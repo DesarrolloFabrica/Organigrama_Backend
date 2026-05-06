@@ -1,10 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Person } from './person/person.entity';
+import { Person } from './person/entities/person.entity';
 import { HealthModule } from './health/health.module';
 import { OrgRelation } from './org-chart/entities/org-relation.entity';
 import { OrgChartModule } from './org-chart/org-chart.module';
+import { Role } from './catalogs/entities/role.entity';
+import { Hierarchy } from './catalogs/entities/hierarchy.entity';
+import { Area } from './catalogs/entities/area.entity';
+import { School } from './catalogs/entities/school.entity';
+import { Program } from './catalogs/entities/program.entity';
+import { City } from './catalogs/entities/city.entity';
+import { Campus } from './catalogs/entities/campus.entity';
+import { ContractType } from './catalogs/entities/contract-type.entity';
+import { Region } from './catalogs/entities/region.entity';
 
 @Module({
   imports: [
@@ -23,7 +32,19 @@ import { OrgChartModule } from './org-chart/org-chart.module';
         username: config.get<string>('DB_USER', 'postgres'),
         password: config.get<string>('DB_PASSWORD', 'postgres'),
         database: config.get<string>('DB_NAME', 'organigrama'),
-        entities: [Person, OrgRelation],
+        entities: [
+          Person,
+          OrgRelation,
+          Role,
+          Hierarchy,
+          Area,
+          School,
+          Program,
+          City,
+          Campus,
+          ContractType,
+          Region,
+        ],
         /**
          * Solo para desarrollo: genera/actualiza tablas desde las entidades.
          * En producción usar migraciones y `DB_SYNCHRONIZE=false`.
