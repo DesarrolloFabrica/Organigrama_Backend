@@ -69,6 +69,8 @@ export type OrgNode = {
   email: string | null;
   edu_email: string | null;
   phone: string | null;
+  /** Número de relaciones directas padre→persona (siempre coherente con BD). */
+  direct_reports_count: number;
   children: OrgNode[];
   hierarchy: OrgNodeHierarchy | null;
   area: OrgNodeArea | null;

@@ -75,11 +75,22 @@ export class OrgChartService {
       );
     }
 
-    const root = persons.find((person) => String(person.hierarchy_id) === '1');
+    // Personas que son hijos activos.
+    const childIds = new Set(
+      activeRelations.map((relation) => String(relation.child_person_id)),
+    );
+
+    // La raíz es quien es padre pero no hijo.
+    const root = persons.find(
+      (person) =>
+        activeRelations.some(
+          (relation) => String(relation.parent_person_id) === String(person.id),
+        ) && !childIds.has(String(person.id)),
+    );
 
     if (!root) {
       throw new UnprocessableEntityException(
-        'No hay nodo raíz con hierarchy_id = 1. Revise los datos de person.',
+        'No se encontró una raíz válida en org_relation.',
       );
     }
 
@@ -217,6 +228,34 @@ export class OrgChartService {
     );
   }
 
+  /**
+   * Devuelve el subárbol cuya raíz es la persona indicada (incluye toda la descendencia activa).
+   * Reutiliza la misma construcción que el organigrama global.
+   */
+  async getOrgChartSubtree(personId: string): Promise<OrgNode> {
+    const tree = await this.getOrgChartTree();
+    const subtree = this.findOrgNodeById(tree, personId);
+    if (!subtree) {
+      throw new NotFoundException(
+        `No se encontró la persona ${personId} en el organigrama activo.`,
+      );
+    }
+    return subtree;
+  }
+
+  private findOrgNodeById(node: OrgNode, id: string): OrgNode | null {
+    if (node.id === id) {
+      return node;
+    }
+    for (const child of node.children) {
+      const found = this.findOrgNodeById(child, id);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+
   private buildMapById<T extends { id: string }>(rows: T[]): Map<string, T> {
     const map = new Map<string, T>();
 
@@ -246,12 +285,7 @@ export class OrgChartService {
     const children = directRelations
       .map((relation) => personById.get(String(relation.child_person_id)))
       .filter((child): child is Person => Boolean(child))
-      .sort((a, b) => {
-        const levelA = Number(a.hierarchy_id ?? 999);
-        const levelB = Number(b.hierarchy_id ?? 999);
-
-        return levelA - levelB || a.full_name.localeCompare(b.full_name);
-      })
+      .sort((a, b) => a.full_name.localeCompare(b.full_name))
       .map((child) =>
         this.mapPersonToOrgNode(
           child,
@@ -383,6 +417,7 @@ export class OrgChartService {
       email: person.email,
       edu_email: person.edu_email,
       phone: person.phone,
+      direct_reports_count: directRelations.length,
       children,
     };
   }

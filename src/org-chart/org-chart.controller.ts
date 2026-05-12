@@ -22,4 +22,10 @@ export class OrgChartController {
   getPersonDetail(@Param('id') id: string) {
     return this.orgChartService.getPersonDetail(id);
   }
+
+  /** Subárbol con la persona indicada como raíz (misma forma que GET /org-chart). */
+  @Get('team/:id')
+  getOrgChartTeamRoot(@Param('id') id: string) {
+    return this.orgChartService.getOrgChartSubtree(id);
+  }
 }
