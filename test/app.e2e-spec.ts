@@ -4,10 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from './../src/app.module';
-import {
-  SEED_IDS,
-  seedEmployeesIfEmpty,
-} from './../src/database/employees.seed';
+import { seedEmployeesIfEmpty } from './../src/database/employees.seed';
 
 describe('API (e2e)', () => {
   let app: INestApplication<App>;
@@ -45,20 +42,18 @@ describe('API (e2e)', () => {
         const body = res.body as {
           id: string;
           name: string;
-          role: string;
-          level: number;
-          area: string;
+          role: { name: string } | null;
+          hierarchy: { name: string } | null;
+          area: { name: string } | null;
           children: unknown[];
         };
-        expect(body).toMatchObject({
-          id: SEED_IDS.director,
-          name: 'Director de Operaciones',
-          role: 'Director',
-          level: 1,
-          area: 'Dirección de Operaciones',
-        });
+        expect(body.name).toBe('Director de Operaciones');
+        expect(body.role?.name).toBe('Director');
+        expect(body.hierarchy?.name).toBe('Dirección');
+        expect(body.area?.name).toBe('Dirección de Operaciones');
         expect(Array.isArray(body.children)).toBe(true);
         expect(body.children).toHaveLength(2);
+        expect(typeof body.id).toBe('string');
       });
   });
 

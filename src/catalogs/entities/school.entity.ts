@@ -1,40 +1,26 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
 /**
- * Catálogo provisional de escuelas.
- *
- * IMPORTANTE:
- * El ID debe mantenerse compatible con el core.
+ * Escuelas de Core.
+ * Core no tiene columna 'description' en school.
  */
 @Entity('school')
 export class School {
-  /** ID de la escuela compatible con el core. */
   @PrimaryColumn({ type: 'bigint' })
   id: string;
 
-  /** Nombre visible de la escuela. */
-  @Column({ type: 'varchar', length: 180 })
-  name: string;
+  @Column({ type: 'varchar', nullable: true })
+  name: string | null;
 
-  /** Descripción opcional. */
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  description: string | null;
+  /** No existe en Core — siempre null en lecturas. */
+  description: string | null = null;
 
-  /** Permite ocultar escuelas sin borrarlas. */
-  @Column({ type: 'boolean', default: true })
-  is_active: boolean;
+  @Column({ type: 'boolean', nullable: true })
+  is_active: boolean | null;
 
-  /** Fecha de creación. */
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  /** Fecha de actualización. */
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 }

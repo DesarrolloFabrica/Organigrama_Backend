@@ -1,40 +1,26 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
 /**
- * Catálogo provisional de áreas organizacionales.
- *
- * IMPORTANTE:
- * El ID debe mantenerse compatible con el core.
+ * Areas organizacionales de Core.
+ * Core no tiene columna 'description' en area.
  */
 @Entity('area')
 export class Area {
-  /** ID del área compatible con el core. */
   @PrimaryColumn({ type: 'bigint' })
   id: string;
 
-  /** Nombre visible del área. */
-  @Column({ type: 'varchar', length: 150 })
-  name: string;
+  @Column({ type: 'varchar', nullable: true })
+  name: string | null;
 
-  /** Descripción opcional del área. */
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  description: string | null;
+  /** No existe en Core — siempre null en lecturas. */
+  description: string | null = null;
 
-  /** Permite ocultar áreas sin borrarlas. */
-  @Column({ type: 'boolean', default: true })
-  is_active: boolean;
+  @Column({ type: 'boolean', nullable: true })
+  is_active: boolean | null;
 
-  /** Fecha de creación. */
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  /** Fecha de actualización. */
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 }

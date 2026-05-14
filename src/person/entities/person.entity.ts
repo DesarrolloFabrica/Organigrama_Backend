@@ -111,11 +111,13 @@ export class Person {
   @Column({ type: 'integer', nullable: true })
   campus_id: number | null;
 
-  /** Fecha de creación del registro en esta BD provisional. */
-  @CreateDateColumn({ type: 'timestamptz' })
+  /** Indica si la persona está activa en Core. */
+  @Column({ type: 'boolean', nullable: false })
+  is_active: boolean;
+
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  /** Fecha de última actualización del registro. */
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 }

@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Role } from '../catalogs/entities/role.entity';
 import { Person } from '../person/entities/person.entity';
-import { OrgRelation } from './entities/org-relation.entity';
 import { OrgChartController } from './org-chart.controller';
 import { OrgChartService } from './org-chart.service';
+import { OrgChartTreeEngine } from './org-chart-tree.engine';
 import { Hierarchy } from '../catalogs/entities/hierarchy.entity';
 import { Area } from '../catalogs/entities/area.entity';
 import { School } from '../catalogs/entities/school.entity';
@@ -18,7 +18,6 @@ import { ContractType } from '../catalogs/entities/contract-type.entity';
   imports: [
     TypeOrmModule.forFeature([
       Person,
-      OrgRelation,
       Role,
       Hierarchy,
       Area,
@@ -31,6 +30,6 @@ import { ContractType } from '../catalogs/entities/contract-type.entity';
     ]),
   ],
   controllers: [OrgChartController],
-  providers: [OrgChartService],
+  providers: [OrgChartService, OrgChartTreeEngine],
 })
 export class OrgChartModule {}

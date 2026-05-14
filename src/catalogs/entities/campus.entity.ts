@@ -25,8 +25,8 @@ export class Campus {
   is_active: boolean;
 
   /** ID de la ciudad asociada. */
-  @Column({ type: 'bigint', nullable: true })
-  city_id: string | null;
+  @Column({ type: 'integer', nullable: true })
+  city_id: number | null;
 
   /** Fecha de creación. */
   @CreateDateColumn({ type: 'timestamptz' })
