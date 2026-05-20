@@ -14,6 +14,8 @@ import { Person } from '../person/entities/person.entity';
 import { findActivePeopleByRoleName } from './org-chart-person.query';
 import { getEdgesForParentRole } from './org-chart.visual-map';
 import type { OrgNode } from './types/org-node.type';
+import { OrgVisualRelation } from './entities/org-visual-relation.entity';
+import { findActiveVisualRelationsByParentId } from './org-visual-relation.query';
 
 /**
  * Mapas de catálogo Core necesarios para enriquecer nodos (misma forma que en el servicio).
@@ -49,6 +51,9 @@ export class OrgChartTreeEngine {
   constructor(
     @InjectRepository(Person)
     private readonly persons: Repository<Person>,
+
+    @InjectRepository(OrgVisualRelation)
+    private readonly visualRelations: Repository<OrgVisualRelation>,
   ) {}
 
   /**
@@ -66,11 +71,41 @@ export class OrgChartTreeEngine {
     catalogs: OrgChartCatalogs,
     buildOrgNode: BuildOrgNodeFn,
   ): Promise<OrgNode[]> {
+    const visualRelations = await findActiveVisualRelationsByParentId(
+      this.visualRelations,
+      String(parent.id),
+    );
+
+    if (visualRelations.length > 0) {
+      const nodes: OrgNode[] = [];
+
+      for (const relation of visualRelations) {
+        const child = await this.persons.findOne({
+          where: {
+            id: String(relation.child_person_id),
+            is_active: true,
+          },
+        });
+
+        if (!child) continue;
+
+        const nestedChildren = await this.buildChildrenForPerson(
+          child,
+          catalogs,
+          buildOrgNode,
+        );
+
+        nodes.push(buildOrgNode(child, catalogs, nestedChildren));
+      }
+
+      return nodes;
+    }
     const parentRoleName = parent.role_id
       ? (catalogs.roleById.get(String(parent.role_id))?.name ?? null)
       : null;
 
     const edges = getEdgesForParentRole(parentRoleName);
+
     if (edges.length === 0) {
       return [];
     }

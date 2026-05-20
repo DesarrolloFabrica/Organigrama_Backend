@@ -13,6 +13,7 @@ import { City } from '../catalogs/entities/city.entity';
 import { Region } from '../catalogs/entities/region.entity';
 import { Campus } from '../catalogs/entities/campus.entity';
 import { ContractType } from '../catalogs/entities/contract-type.entity';
+import { OrgVisualRelation } from './entities/org-visual-relation.entity';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ContractType } from '../catalogs/entities/contract-type.entity';
       Campus,
       ContractType,
       Region,
+      OrgVisualRelation,
     ]),
   ],
   controllers: [OrgChartController],

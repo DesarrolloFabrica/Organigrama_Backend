@@ -214,20 +214,17 @@ export class OrgChartService {
     // Cargamos catálogos para enriquecer la respuesta igual que en el árbol principal.
     const catalogs = await this.loadCatalogs();
 
-    const role = catalogs.roleById.get(String(person.role_id));
-    const visualLevel = resolveOrgLevelFromRoleName(role?.name);
+    // El engine decide automáticamente si este rol tiene hijos visuales.
+    // Si no existen reglas para el rol actual, devuelve [].
+    const children = await this.treeEngine.buildChildrenForPerson(
+      person,
+      catalogs,
+      (nodePerson, nodeCatalogs, nodeChildren) =>
+        this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren),
+    );
 
-    if (visualLevel === 3 || visualLevel === 4) {
-      const children = await this.treeEngine.buildChildrenForPerson(
-        person,
-        catalogs,
-        (nodePerson, nodeCatalogs, nodeChildren) =>
-          this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren),
-      );
-      return this.buildOrgNode(person, catalogs, children);
-    }
-
-    return this.buildOrgNode(person, catalogs, []);
+    // Retornamos la persona raíz del subárbol con sus hijos.
+    return this.buildOrgNode(person, catalogs, children);
   }
 
   // ─── GET /org-chart/search ─────────────────────────────────────────────────

@@ -5,7 +5,7 @@
  * La jerarquía visual se resuelve por `role.name` (y en niveles futuros, filtros como edu_email).
  */
 
-export type RoleMatchMode = 'exact' | 'ilike';
+export type RoleMatchMode = 'exact' | 'ilike' | 'any';
 
 /** `ilike` aquí significa: el nombre normalizado contiene el literal del patrón (equivalente a SQL ILIKE '%patrón%'). */
 export type OrgVisualRootRule = {
@@ -18,7 +18,7 @@ export type OrgVisualRootRule = {
 export type OrgVisualEdgeRule = {
   parentRoleName: string;
   parentMatch: RoleMatchMode;
-  childRoleName: string;
+  childRoleName: string | null;
   childMatch: RoleMatchMode;
   /** Opcional: acota hijos por correo institucional (se usa en queries, no en resolveOrgLevelFromRoleName). */
   childEduEmails?: readonly string[];
@@ -42,49 +42,31 @@ export const ORG_VISUAL_EDGE_RULES: readonly OrgVisualEdgeRule[] = [
     visualLevel: 2,
     description: 'Nivel 2 bajo Director',
   },
-  {
-    parentRoleName: 'COORDINADOR GENERAL OPERACIONES',
-    parentMatch: 'ilike',
-    childRoleName: 'COORDINADOR AREA FABRICA Y DESARROLLO',
-    childMatch: 'ilike',
-    visualLevel: 3,
-    description: 'Nivel 3 bajo Coordinador General',
-  },
-  {
-    parentRoleName: 'COORDINADOR AREA FABRICA Y DESARROLLO',
-    parentMatch: 'ilike',
-    childRoleName: 'DESARROLLADOR MULTIMEDIA',
-    childMatch: 'ilike',
-    visualLevel: 4,
-    description: 'Nivel 4 bajo Coordinador Área Fábrica y Desarrollo',
-  },
-  {
-    parentRoleName: 'DESARROLLADOR MULTIMEDIA',
-    parentMatch: 'ilike',
-    childRoleName: 'DESARROLLADOR',
-    childMatch: 'exact',
-    childEduEmails: [
-      'alejandro_castro@cun.edu.co',
-      'camilo_quintero@cun.edu.co',
-      'jose_camachoc@cun.edu.co',
-      'zuany_acuna@cun.edu.co',
-    ],
-    visualLevel: 5,
-    description: 'Nivel 5: DESARROLLADOR acotado por edu_email en queries',
-  },
 ] as const;
 
 function matchesRolePattern(
-  nameNormalized: string,
-  pattern: string,
-  mode: RoleMatchMode,
+  roleName: string | null | undefined,
+  pattern: string | null,
+  match: RoleMatchMode,
 ): boolean {
-  const p = pattern.trim().toUpperCase();
-  if (!p) return false;
-  if (mode === 'exact') {
-    return nameNormalized === p;
+  // Si el match es "any", no importa el nombre del rol.
+  if (match === 'any') {
+    return true;
   }
-  return nameNormalized.includes(p);
+
+  // Para exact/ilike sí necesitamos roleName y pattern.
+  if (!roleName || !pattern) {
+    return false;
+  }
+
+  const normalizedRoleName = roleName.trim().toUpperCase();
+  const normalizedPattern = pattern.trim().toUpperCase();
+
+  if (match === 'exact') {
+    return normalizedRoleName === normalizedPattern;
+  }
+
+  return normalizedRoleName.includes(normalizedPattern);
 }
 
 /**

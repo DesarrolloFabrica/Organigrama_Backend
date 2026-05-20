@@ -14,6 +14,7 @@ import { Campus } from './catalogs/entities/campus.entity';
 import { ContractType } from './catalogs/entities/contract-type.entity';
 import { Region } from './catalogs/entities/region.entity';
 import { OrganigramaDemoSeedBootstrap } from './database/organigrama-demo-seed.bootstrap';
+import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.entity';
 
 @Module({
   imports: [
@@ -35,7 +36,15 @@ import { OrganigramaDemoSeedBootstrap } from './database/organigrama-demo-seed.b
           !host.startsWith('/cloudsql/');
 
         const logger = new Logger('TypeORM');
-        logger.log(`Conectando a DB: ${dbName} en ${host}${schema ? ` (schema: ${schema})` : ''}`);
+        logger.log(
+          `Conectando a DB: ${dbName} en ${host}${schema ? ` (schema: ${schema})` : ''}`,
+        );
+        console.log({
+          host: process.env.DB_HOST,
+          port: process.env.DB_PORT,
+          database: process.env.DB_NAME,
+          schema: process.env.DB_SCHEMA,
+        });
 
         return {
           type: 'postgres' as const,
@@ -56,6 +65,7 @@ import { OrganigramaDemoSeedBootstrap } from './database/organigrama-demo-seed.b
             Campus,
             ContractType,
             Region,
+            OrgVisualRelation,
           ],
           /**
            * Solo para desarrollo: genera/actualiza tablas desde las entidades.
