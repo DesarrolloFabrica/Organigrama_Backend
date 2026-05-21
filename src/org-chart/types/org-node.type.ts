@@ -56,6 +56,33 @@ export type OrgNodeLocation = {
   campus: OrgNodeCampus | null;
 };
 
+export type OrgHierarchyPathSegment = {
+  id: string;
+  name: string;
+  role_id: string | null;
+  role: OrgNodeRole | null;
+  hierarchy_id: string | null;
+  hierarchy: OrgNodeHierarchy | null;
+};
+
+/** Resultado de GET /api/org-chart/search?q= */
+export type OrgChartSearchHit = {
+  id: string;
+  document: string;
+  name: string;
+  role_id: string | null;
+  role: OrgNodeRole | null;
+  hierarchy_id: string | null;
+  hierarchy: OrgNodeHierarchy | null;
+  area_id: string | null;
+  school_id: string | null;
+  program_id: string | null;
+  email: string | null;
+  edu_email: string | null;
+  phone: string | null;
+  path: OrgHierarchyPathSegment[];
+};
+
 export type OrgNode = {
   id: string;
   document: string;

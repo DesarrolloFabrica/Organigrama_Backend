@@ -28,4 +28,28 @@ export class OrgChartController {
   getOrgChartTeamRoot(@Param('id') id: string) {
     return this.orgChartService.getOrgChartSubtree(id);
   }
+
+  /** Persona como raíz del lienzo + solo hijos directos (carga superficial). */
+  @Get('node/:id')
+  getOrgChartNode(@Param('id') id: string) {
+    return this.orgChartService.getOrgChartNode(id);
+  }
+
+  /** Devuelve solo los hijos directos de una persona. */
+  @Get('children/:id')
+  getOrgChartChildren(@Param('id') id: string) {
+    return this.orgChartService.getOrgChartChildren(id);
+  }
+
+  /** Devuelve la raíz del organigrama con solo sus hijos directos. */
+  @Get('root')
+  getOrgChartRoot() {
+    return this.orgChartService.getOrgChartRoot();
+  }
+
+  /** Resumen por áreas generales (hijos directos del root + totales bajo jerarquía). */
+  @Get('summary/general-areas')
+  getGeneralAreasSummary() {
+    return this.orgChartService.getGeneralAreasSummary();
+  }
 }

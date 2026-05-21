@@ -4,8 +4,8 @@
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, ILike, Repository } from 'typeorm';
 import { Role } from '../catalogs/entities/role.entity';
 import { Hierarchy } from '../catalogs/entities/hierarchy.entity';
 import { Area } from '../catalogs/entities/area.entity';
@@ -17,6 +17,7 @@ import { ContractType } from '../catalogs/entities/contract-type.entity';
 import { Region } from '../catalogs/entities/region.entity';
 import { Person } from '../person/entities/person.entity';
 import type {
+  OrgChartSearchHit,
   OrgNode,
   OrgNodeHierarchy,
   OrgNodeRole,
@@ -24,6 +25,7 @@ import type {
 import { resolveOrgLevelFromRoleName } from './org-chart.visual-map';
 import { findActivePeopleByRoleName } from './org-chart-person.query';
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
+import type { GeneralAreaSummaryDto } from './types/general-area-summary.dto';
 
 // ─── Catalog maps helper ──────────────────────────────────────────────────────
 
@@ -67,8 +69,28 @@ export function isPersonIncludedInCurrentOrgPhase(
 export class OrgChartService {
   private readonly log = new Logger(OrgChartService.name);
 
+  private catalogsCache: { value: OrgCatalogs; expiresAt: number } | null =
+    null;
+
+  private readonly catalogsCacheTtlMs = 5 * 60 * 1000;
+
+  private orgChartRootCache: { value: OrgNode; expiresAt: number } | null =
+    null;
+
+  private orgChartNodeCache = new Map<
+    string,
+    { value: OrgNode; expiresAt: number }
+  >();
+
+  private readonly orgChartResponseCacheTtlMs = 60 * 1000;
+
+  private readonly enableOrgChartPerfLogs =
+    process.env.ORG_CHART_PERF_LOGS === 'true';
+
   constructor(
     private readonly treeEngine: OrgChartTreeEngine,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
     @InjectRepository(Person)
     private readonly persons: Repository<Person>,
     @InjectRepository(Role)
@@ -227,77 +249,279 @@ export class OrgChartService {
     return this.buildOrgNode(person, catalogs, children);
   }
 
-  // ─── GET /org-chart/search ─────────────────────────────────────────────────
+  async getOrgChartChildren(personId: string): Promise<OrgNode[]> {
+    // Buscamos la persona padre desde la cual se quieren cargar los hijos directos.
+    const person = await this.persons.findOne({ where: { id: personId } });
 
-  async searchOrgChart(query: string) {
-    const normalized = query?.trim();
-
-    if (!normalized) {
-      throw new BadRequestException('Debe enviar un parámetro de búsqueda q.');
+    // Si no existe la persona, devolvemos error claro para el frontend/Postman.
+    if (!person) {
+      throw new NotFoundException(
+        `No existe una persona con id ${personId} en Core.`,
+      );
     }
 
-    const matches = await this.persons.find({
-      where: [
-        { full_name: ILike(`%${normalized}%`) },
-        { document: ILike(`%${normalized}%`) },
-        { email: ILike(`%${normalized}%`) },
-        { edu_email: ILike(`%${normalized}%`) },
-        { phone: ILike(`%${normalized}%`) },
-      ],
-      order: { hierarchy_id: 'ASC', full_name: 'ASC' },
-      take: 20,
+    // Cargamos los catálogos para enriquecer cada hijo con rol, jerarquía, área, etc.
+    const catalogs = await this.loadCatalogsCached();
+
+    // IMPORTANTE:
+    // Aquí NO queremos construir todo el subárbol.
+    // Solo queremos los hijos directos de esta persona.
+    return this.treeEngine.buildDirectChildrenForPerson(
+      person,
+      catalogs,
+      (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
+        this.buildOrgNode(
+          nodePerson,
+          nodeCatalogs,
+          nodeChildren,
+          directReportsCount,
+        ),
+    );
+  }
+
+  /**
+   * Nodo raíz del lienzo de exploración: persona activa + hijos directos (sin recursión).
+   * GET /api/org-chart/node/:id
+   */
+  async getOrgChartNode(personId: string): Promise<OrgNode> {
+    const now = Date.now();
+    const cachedNode = this.orgChartNodeCache.get(personId);
+
+    if (cachedNode && cachedNode.expiresAt > now) {
+      this.logOrgChartPerf(`[CacheNode] id=${personId} hit`);
+      return cachedNode.value;
+    }
+
+    this.logOrgChartPerf(`[CacheNode] id=${personId} miss`);
+
+    const perfTotalStart = Date.now();
+    const perfId = personId;
+
+    const perfFindPersonStart = Date.now();
+    const person = await this.persons.findOne({
+      where: {
+        id: personId,
+        is_active: true,
+      },
+    });
+    this.logOrgChartPerf(
+      `[PerfNode] id=${perfId} findPerson: ${Date.now() - perfFindPersonStart}ms`,
+    );
+
+    if (!person) {
+      throw new NotFoundException(
+        `No existe una persona activa con id ${personId} en Core.`,
+      );
+    }
+
+    const perfLoadCatalogsStart = Date.now();
+    const catalogs = await this.loadCatalogsCached();
+    this.logOrgChartPerf(
+      `[PerfNode] id=${perfId} loadCatalogs: ${Date.now() - perfLoadCatalogsStart}ms`,
+    );
+
+    const perfBuildDirectChildrenStart = Date.now();
+    const children = await this.treeEngine.buildDirectChildrenForPerson(
+      person,
+      catalogs,
+      (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
+        this.buildOrgNode(
+          nodePerson,
+          nodeCatalogs,
+          nodeChildren,
+          directReportsCount,
+        ),
+    );
+    this.logOrgChartPerf(
+      `[PerfNode] id=${perfId} buildDirectChildren: ${Date.now() - perfBuildDirectChildrenStart}ms`,
+    );
+
+    const perfBuildOrgNodeStart = Date.now();
+    const node = this.buildOrgNode(person, catalogs, children);
+    this.logOrgChartPerf(
+      `[PerfNode] id=${perfId} buildOrgNode: ${Date.now() - perfBuildOrgNodeStart}ms`,
+    );
+
+    this.logOrgChartPerf(
+      `[PerfNode] id=${perfId} total: ${Date.now() - perfTotalStart}ms`,
+    );
+
+    this.pruneExpiredOrgChartNodeCache(now);
+    this.orgChartNodeCache.set(personId, {
+      value: node,
+      expiresAt: now + this.orgChartResponseCacheTtlMs,
     });
 
-    if (matches.length === 0) return [];
+    return node;
+  }
 
-    const [roles, hierarchies] = await Promise.all([
-      this.roles.find({ order: { id: 'ASC' } }),
-      this.hierarchies.find({ order: { id: 'ASC' } }),
-    ]);
+  async getOrgChartRoot(): Promise<OrgNode> {
+    const now = Date.now();
 
-    const roleById = this.buildMapById(roles);
-    const hierarchyById = this.buildMapById(hierarchies);
+    if (this.orgChartRootCache && this.orgChartRootCache.expiresAt > now) {
+      this.logOrgChartPerf('[CacheRoot] hit');
+      return this.orgChartRootCache.value;
+    }
+
+    this.logOrgChartPerf('[CacheRoot] miss');
+
+    const perfTotalStart = Date.now();
+
+    // TODO: mover a variable de entorno, p. ej. ORG_CHART_ROOT_PERSON_ID.
+    const ORG_CHART_ROOT_PERSON_ID = '1144';
+
+    const perfFindDirectorStart = Date.now();
+    const root = await this.persons.findOne({
+      where: {
+        id: ORG_CHART_ROOT_PERSON_ID,
+        is_active: true,
+      },
+    });
+    this.logOrgChartPerf(
+      `[PerfRoot] findDirector: ${Date.now() - perfFindDirectorStart}ms`,
+    );
+
+    if (!root) {
+      throw new NotFoundException(
+        `No se encontró la persona raíz del organigrama (id=${ORG_CHART_ROOT_PERSON_ID}, activa) en Core.`,
+      );
+    }
+
+    const perfLoadCatalogsStart = Date.now();
+    const catalogs = await this.loadCatalogsCached();
+    this.logOrgChartPerf(
+      `[PerfRoot] loadCatalogs: ${Date.now() - perfLoadCatalogsStart}ms`,
+    );
+
+    const perfBuildDirectChildrenStart = Date.now();
+    const children = await this.treeEngine.buildDirectChildrenForPerson(
+      root,
+      catalogs,
+      (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
+        this.buildOrgNode(
+          nodePerson,
+          nodeCatalogs,
+          nodeChildren,
+          directReportsCount,
+        ),
+    );
+    this.logOrgChartPerf(
+      `[PerfRoot] buildDirectChildren: ${Date.now() - perfBuildDirectChildrenStart}ms`,
+    );
+
+    const perfBuildRootNodeStart = Date.now();
+    const rootNode = this.buildOrgNode(root, catalogs, children);
+    this.logOrgChartPerf(
+      `[PerfRoot] buildOrgNode: ${Date.now() - perfBuildRootNodeStart}ms`,
+    );
+
+    this.logOrgChartPerf(
+      `[PerfRoot] total: ${Date.now() - perfTotalStart}ms`,
+    );
+
+    this.orgChartRootCache = {
+      value: rootNode,
+      expiresAt: now + this.orgChartResponseCacheTtlMs,
+    };
+
+    return rootNode;
+  }
+
+  // ─── GET /org-chart/summary/general-areas ───────────────────────────────────
+
+  /**
+   * Resumen por áreas generales: hijos directos del root visual y total de
+   * personas bajo cada jerarquía (todos los descendientes vía org_visual_relation).
+   */
+  async getGeneralAreasSummary(): Promise<GeneralAreaSummaryDto[]> {
+    const rootNode = await this.getOrgChartRoot();
+    const generalAreas = rootNode.children;
+
+    if (generalAreas.length === 0) {
+      return [];
+    }
+
+    const summaries = await Promise.all(
+      generalAreas.map(async (area) => {
+        const totalPeople = await this.countAllDescendants(area.id);
+
+        return {
+          id: area.id,
+          name: area.name,
+          roleName: area.role?.name ?? null,
+          totalPeople,
+          vacancies: 0,
+        };
+      }),
+    );
+
+    return summaries;
+  }
+
+  // ─── GET /org-chart/search?q= ──────────────────────────────────────────────
+
+  /**
+   * Búsqueda ligera de personas activas por nombre, correo o documento.
+   * La ruta jerárquica (`path`) es mínima (solo el propio hit) hasta integrar el árbol.
+   */
+  async searchOrgChart(query: string): Promise<OrgChartSearchHit[]> {
+    const term = (query ?? '').trim();
+    if (term.length < 2) {
+      return [];
+    }
+
+    const pattern = `%${term}%`;
+    const matches = await this.persons.find({
+      where: [
+        { is_active: true, full_name: ILike(pattern) },
+        { is_active: true, email: ILike(pattern) },
+        { is_active: true, edu_email: ILike(pattern) },
+        { is_active: true, document: ILike(pattern) },
+      ],
+      take: 20,
+      order: { id: 'ASC' },
+    });
+
+    if (matches.length === 0) {
+      return [];
+    }
+
+    const catalogs = await this.loadCatalogs();
 
     return matches.map((person) => {
       const role = person.role_id
-        ? (roleById.get(String(person.role_id)) ?? null)
+        ? (catalogs.roleById.get(String(person.role_id)) ?? null)
         : null;
       const hierarchy = person.hierarchy_id
-        ? (hierarchyById.get(String(person.hierarchy_id)) ?? null)
+        ? (catalogs.hierarchyById.get(String(person.hierarchy_id)) ?? null)
         : null;
 
       return {
         id: String(person.id),
-        document: person.document,
-        name: person.full_name,
-
+        document: person.document ?? '',
+        name: person.full_name ?? '',
         role_id: person.role_id,
         role: role
           ? {
               id: String(role.id),
-              name: role.name,
+              name: role.name ?? '',
               description: role.description,
             }
           : null,
-
         hierarchy_id: person.hierarchy_id,
         hierarchy: hierarchy
           ? {
               id: String(hierarchy.id),
-              name: hierarchy.name,
+              name: hierarchy.name ?? '',
               description: hierarchy.description,
             }
           : null,
-
         area_id: person.area_id,
         school_id: person.school_id,
         program_id: person.program_id,
         email: person.email,
         edu_email: person.edu_email,
         phone: person.phone,
-
-        // Fase 1: el path muestra solo la persona misma.
-        // Se poblará con la cadena completa una vez integrados los niveles intermedios.
         path: [this.buildPathNode(person, role, hierarchy)],
       };
     });
@@ -432,6 +656,74 @@ export class OrgChartService {
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
+  private logOrgChartPerf(message: string): void {
+    if (this.enableOrgChartPerfLogs) {
+      this.log.log(message);
+    }
+  }
+
+  /**
+   * Cuenta todas las personas descendientes activas bajo `personId` en el grafo visual.
+   */
+  private async countAllDescendants(personId: string): Promise<number> {
+    const result = await this.dataSource.query(
+      `
+      WITH RECURSIVE descendants AS (
+        SELECT
+          r.child_person_id
+        FROM organigrama.org_visual_relation r
+        INNER JOIN core.person p
+          ON p.id = r.child_person_id
+          AND p.is_active = true
+        WHERE r.parent_person_id = $1
+          AND r.is_active = true
+
+        UNION ALL
+
+        SELECT
+          r.child_person_id
+        FROM organigrama.org_visual_relation r
+        INNER JOIN descendants d
+          ON r.parent_person_id = d.child_person_id
+        INNER JOIN core.person p
+          ON p.id = r.child_person_id
+          AND p.is_active = true
+        WHERE r.is_active = true
+      )
+      SELECT COUNT(*)::int AS total
+      FROM descendants;
+      `,
+      [personId],
+    );
+
+    return Number(result?.[0]?.total ?? 0);
+  }
+
+  private pruneExpiredOrgChartNodeCache(now: number): void {
+    for (const [key, entry] of this.orgChartNodeCache.entries()) {
+      if (entry.expiresAt <= now) {
+        this.orgChartNodeCache.delete(key);
+      }
+    }
+  }
+
+  private async loadCatalogsCached(): Promise<OrgCatalogs> {
+    const now = Date.now();
+
+    if (this.catalogsCache && this.catalogsCache.expiresAt > now) {
+      return this.catalogsCache.value;
+    }
+
+    const value = await this.loadCatalogs();
+
+    this.catalogsCache = {
+      value,
+      expiresAt: now + this.catalogsCacheTtlMs,
+    };
+
+    return value;
+  }
+
   private async loadCatalogs(): Promise<OrgCatalogs> {
     const [
       roles,
@@ -472,6 +764,7 @@ export class OrgChartService {
     person: Person,
     catalogs: OrgCatalogs,
     children: OrgNode[],
+    directReportsCount?: number,
   ): OrgNode {
     const role = person.role_id
       ? (catalogs.roleById.get(String(person.role_id)) ?? null)
@@ -568,7 +861,7 @@ export class OrgChartService {
       email: person.email,
       edu_email: person.edu_email,
       phone: person.phone,
-      direct_reports_count: children.length,
+      direct_reports_count: directReportsCount ?? children.length,
       children,
     };
   }
