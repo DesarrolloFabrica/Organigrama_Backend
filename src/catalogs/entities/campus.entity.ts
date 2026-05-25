@@ -10,7 +10,10 @@ import {
  * Catálogo provisional de campus/sedes.
  * El `id` debe mantenerse compatible con el core.
  */
-@Entity('campus')
+@Entity({
+  name: 'campus',
+  schema: 'core',
+})
 export class Campus {
   /** ID del campus compatible con el core. */
   @PrimaryColumn({ type: 'integer' })

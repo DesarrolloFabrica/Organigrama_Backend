@@ -10,7 +10,10 @@ import {
  * Catálogo provisional de tipos de contrato.
  * El `id` debe mantenerse compatible con el core.
  */
-@Entity('contract_type')
+@Entity({
+  name: 'contract_type',
+  schema: 'core',
+})
 export class ContractType {
   /** ID del tipo de contrato compatible con el core. */
   @PrimaryColumn({ type: 'bigint' })

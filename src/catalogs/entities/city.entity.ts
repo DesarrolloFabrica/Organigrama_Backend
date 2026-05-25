@@ -5,7 +5,10 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
  * Core solo tiene: id, name, is_active.
  * No tiene region_id, created_at ni updated_at.
  */
-@Entity('city')
+@Entity({
+  name: 'city',
+  schema: 'core',
+})
 export class City {
   @PrimaryColumn({ type: 'bigint' })
   id: string;

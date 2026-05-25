@@ -14,7 +14,10 @@ import {
  * La nomenclatura de columnas respeta el core de información
  * para facilitar la integración futura.
  */
-@Entity('person')
+@Entity({
+  name: 'person',
+  schema: 'core',
+})
 @Index(['document'])
 @Index(['hierarchy_id'])
 @Index(['role_id'])

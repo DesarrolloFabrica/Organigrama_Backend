@@ -13,7 +13,10 @@ import {
  * El `id` debe mantenerse compatible con el core.
  * Por eso NO usamos PrimaryGeneratedColumn.
  */
-@Entity('role')
+@Entity({
+  name: 'role',
+  schema: 'core',
+})
 export class Role {
   /** ID del rol/cargo. Debe coincidir con el core. */
   @PrimaryColumn({ type: 'bigint' })

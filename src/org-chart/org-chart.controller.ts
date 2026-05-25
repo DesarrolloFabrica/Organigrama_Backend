@@ -52,4 +52,10 @@ export class OrgChartController {
   getGeneralAreasSummary() {
     return this.orgChartService.getGeneralAreasSummary();
   }
+
+  /** Resumen jerárquico de un nodo: general + desglose por hijos directos. */
+  @Get('summary/:personId')
+  getNodeSummary(@Param('personId') personId: string) {
+    return this.orgChartService.getNodeSummary(personId);
+  }
 }

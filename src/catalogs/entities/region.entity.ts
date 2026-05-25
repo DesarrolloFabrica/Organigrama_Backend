@@ -10,7 +10,10 @@ import {
  * Catálogo provisional de regiones.
  * El `id` debe mantenerse compatible con el core.
  */
-@Entity('region')
+@Entity({
+  name: 'region',
+  schema: 'core',
+})
 export class Region {
   /** ID de la región compatible con el core. */
   @PrimaryColumn({ type: 'integer' })

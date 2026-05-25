@@ -26,6 +26,7 @@ import { resolveOrgLevelFromRoleName } from './org-chart.visual-map';
 import { findActivePeopleByRoleName } from './org-chart-person.query';
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
 import type { GeneralAreaSummaryDto } from './types/general-area-summary.dto';
+import type { OrgSummaryResponseDto } from './types/org-summary.dto';
 
 // ─── Catalog maps helper ──────────────────────────────────────────────────────
 
@@ -456,6 +457,84 @@ export class OrgChartService {
     );
 
     return summaries;
+  }
+
+  // ─── GET /org-chart/summary/:personId ─────────────────────────────────────
+
+  /**
+   * Resumen jerárquico de un nodo:
+   *  - general: total de descendientes del nodo actual.
+   *  - areas: solo hijos directos, cada uno con el total completo de su jerarquía.
+   */
+  async getNodeSummary(personId: string): Promise<OrgSummaryResponseDto> {
+    const person = await this.persons.findOne({
+      where: { id: personId, is_active: true },
+    });
+
+    if (!person) {
+      throw new NotFoundException(
+        `Persona ${personId} no encontrada o inactiva.`,
+      );
+    }
+
+    const catalogs = await this.loadCatalogsCached();
+    const role = person.role_id
+      ? catalogs.roleById.get(String(person.role_id))
+      : undefined;
+
+    const totalPeople = await this.countAllDescendants(personId);
+
+    const directChildRows: { child_person_id: string }[] =
+      await this.dataSource.query(
+        `SELECT child_person_id
+           FROM organigrama.org_visual_relation
+          WHERE parent_person_id = $1
+            AND is_active = true`,
+        [personId],
+      );
+
+    const childIds = directChildRows.map((r) => r.child_person_id);
+
+    let areas: OrgSummaryResponseDto['areas'] = [];
+
+    if (childIds.length > 0) {
+      const childPersons = await this.persons.find({
+        where: childIds.map((id) => ({ id, is_active: true })),
+      });
+
+      const childMap = new Map(childPersons.map((p) => [String(p.id), p]));
+
+      areas = await Promise.all(
+        childIds
+          .filter((id) => childMap.has(id))
+          .map(async (id) => {
+            const child = childMap.get(id)!;
+            const childRole = child.role_id
+              ? catalogs.roleById.get(String(child.role_id))
+              : undefined;
+            const childTotal = await this.countAllDescendants(id);
+
+            return {
+              id: String(child.id),
+              name: child.full_name,
+              roleName: childRole?.name ?? null,
+              totalPeople: childTotal,
+              vacancies: 0,
+            };
+          }),
+      );
+    }
+
+    return {
+      general: {
+        id: String(person.id),
+        name: person.full_name,
+        roleName: role?.name ?? null,
+        totalPeople,
+        vacancies: 0,
+      },
+      areas,
+    };
   }
 
   // ─── GET /org-chart/search?q= ──────────────────────────────────────────────

@@ -5,7 +5,10 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
  * Core solo almacena: id, name, description, level.
  * No tiene is_active, created_at ni updated_at.
  */
-@Entity('hierarchy')
+@Entity({
+  name: 'hierarchy',
+  schema: 'core',
+})
 export class Hierarchy {
   @PrimaryColumn({ type: 'bigint' })
   id: string;

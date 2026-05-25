@@ -1,6 +1,7 @@
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppController } from './app.controller';
 import { Person } from './person/entities/person.entity';
 import { HealthModule } from './health/health.module';
 import { OrgChartModule } from './org-chart/org-chart.module';
@@ -28,8 +29,8 @@ import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.enti
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const host = config.get<string>('DB_HOST', 'localhost');
-        const dbName = config.get<string>('DB_NAME', 'organigrama');
+        const host = config.get<string>('DB_HOST') || 'localhost';
+        const dbName = config.get<string>('DB_NAME');
         const schema = config.get<string>('DB_SCHEMA') || undefined;
         const useSsl =
           config.get<string>('DB_SSL', 'false') === 'true' &&
@@ -46,14 +47,22 @@ import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.enti
           schema: process.env.DB_SCHEMA,
         });
 
+        const isProd = config.get<string>('NODE_ENV') === 'production';
+
         return {
           type: 'postgres' as const,
           host,
           port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
-          username: config.get<string>('DB_USERNAME', 'postgres'),
-          password: config.get<string>('DB_PASSWORD', 'postgres'),
+          username: config.get<string>('DB_USERNAME'),
+          password: config.get<string>('DB_PASSWORD'),
           database: dbName,
           schema,
+          /** Producción: pocos reintentos + timeout corto (Cloud Run ya tiene el puerto abierto). */
+          retryAttempts: isProd ? 2 : 10,
+          retryDelay: isProd ? 1000 : 3000,
+          extra: {
+            connectionTimeoutMillis: isProd ? 10_000 : undefined,
+          },
           entities: [
             Person,
             Role,
@@ -80,6 +89,7 @@ import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.enti
     HealthModule,
     OrgChartModule,
   ],
+  controllers: [AppController],
   providers: [OrganigramaDemoSeedBootstrap],
 })
 export class AppModule {}

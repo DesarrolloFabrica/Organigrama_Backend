@@ -1,10 +1,19 @@
-import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 /**
  * Programas academicos de Core.
  * Core no tiene columna 'description' en program.
  */
-@Entity('program')
+@Entity({
+  name: 'program',
+  schema: 'core',
+})
 export class Program {
   @PrimaryColumn({ type: 'bigint' })
   id: string;
