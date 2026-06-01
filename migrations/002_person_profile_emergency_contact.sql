@@ -1,0 +1,7 @@
+-- DEPRECADO: el contacto de emergencia vive en core.person (ver 003_core_person_emergency_contact.sql).
+-- Si aplicaste columnas de emergencia aquí por error, puedes eliminarlas:
+--
+-- ALTER TABLE organigrama.person_profile_state
+--   DROP COLUMN IF EXISTS emergency_contact_name,
+--   DROP COLUMN IF EXISTS emergency_contact_phone,
+--   DROP COLUMN IF EXISTS emergency_contact_relationship;

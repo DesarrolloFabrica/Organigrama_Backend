@@ -65,11 +65,14 @@ export type OrgHierarchyPathSegment = {
   hierarchy: OrgNodeHierarchy | null;
 };
 
+export type OrgNodeKind = 'person' | 'vacancy';
+
 /** Resultado de GET /api/org-chart/search?q= */
 export type OrgChartSearchHit = {
   id: string;
   document: string;
   name: string;
+  nodeKind?: OrgNodeKind;
   role_id: string | null;
   role: OrgNodeRole | null;
   hierarchy_id: string | null;
@@ -96,6 +99,11 @@ export type OrgNode = {
   email: string | null;
   edu_email: string | null;
   phone: string | null;
+  /**
+   * `person`: colaborador real; `vacancy`: placeholder en core.person (rol vacante).
+   * La vacante hereda hierarchy del puesto (NIVEL 2–5), no es un NIVEL 6.
+   */
+  nodeKind?: OrgNodeKind;
   /** Número de relaciones directas padre→persona (siempre coherente con BD). */
   direct_reports_count: number;
   children: OrgNode[];
@@ -108,4 +116,6 @@ export type OrgNode = {
   contract_type: OrgNodeContractType | null;
   region_id: number | null;
   location: OrgNodeLocation | null;
+  /** URL provisional de foto; null si no hay imagen disponible. */
+  photoUrl: string | null;
 };

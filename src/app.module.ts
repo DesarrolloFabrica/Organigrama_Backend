@@ -15,7 +15,11 @@ import { Campus } from './catalogs/entities/campus.entity';
 import { ContractType } from './catalogs/entities/contract-type.entity';
 import { Region } from './catalogs/entities/region.entity';
 import { OrganigramaDemoSeedBootstrap } from './database/organigrama-demo-seed.bootstrap';
+import { GoogleWorkspaceModule } from './google-workspace/google-workspace.module';
 import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.entity';
+import { AuthModule } from './auth/auth.module';
+import { ProfileModule } from './profile/profile.module';
+import { PersonProfileState } from './profile/entities/person-profile-state.entity';
 
 @Module({
   imports: [
@@ -75,6 +79,7 @@ import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.enti
             ContractType,
             Region,
             OrgVisualRelation,
+            PersonProfileState,
           ],
           /**
            * Solo para desarrollo: genera/actualiza tablas desde las entidades.
@@ -86,8 +91,11 @@ import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.enti
         };
       },
     }),
+    AuthModule,
+    ProfileModule,
     HealthModule,
     OrgChartModule,
+    GoogleWorkspaceModule,
   ],
   controllers: [AppController],
   providers: [OrganigramaDemoSeedBootstrap],

@@ -1,13 +1,44 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  GoneException,
+  Logger,
+  Param,
+  Query,
+} from '@nestjs/common';
+import {
+  isOrgChartLegacyEnabled,
+  LEGACY_ORG_CHART_DISABLED_MESSAGE,
+} from './org-chart-legacy.config';
 import { OrgChartService } from './org-chart.service';
 
 @Controller('org-chart')
 export class OrgChartController {
+  private readonly log = new Logger(OrgChartController.name);
+
   constructor(private readonly orgChartService: OrgChartService) {}
 
-  /** Devuelve el árbol completo del organigrama. */
+  /**
+   * LEGACY ENDPOINT — @deprecated
+   * Devuelve el árbol completo del organigrama (recursión sin límite).
+   * No usar en frontend principal.
+   * Usar `GET /api/org-chart/root`, `GET /api/org-chart/node/:id` y
+   * `GET /api/org-chart/children/:id` para carga progresiva.
+   */
   @Get()
   getOrgChart() {
+    if (!isOrgChartLegacyEnabled()) {
+      this.log.warn(
+        '[OrgChartLegacy] Blocked deprecated endpoint GET /api/org-chart because ORG_CHART_LEGACY_ENABLED=false',
+      );
+      throw new GoneException({
+        message: LEGACY_ORG_CHART_DISABLED_MESSAGE,
+      });
+    }
+
+    this.log.warn(
+      '[OrgChartLegacy] Deprecated endpoint GET /api/org-chart was called',
+    );
     return this.orgChartService.getOrgChartTree();
   }
 
@@ -23,9 +54,26 @@ export class OrgChartController {
     return this.orgChartService.getPersonDetail(id);
   }
 
-  /** Subárbol con la persona indicada como raíz (misma forma que GET /org-chart). */
+  /**
+   * LEGACY ENDPOINT — @deprecated
+   * Subárbol completo con la persona indicada como raíz (recursión sin límite).
+   * No usar en frontend principal.
+   * Usar `GET /api/org-chart/node/:id` y `GET /api/org-chart/children/:id`.
+   */
   @Get('team/:id')
   getOrgChartTeamRoot(@Param('id') id: string) {
+    if (!isOrgChartLegacyEnabled()) {
+      this.log.warn(
+        '[OrgChartLegacy] Blocked deprecated endpoint GET /api/org-chart/team/:id because ORG_CHART_LEGACY_ENABLED=false',
+      );
+      throw new GoneException({
+        message: LEGACY_ORG_CHART_DISABLED_MESSAGE,
+      });
+    }
+
+    this.log.warn(
+      '[OrgChartLegacy] Deprecated endpoint GET /api/org-chart/team/:id was called',
+    );
     return this.orgChartService.getOrgChartSubtree(id);
   }
 

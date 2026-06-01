@@ -1,8 +1,10 @@
 import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
+import { Public } from '../auth/public.decorator';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
 /** Punto de comprobación simple para monitoreo y smoke tests del API. */
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(

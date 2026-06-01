@@ -18,14 +18,19 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "npm run build && node dist/database/run-seed.js"
+    "seed": "npm run build && node dist/database/run-seed.js",
+    "diag:google-photo": "npm run build && node dist/google-workspace/run-photo-diagnostic.js",
+    "diag:org-photo": "npm run build && node dist/org-chart/run-org-node-photo-diagnostic.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.1",
+    "google-auth-library": "^10.6.2",
+    "googleapis": "^172.0.0",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

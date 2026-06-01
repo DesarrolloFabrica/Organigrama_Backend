@@ -56,7 +56,18 @@ npm install
 | Método | Ruta | Descripción |
 | ------ | ---- | ----------- |
 | GET | `/api/health` | Estado del servicio (`ok`, `app`, `status`). |
-| GET | `/api/org-chart` | Árbol (`id`, `name`, `role`, `level`, `area`, `children`) desde BD. |
+| GET | `/api/org-chart/root` | **Recomendado** — Raíz del organigrama con solo hijos directos (carga inicial). |
+| GET | `/api/org-chart/node/:id` | **Recomendado** — Persona como raíz del lienzo + hijos directos. |
+| GET | `/api/org-chart/children/:id` | **Recomendado** — Solo hijos directos de una persona (expansión lazy). |
+| GET | `/api/org-chart/person/:id` | Detalle ampliado de una persona. |
+| GET | `/api/org-chart/summary/:personId` | Resumen jerárquico (totales, sin árbol JSON). |
+| GET | `/api/org-chart/search?q=` | Búsqueda de personas (hasta 20 resultados). |
+| GET | `/api/org-chart` | **Deprecated (legacy)** — Árbol completo con `children` anidados en todos los niveles. No usar en frontend principal. |
+| GET | `/api/org-chart/team/:id` | **Deprecated (legacy)** — Subárbol completo bajo la persona. Preferir `/node/:id` + `/children/:id`. |
+
+Flujo recomendado para la UI: carga inicial con `/root` o `/node/:id`, y expansión del mapa con `/children/:id` bajo demanda.
+
+Variable `ORG_CHART_LEGACY_ENABLED` (por defecto `true`): en Cloud Run, poner `false` para bloquear los endpoints legacy con **410 Gone** cuando ya no haya consumidores.
 
 ## CORS
 

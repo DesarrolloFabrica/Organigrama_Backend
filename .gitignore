@@ -4,5 +4,6 @@ dist
 .env.local
 .env.core
 coverage
+secrets/
 tools/
 cloud-sql-proxy.exe

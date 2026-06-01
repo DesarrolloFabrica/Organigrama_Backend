@@ -42,7 +42,7 @@ export type BuildOrgNodeFn = (
   catalogs: OrgChartCatalogs,
   children: OrgNode[],
   directReportsCount?: number,
-) => OrgNode;
+) => OrgNode | Promise<OrgNode>;
 
 /**
  * Motor declarativo del árbol visual: aristas en `org-chart.visual-map.ts` + personas en Core.
@@ -96,7 +96,7 @@ export class OrgChartTreeEngine {
           buildOrgNode,
         );
 
-        nodes.push(buildOrgNode(child, catalogs, nestedChildren));
+        nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
       }
 
       return nodes;
@@ -131,7 +131,7 @@ export class OrgChartTreeEngine {
           catalogs,
           buildOrgNode,
         );
-        nodes.push(buildOrgNode(child, catalogs, nestedChildren));
+        nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
       }
     }
 
@@ -164,7 +164,7 @@ export class OrgChartTreeEngine {
             catalogs,
             countMap,
           );
-          return buildOrgNode(child, catalogs, [], directCount);
+          return await buildOrgNode(child, catalogs, [], directCount);
         }),
       );
     }
@@ -206,7 +206,7 @@ export class OrgChartTreeEngine {
           catalogs,
           countMap,
         );
-        return buildOrgNode(child, catalogs, [], directCount);
+        return await buildOrgNode(child, catalogs, [], directCount);
       }),
     );
   }

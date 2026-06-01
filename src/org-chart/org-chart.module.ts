@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Role } from '../catalogs/entities/role.entity';
 import { Person } from '../person/entities/person.entity';
@@ -14,9 +14,12 @@ import { Region } from '../catalogs/entities/region.entity';
 import { Campus } from '../catalogs/entities/campus.entity';
 import { ContractType } from '../catalogs/entities/contract-type.entity';
 import { OrgVisualRelation } from './entities/org-visual-relation.entity';
+import { OrgChartPhotosModule } from './photos/org-chart-photos.module';
+import { ProfileModule } from '../profile/profile.module';
 
 @Module({
   imports: [
+    forwardRef(() => ProfileModule),
     TypeOrmModule.forFeature([
       Person,
       Role,
@@ -30,8 +33,10 @@ import { OrgVisualRelation } from './entities/org-visual-relation.entity';
       Region,
       OrgVisualRelation,
     ]),
+    OrgChartPhotosModule,
   ],
   controllers: [OrgChartController],
   providers: [OrgChartService, OrgChartTreeEngine],
+  exports: [OrgChartService],
 })
 export class OrgChartModule {}

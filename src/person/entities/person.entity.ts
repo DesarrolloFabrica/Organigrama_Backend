@@ -98,6 +98,15 @@ export class Person {
   @Column({ type: 'varchar', length: 250, nullable: true })
   address: string | null;
 
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  emergency_contact_name: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  emergency_contact_phone: string | null;
+
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  emergency_contact_relationship: string | null;
+
   /** Nombre completo de la persona. */
   @Column({ type: 'varchar', length: 250, nullable: false })
   full_name: string;

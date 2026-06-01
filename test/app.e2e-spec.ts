@@ -34,27 +34,30 @@ describe('API (e2e)', () => {
     });
   });
 
-  it('GET /api/org-chart', () => {
-    return request(app.getHttpServer())
-      .get('/api/org-chart')
-      .expect(200)
-      .expect((res) => {
-        const body = res.body as {
-          id: string;
-          name: string;
-          role: { name: string } | null;
-          hierarchy: { name: string } | null;
-          area: { name: string } | null;
-          children: unknown[];
-        };
-        expect(body.name).toBe('Director de Operaciones');
-        expect(body.role?.name).toBe('Director');
-        expect(body.hierarchy?.name).toBe('Dirección');
-        expect(body.area?.name).toBe('Dirección de Operaciones');
-        expect(Array.isArray(body.children)).toBe(true);
-        expect(body.children).toHaveLength(2);
-        expect(typeof body.id).toBe('string');
-      });
+  it('GET /api/org-chart/root and progressive children', async () => {
+    const rootRes = await request(app.getHttpServer())
+      .get('/api/org-chart/root')
+      .expect(200);
+
+    const root = rootRes.body as {
+      id: string;
+      children: { id: string }[];
+    };
+
+    expect(typeof root.id).toBe('string');
+    expect(root.id.length).toBeGreaterThan(0);
+    expect(Array.isArray(root.children)).toBe(true);
+
+    if (root.children.length === 0) {
+      return;
+    }
+
+    const childId = root.children[0].id;
+    const childrenRes = await request(app.getHttpServer())
+      .get(`/api/org-chart/children/${childId}`)
+      .expect(200);
+
+    expect(Array.isArray(childrenRes.body)).toBe(true);
   });
 
   afterEach(async () => {

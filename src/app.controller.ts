@@ -1,6 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
+import { Public } from './auth/public.decorator';
 
 /** Raíz del API bajo el prefijo global `api` → GET /api */
+@Public()
 @Controller()
 export class AppController {
   @Get()
