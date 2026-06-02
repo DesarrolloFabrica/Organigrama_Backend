@@ -27,7 +27,8 @@ import type {
 import { resolveOrgLevelFromRoleName } from './org-chart.visual-map';
 import {
   isVacancyPerson as detectVacancyPerson,
-  resolveOrgNodeKindFromRoleName,
+  resolveOrgNodeKindFromPerson,
+  VACANCY_PERSON_SQL_WHERE,
   VACANCY_ROLE_NAMES_NORMALIZED,
 } from './org-chart-vacancy';
 import { findActivePeopleByRoleName } from './org-chart-person.query';
@@ -489,7 +490,8 @@ export class OrgChartService {
   /**
    * Resumen jerárquico de un nodo:
    *  - general: total de descendientes del nodo actual.
-   *  - areas: solo hijos directos, cada uno con el total completo de su jerarquía.
+   *  - areas: hijos directos que no son vacantes, con totales de su jerarquía.
+   *  - vacancyItems: nivel visual 1 → todas las vacantes del subárbol; nivel 2+ → solo vacantes directas.
    *
    * `totalPeople` incluye vacantes y personas reales bajo el nodo (sin contar al propio nodo).
    * `vacancies` cuenta placeholders con rol vacante (descendientes; en `areas` también el hijo directo si aplica).
@@ -509,24 +511,28 @@ export class OrgChartService {
     const role = person.role_id
       ? catalogs.roleById.get(String(person.role_id))
       : undefined;
+    const viewerVisualLevel = resolveOrgLevelFromRoleName(role?.name);
+    const includeSubtreeVacancies = viewerVisualLevel === 1;
 
-    const [totalPeople, generalVacancies] = await Promise.all([
-      this.countAllDescendants(personId),
-      this.countVacancyDescendants(personId),
-    ]);
-
-    const directChildRows: { child_person_id: string }[] =
-      await this.dataSource.query(
-        `SELECT child_person_id
-           FROM organigrama.org_visual_relation
-          WHERE parent_person_id = $1
-            AND is_active = true`,
-        [personId],
-      );
+    const [totalPeople, directChildRows, subtreeVacancyRows] =
+      await Promise.all([
+        this.countAllDescendants(personId),
+        this.dataSource.query(
+          `SELECT child_person_id
+             FROM organigrama.org_visual_relation
+            WHERE parent_person_id = $1
+              AND is_active = true`,
+          [personId],
+        ) as Promise<{ child_person_id: string }[]>,
+        includeSubtreeVacancies
+          ? this.listVacanciesInSubtree(personId)
+          : Promise.resolve([]),
+      ]);
 
     const childIds = directChildRows.map((r) => r.child_person_id);
 
     let areas: OrgSummaryResponseDto['areas'] = [];
+    let vacancyItems: OrgSummaryResponseDto['vacancyItems'] = [];
 
     if (childIds.length > 0) {
       const childPersons = await this.persons.find({
@@ -534,30 +540,79 @@ export class OrgChartService {
       });
 
       const childMap = new Map(childPersons.map((p) => [String(p.id), p]));
+      const orderedChildren = childIds
+        .filter((id) => childMap.has(id))
+        .map((id) => childMap.get(id)!);
 
-      areas = await Promise.all(
-        childIds
-          .filter((id) => childMap.has(id))
-          .map(async (id) => {
-            const child = childMap.get(id)!;
+      const directVacancyPeople = orderedChildren.filter((child) =>
+        this.isVacancyPerson(child, catalogs),
+      );
+      const directTeamPeople = orderedChildren.filter(
+        (child) => !this.isVacancyPerson(child, catalogs),
+      );
+
+      vacancyItems = includeSubtreeVacancies
+        ? subtreeVacancyRows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            roleName: row.roleName,
+            totalPeople: 0,
+            vacancies: 0,
+            nodeKind: 'vacancy' as const,
+          }))
+        : directVacancyPeople.map((child) => {
             const childRole = child.role_id
               ? catalogs.roleById.get(String(child.role_id))
               : undefined;
-            const [childTotal, childVacancies] = await Promise.all([
-              this.countAllDescendants(id),
-              this.countVacanciesInSubtree(id, true),
-            ]);
-
             return {
               id: String(child.id),
               name: child.full_name,
               roleName: childRole?.name ?? null,
-              totalPeople: childTotal,
-              vacancies: childVacancies,
+              totalPeople: 0,
+              vacancies: 0,
+              nodeKind: 'vacancy' as const,
             };
-          }),
+          });
+
+      areas = await Promise.all(
+        directTeamPeople.map(async (child) => {
+          const id = String(child.id);
+          const childRole = child.role_id
+            ? catalogs.roleById.get(String(child.role_id))
+            : undefined;
+          const [childTotal, childVacancies] = await Promise.all([
+            this.countAllDescendants(id),
+            this.countVacanciesInSubtree(id, true),
+          ]);
+
+          return {
+            id,
+            name: child.full_name,
+            roleName: childRole?.name ?? null,
+            totalPeople: childTotal,
+            vacancies: childVacancies,
+            nodeKind: 'person' as const,
+          };
+        }),
       );
+    } else if (includeSubtreeVacancies) {
+      vacancyItems = subtreeVacancyRows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        roleName: row.roleName,
+        totalPeople: 0,
+        vacancies: 0,
+        nodeKind: 'vacancy' as const,
+      }));
     }
+
+    const generalVacancies = includeSubtreeVacancies
+      ? await this.countVacancyDescendants(personId)
+      : vacancyItems.length;
+
+    const generalNodeKind = this.isVacancyPerson(person, catalogs)
+      ? ('vacancy' as const)
+      : ('person' as const);
 
     return {
       general: {
@@ -566,8 +621,10 @@ export class OrgChartService {
         roleName: role?.name ?? null,
         totalPeople,
         vacancies: generalVacancies,
+        nodeKind: generalNodeKind,
       },
       areas,
+      vacancyItems,
     };
   }
 
@@ -684,7 +741,7 @@ export class OrgChartService {
       ? (catalogs.contractTypeById.get(String(person.contract_type_id)) ?? null)
       : null;
 
-    const nodeKind = resolveOrgNodeKindFromRoleName(role?.name);
+    const nodeKind = resolveOrgNodeKindFromPerson(person, role);
 
     const directReportsCount = await this.countDirectVisualChildren(
       String(person.id),
@@ -889,9 +946,9 @@ export class OrgChartService {
         INNER JOIN core.person p
           ON p.id = s.person_id
           AND p.is_active = true
-        INNER JOIN core.role ro
+        LEFT JOIN core.role ro
           ON ro.id = p.role_id
-        WHERE UPPER(TRIM(ro.name)) = ANY($2::text[]);
+        WHERE ${VACANCY_PERSON_SQL_WHERE};
         `,
         [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED],
       );
@@ -927,14 +984,69 @@ export class OrgChartService {
       INNER JOIN core.person p
         ON p.id = d.person_id
         AND p.is_active = true
-      INNER JOIN core.role ro
+      LEFT JOIN core.role ro
         ON ro.id = p.role_id
-      WHERE UPPER(TRIM(ro.name)) = ANY($2::text[]);
+      WHERE ${VACANCY_PERSON_SQL_WHERE};
       `,
       [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED],
     );
 
     return Number(result?.[0]?.total ?? 0);
+  }
+
+  /**
+   * Placeholders de vacante bajo `rootPersonId` (descendientes activos, sin el propio nodo).
+   */
+  private async listVacanciesInSubtree(
+    rootPersonId: string,
+  ): Promise<{ id: string; name: string; roleName: string | null }[]> {
+    const result = await this.dataSource.query<
+      { id: string; name: string; role_name: string | null }[]
+    >(
+      `
+      WITH RECURSIVE descendants AS (
+        SELECT
+          r.child_person_id AS person_id
+        FROM organigrama.org_visual_relation r
+        INNER JOIN core.person p
+          ON p.id = r.child_person_id
+          AND p.is_active = true
+        WHERE r.parent_person_id = $1
+          AND r.is_active = true
+
+        UNION ALL
+
+        SELECT
+          r.child_person_id
+        FROM organigrama.org_visual_relation r
+        INNER JOIN descendants d
+          ON r.parent_person_id = d.person_id
+        INNER JOIN core.person p
+          ON p.id = r.child_person_id
+          AND p.is_active = true
+        WHERE r.is_active = true
+      )
+      SELECT
+        p.id::text AS id,
+        p.full_name AS name,
+        ro.name AS role_name
+      FROM descendants d
+      INNER JOIN core.person p
+        ON p.id = d.person_id
+        AND p.is_active = true
+      LEFT JOIN core.role ro
+        ON ro.id = p.role_id
+      WHERE ${VACANCY_PERSON_SQL_WHERE}
+      ORDER BY p.full_name ASC, p.id ASC;
+      `,
+      [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED],
+    );
+
+    return (result ?? []).map((row) => ({
+      id: String(row.id),
+      name: row.name ?? '',
+      roleName: row.role_name ?? null,
+    }));
   }
 
   private isVacancyPerson(person: Person, catalogs: OrgCatalogs): boolean {
@@ -1052,7 +1164,7 @@ export class OrgChartService {
       ? (catalogs.regionById.get(String(person.region_id)) ?? null)
       : null;
 
-    const nodeKind = resolveOrgNodeKindFromRoleName(role?.name);
+    const nodeKind = resolveOrgNodeKindFromPerson(person, role);
 
     return {
       id: String(person.id),
