@@ -5,6 +5,7 @@ import { Person } from '../person/entities/person.entity';
 import { OrgChartController } from './org-chart.controller';
 import { OrgChartService } from './org-chart.service';
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
+import { OrgChartVisibilityService } from './org-chart-visibility.service';
 import { Hierarchy } from '../catalogs/entities/hierarchy.entity';
 import { Area } from '../catalogs/entities/area.entity';
 import { School } from '../catalogs/entities/school.entity';
@@ -36,7 +37,8 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartPhotosModule,
   ],
   controllers: [OrgChartController],
-  providers: [OrgChartService, OrgChartTreeEngine],
-  exports: [OrgChartService],
+  providers: [OrgChartService, OrgChartTreeEngine, OrgChartVisibilityService],
+  exports: [OrgChartService, OrgChartVisibilityService],
+
 })
 export class OrgChartModule {}

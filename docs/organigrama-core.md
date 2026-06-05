@@ -95,7 +95,86 @@ Endpoints legacy (deprecados)
 - `GET /api/org-chart` — árbol completo con `children` anidados (recursión sin límite).
 - `GET /api/org-chart/team/:id` — subárbol completo bajo la persona.
 
-No deben usarse en nuevos clientes ni en el frontend principal. Pueden desactivarse en el servidor con `ORG_CHART_LEGACY_ENABLED=false` (responden **410 Gone** con mensaje de reemplazo).
+No deben usarse en nuevos clientes ni en el frontend principal. El frontend activo (`Organigrama_Frontend`) **no** llama a estos endpoints en rutas montadas; usa `/api/org-chart/root`, `/node/:id` y `/children/:id`.
+
+### Producción: desactivar endpoints legacy
+
+En **Cloud Run** (y cualquier entorno productivo) configurar:
+
+```env
+ORG_CHART_LEGACY_ENABLED=false
+```
+
+Comportamiento con `false`:
+
+| Ruta | HTTP | Cuerpo |
+|------|------|--------|
+| `GET /api/org-chart` | **410 Gone** | Mensaje: usar `/api/org-chart/root`, `/node/:id`, `/children/:id` |
+| `GET /api/org-chart/team/:id` | **410 Gone** | Igual |
+
+Siguen protegidos por JWT (no son públicos sin sesión): sin token → **401**; con token y legacy desactivado → **410**.
+
+**Verificación post-deploy (Cloud Run):**
+
+```bash
+# Sustituir URL del servicio y un JWT válido
+API="https://TU-SERVICIO-REGION.run.app"
+TOKEN="eyJ..."
+
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$API/api/org-chart"
+# Esperado: 410
+
+curl -s -H "Authorization: Bearer $TOKEN" "$API/api/org-chart"
+# Esperado: JSON con "message" indicando endpoints de reemplazo
+
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$API/api/org-chart/team/1144"
+# Esperado: 410
+```
+
+**Confirmar variable en Cloud Run:**
+
+```bash
+gcloud run services describe NOMBRE_SERVICIO \
+  --region=REGION \
+  --format="yaml(spec.template.spec.containers[0].env)" \
+  | grep -A1 ORG_CHART_LEGACY_ENABLED
+```
+
+Debe aparecer `value: 'false'`. Si se usa Secret Manager o archivo de entorno del servicio, revisar la revisión desplegada activa en la consola: Cloud Run → Servicio → Revisión → Variables de entorno.
+
+Referencia local: `Organigrama_Backend/.env.example` trae `ORG_CHART_LEGACY_ENABLED=false` como valor recomendado.
+
+## Visibilidad jerárquica de información (ficha y API)
+
+Regla aplicada en backend (`OrgChartVisibilityService` + redacción en respuestas HTTP). La jerarquía válida es la del grafo **`organigrama.org_visual_relation`** (no `core.hierarchy.level`).
+
+### Quién ve ficha completa
+
+| Relación del usuario autenticado (viewer) con la persona consultada (target) | `canViewFullProfile` | Datos en API |
+|-------------------------------------------------------------------------------|----------------------|--------------|
+| **Self** — el viewer es la misma persona | `true` | Ficha completa (`profile` con documento, teléfono, correo personal, emergencia, ubicación, etc.) |
+| **Descendiente** — target está en el subárbol visual bajo el viewer (hijos, nietos, toda la cadena hacia abajo) | `true` | Igual |
+| **Jefe / ancestro** — target está por encima en la cadena visual | `false` | Vista pública mínima |
+| **Par u otra rama** — sin relación ascendente/descendente en `org_visual_relation` | `false` | Vista pública mínima |
+
+En términos operativos: un colaborador ve ficha completa de **sí mismo** y de **todo su equipo hacia abajo**; hacia **jefes, pares y otras áreas** solo información pública mínima.
+
+### Vista pública mínima (sin ficha completa)
+
+Expuesta en `GET /api/org-chart/person/:id` cuando `canViewFullProfile: false`:
+
+- `id`, `name`, `institutionalEmail` (`edu_email` en Core)
+- `photoUrl` institucional (si existe y el proxy de fotos la resuelve)
+- `canViewFullProfile: false`
+- `profile: null` (sin documento, teléfono, correo personal, dirección, emergencia, etc.)
+
+El **mapa** (`/root`, `/node/:id`, `/children/:id`) sigue mostrando nodos para navegar; cada nodo se **redacta** por viewer (sin exponer PII extendida en JSON de nodos ajenos).
+
+**Búsqueda** (`/search`): puede encontrar personas fuera de la rama; los hits sin permiso llegan sin documento, teléfono, correo personal ni rol/ruta.
+
+**Resúmenes** (`/summary/:personId`, `/summary/general-areas`): nombres y métricas de conteo; `roleName` solo si el viewer tiene permiso de ficha completa sobre esa persona.
+
+Archivos: `src/org-chart/org-chart-visibility.service.ts`, `org-chart-visibility.mapper.ts`, integración en `org-chart.service.ts`.
 
 Estado actual probado
 

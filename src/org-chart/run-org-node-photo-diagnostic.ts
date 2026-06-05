@@ -69,7 +69,8 @@ async function main() {
     console.log(JSON.stringify(googleIds, null, 2));
 
     orgChart.clearResponseCaches();
-    const rootFresh = await orgChart.getOrgChartRoot();
+    const diagViewerId = process.env.ORG_CHART_DIAG_VIEWER_ID ?? '1144';
+    const rootFresh = await orgChart.getOrgChartRoot(diagViewerId);
     const nodeFresh = findNodeByName(rootFresh, TARGET_NAME);
 
     console.log('\n--- GET /api/org-chart/root (caché limpiada, servicio directo) ---');
@@ -83,7 +84,7 @@ async function main() {
       console.log(JSON.stringify(pickNodeFields(nodeFresh), null, 2));
     }
 
-    const rootCached = await orgChart.getOrgChartRoot();
+    const rootCached = await orgChart.getOrgChartRoot(diagViewerId);
     const nodeCached = nodeFresh ? findNodeByName(rootCached, TARGET_NAME) : null;
     console.log('\n--- Segunda llamada getOrgChartRoot (puede ser cache hit) ---');
     console.log(
@@ -116,13 +117,14 @@ async function main() {
       );
 
       orgChart.clearResponseCaches();
-      const detail = await orgChart.getPersonDetail(personId);
+      const detail = await orgChart.getPersonDetail(personId, diagViewerId);
       console.log('\n--- GET /api/org-chart/person/:id (servicio directo) ---');
       console.log(
         JSON.stringify(
           {
             id: detail.id,
-            full_name: detail.full_name,
+            name: detail.name,
+            canViewFullProfile: detail.canViewFullProfile,
             photoUrl: detail.photoUrl,
           },
           null,
@@ -131,7 +133,7 @@ async function main() {
       );
 
       orgChart.clearResponseCaches();
-      const nodeAsRoot = await orgChart.getOrgChartNode(personId);
+      const nodeAsRoot = await orgChart.getOrgChartNode(personId, diagViewerId);
       console.log('\n--- GET /api/org-chart/node/:id (persona como raíz del lienzo) ---');
       console.log(JSON.stringify(pickNodeFields(nodeAsRoot), null, 2));
 
@@ -150,7 +152,10 @@ async function main() {
 
       for (const row of parentRows) {
         orgChart.clearResponseCaches();
-        const siblings = await orgChart.getOrgChartChildren(row.parent_id);
+        const siblings = await orgChart.getOrgChartChildren(
+          row.parent_id,
+          diagViewerId,
+        );
         const self = siblings.find(
           (c) =>
             c.name?.trim().toUpperCase() === TARGET_NAME.trim().toUpperCase(),
@@ -174,6 +179,7 @@ async function main() {
 
       const children = await orgChart.getOrgChartChildren(
         String(rootFresh.id),
+        diagViewerId,
       );
       const selfInChildren = children.find(
         (c) => c.name?.trim().toUpperCase() === TARGET_NAME.trim().toUpperCase(),
