@@ -15,6 +15,10 @@ import { Campus } from './catalogs/entities/campus.entity';
 import { ContractType } from './catalogs/entities/contract-type.entity';
 import { Region } from './catalogs/entities/region.entity';
 import { OrganigramaDemoSeedBootstrap } from './database/organigrama-demo-seed.bootstrap';
+import {
+  buildPgPoolExtra,
+  createTypeOrmDataSource,
+} from './database/typeorm-data-source.factory';
 import { GoogleWorkspaceModule } from './google-workspace/google-workspace.module';
 import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.entity';
 import { AuthModule } from './auth/auth.module';
@@ -52,6 +56,7 @@ import { PersonProfileState } from './profile/entities/person-profile-state.enti
         });
 
         const isProd = config.get<string>('NODE_ENV') === 'production';
+        const poolExtra = buildPgPoolExtra(isProd);
 
         return {
           type: 'postgres' as const,
@@ -64,9 +69,7 @@ import { PersonProfileState } from './profile/entities/person-profile-state.enti
           /** Producción: pocos reintentos + timeout corto (Cloud Run ya tiene el puerto abierto). */
           retryAttempts: isProd ? 2 : 10,
           retryDelay: isProd ? 1000 : 3000,
-          extra: {
-            connectionTimeoutMillis: isProd ? 10_000 : undefined,
-          },
+          extra: poolExtra,
           entities: [
             Person,
             Role,
@@ -89,6 +92,14 @@ import { PersonProfileState } from './profile/entities/person-profile-state.enti
           logging: config.get<string>('DB_LOGGING', 'false') === 'true',
           ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
         };
+      },
+      dataSourceFactory: async (options) => {
+        if (!options) {
+          throw new Error(
+            'TypeORM dataSourceFactory recibió options indefinidas.',
+          );
+        }
+        return createTypeOrmDataSource(options, new Logger('TypeORM'));
       },
     }),
     AuthModule,

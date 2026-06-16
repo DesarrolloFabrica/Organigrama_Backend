@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
   forwardRef,
@@ -24,7 +25,10 @@ import { ProfileCompletionService } from './profile-completion.service';
 import type { AuthenticatedSessionContext } from '../auth/types/authenticated-session.context';
 import { OrgChartService } from '../org-chart/org-chart.service';
 import { PhotoCacheService } from '../org-chart/photos/photo-cache.service';
-import { getApiPublicBaseUrl, isOrgChartPhotosEnabled } from '../org-chart/photos/photo.config';
+import {
+  getApiPublicBaseUrl,
+  isOrgChartPhotosEnabled,
+} from '../org-chart/photos/photo.config';
 import { PROFILE_PHOTO_SOURCE_GOOGLE } from './profile-photo.constants';
 import type {
   ProfileEmergencyContactResponse,
@@ -34,6 +38,8 @@ import type {
 
 @Injectable()
 export class ProfileService {
+  private readonly log = new Logger(ProfileService.name);
+
   constructor(
     @InjectRepository(Person)
     private readonly persons: Repository<Person>,
@@ -97,9 +103,30 @@ export class ProfileService {
   async updateProfileMe(
     personId: string,
     dto: UpdateProfileDto,
+    options?: { timing?: boolean },
   ): Promise<ProfileMeResponse> {
+    const timing = options?.timing === true;
+    const step = (label: string, startMs: number) => {
+      if (!timing) return;
+      const elapsedMs = Date.now() - startMs;
+      if (elapsedMs > 1000) {
+        this.log.warn(
+          `[Profile] paso lento ${label}: ${elapsedMs}ms personId=${personId}`,
+        );
+      } else {
+        this.log.debug(
+          `[Profile] ${label}: ${elapsedMs}ms personId=${personId}`,
+        );
+      }
+    };
+
+    let t = Date.now();
     const person = await this.requireActiveCollaborator(personId);
+    step('requireActiveCollaborator', t);
+
+    t = Date.now();
     const state = await this.ensureProfileState(personId);
+    step('ensureProfileState', t);
 
     if (dto.document !== undefined) {
       person.document = this.normalizeDocument(dto.document);
@@ -144,7 +171,9 @@ export class ProfileService {
       );
     }
 
+    t = Date.now();
     await this.persons.save(person);
+    step('persons.save', t);
 
     state.profile_updated_by_user_at = new Date();
 
@@ -159,12 +188,19 @@ export class ProfileService {
       state.profile_completed_at = new Date();
     }
 
+    t = Date.now();
     await this.profileStates.save(state);
+    step('profileStates.save', t);
 
-    return this.buildProfileResponse(person, state);
+    t = Date.now();
+    const response = await this.buildProfileResponse(person, state);
+    step('buildProfileResponse', t);
+    return response;
   }
 
-  async resetOnboardingByEduEmail(eduEmail: string): Promise<{ personId: string }> {
+  async resetOnboardingByEduEmail(
+    eduEmail: string,
+  ): Promise<{ personId: string }> {
     const normalized = normalizeInstitutionalEmail(eduEmail);
     if (!normalized) {
       throw new BadRequestException('edu_email inválido');
@@ -217,7 +253,9 @@ export class ProfileService {
     return person;
   }
 
-  private async ensureProfileState(personId: string): Promise<PersonProfileState> {
+  private async ensureProfileState(
+    personId: string,
+  ): Promise<PersonProfileState> {
     const existing = await this.profileStates.findOne({
       where: { person_id: personId },
     });
@@ -305,7 +343,10 @@ export class ProfileService {
       Boolean(state.profile_photo_url?.trim());
 
     if (!hasGoogle || !isOrgChartPhotosEnabled()) {
-      return { source: hasGoogle ? PROFILE_PHOTO_SOURCE_GOOGLE : null, photoUrl: null };
+      return {
+        source: hasGoogle ? PROFILE_PHOTO_SOURCE_GOOGLE : null,
+        photoUrl: null,
+      };
     }
 
     return {
@@ -347,7 +388,9 @@ export class ProfileService {
     }
 
     if (trimmed.length > 80) {
-      throw new BadRequestException('El documento excede la longitud permitida');
+      throw new BadRequestException(
+        'El documento excede la longitud permitida',
+      );
     }
 
     return trimmed;
