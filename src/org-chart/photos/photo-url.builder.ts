@@ -38,7 +38,10 @@ export class PhotoUrlBuilder {
     return testUrl;
   }
 
-  shouldExposeProxyUrl(person: Person, hasPersistedGooglePhoto = false): boolean {
+  shouldExposeProxyUrl(
+    person: Person,
+    hasPersistedGooglePhoto = false,
+  ): boolean {
     if (hasPersistedGooglePhoto) {
       return true;
     }

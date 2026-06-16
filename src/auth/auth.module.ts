@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { getJwtExpiresIn, getJwtSecret } from './auth.config';
 import { GoogleTokenService } from './google-token.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
         expiresIn: getJwtExpiresIn() as `${number}d`,
       },
     }),
+    PermissionsModule,
   ],
   controllers: [AuthController],
   providers: [

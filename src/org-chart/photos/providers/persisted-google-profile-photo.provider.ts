@@ -29,10 +29,7 @@ export class PersistedGoogleProfilePhotoProvider implements PhotoSourceProvider 
 
   getCacheKey(context: PhotoResolveContext): string | null {
     const url = context.profilePhotoUrl?.trim();
-    if (
-      context.profilePhotoSource !== PROFILE_PHOTO_SOURCE_GOOGLE ||
-      !url
-    ) {
+    if (context.profilePhotoSource !== PROFILE_PHOTO_SOURCE_GOOGLE || !url) {
       return null;
     }
 

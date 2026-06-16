@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  getOrgChartPhotoTestUrl,
-  isRootMockEligible,
-} from '../photo.config';
+import { getOrgChartPhotoTestUrl, isRootMockEligible } from '../photo.config';
 import type {
   PhotoPayload,
   PhotoResolveContext,

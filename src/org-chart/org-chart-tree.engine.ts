@@ -57,24 +57,16 @@ export class OrgChartTreeEngine {
     private readonly visualRelations: Repository<OrgVisualRelation>,
   ) {}
 
-  /**
-   * Construye los nodos hijos directos de `parent` según las aristas visuales cuyo padre
-   * coincide con el rol de `parent`, y recurre para cada hijo encontrado.
-   *
-   * Flujo:
-   * 1. Resolver `core.role.name` del padre vía `catalogs.roleById`.
-   * 2. `getEdgesForParentRole` → reglas hijas aplicables (orden del `visual-map`).
-   * 3. Por cada arista: `findActivePeopleByRoleName` (match + emails opcionales).
-   * 4. Por cada persona hija: recursión con `buildChildrenForPerson` + `buildOrgNode` al cerrar.
-   */
   async buildChildrenForPerson(
     parent: Person,
     catalogs: OrgChartCatalogs,
     buildOrgNode: BuildOrgNodeFn,
+    versionId: string,
   ): Promise<OrgNode[]> {
     const visualRelations = await findActiveVisualRelationsByParentId(
       this.visualRelations,
       String(parent.id),
+      versionId,
     );
 
     if (visualRelations.length > 0) {
@@ -94,6 +86,7 @@ export class OrgChartTreeEngine {
           child,
           catalogs,
           buildOrgNode,
+          versionId,
         );
 
         nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
@@ -130,6 +123,7 @@ export class OrgChartTreeEngine {
           child,
           catalogs,
           buildOrgNode,
+          versionId,
         );
         nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
       }
@@ -142,10 +136,12 @@ export class OrgChartTreeEngine {
     parent: Person,
     catalogs: OrgChartCatalogs,
     buildOrgNode: BuildOrgNodeFn,
+    versionId: string,
   ): Promise<OrgNode[]> {
     const visualRelations = await findActiveVisualRelationsByParentId(
       this.visualRelations,
       String(parent.id),
+      versionId,
     );
 
     if (visualRelations.length > 0) {
@@ -155,6 +151,7 @@ export class OrgChartTreeEngine {
 
       const countMap = await this.countActiveDirectChildrenByParentIds(
         orderedChildren.map((c) => String(c.id)),
+        versionId,
       );
 
       return Promise.all(
@@ -163,6 +160,7 @@ export class OrgChartTreeEngine {
             child,
             catalogs,
             countMap,
+            versionId,
           );
           return await buildOrgNode(child, catalogs, [], directCount);
         }),
@@ -197,6 +195,7 @@ export class OrgChartTreeEngine {
 
     const countMap = await this.countActiveDirectChildrenByParentIds(
       candidates.map((c) => String(c.id)),
+      versionId,
     );
 
     return Promise.all(
@@ -205,6 +204,7 @@ export class OrgChartTreeEngine {
           child,
           catalogs,
           countMap,
+          versionId,
         );
         return await buildOrgNode(child, catalogs, [], directCount);
       }),
@@ -235,6 +235,7 @@ export class OrgChartTreeEngine {
    */
   private async countActiveDirectChildrenByParentIds(
     parentIds: string[],
+    versionId: string,
   ): Promise<Map<string, number>> {
     const map = new Map<string, number>();
     if (parentIds.length === 0) {
@@ -246,8 +247,11 @@ export class OrgChartTreeEngine {
       .createQueryBuilder('r')
       .innerJoin(Person, 'p', 'p.id = r.child_person_id')
       .select('r.parent_person_id', 'parentId')
-      .addSelect('COUNT(*)', 'cnt')
-      .where('r.parent_person_id IN (:...parentIds)', { parentIds: uniqueIds })
+      .addSelect('COUNT(DISTINCT r.child_person_id)', 'cnt')
+      .where('r.version_id = :versionId', { versionId })
+      .andWhere('r.parent_person_id IN (:...parentIds)', {
+        parentIds: uniqueIds,
+      })
       .andWhere('r.is_active = :relActive', { relActive: true })
       .andWhere('p.is_active = :personActive', { personActive: true })
       .groupBy('r.parent_person_id')
@@ -264,10 +268,12 @@ export class OrgChartTreeEngine {
   private async countDirectChildrenForPerson(
     person: Person,
     catalogs: OrgChartCatalogs,
+    versionId: string,
   ): Promise<number> {
     const visualRelations = await findActiveVisualRelationsByParentId(
       this.visualRelations,
       String(person.id),
+      versionId,
     );
 
     if (visualRelations.length > 0) {
@@ -311,11 +317,12 @@ export class OrgChartTreeEngine {
     person: Person,
     catalogs: OrgChartCatalogs,
     visualCountMap: Map<string, number>,
+    versionId: string,
   ): Promise<number> {
     const id = String(person.id);
     if (visualCountMap.has(id)) {
       return visualCountMap.get(id) ?? 0;
     }
-    return this.countDirectChildrenForPerson(person, catalogs);
+    return this.countDirectChildrenForPerson(person, catalogs, versionId);
   }
 }

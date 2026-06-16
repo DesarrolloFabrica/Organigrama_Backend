@@ -45,3 +45,30 @@ export function isCollaboratorEduEmail(eduEmail: string): boolean {
 
   return parsed.local.includes('_');
 }
+
+/**
+ * Devuelve el Set de correos técnicos autorizados (ORG_TECHNICAL_EMAILS).
+ * Son usuarios que pueden autenticarse aunque su edu_email no contenga `_`.
+ * Se normalizan a trim + lowercase.
+ */
+export function getTechnicalEmailsSet(): Set<string> {
+  const raw = process.env.ORG_TECHNICAL_EMAILS ?? '';
+  if (!raw.trim()) {
+    return new Set();
+  }
+  return new Set(
+    raw
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+/**
+ * Indica si el correo corresponde a un usuario técnico registrado en ORG_TECHNICAL_EMAILS.
+ * Estos usuarios pasan la validación institucional aunque su email no contenga `_`.
+ */
+export function isTechnicalUser(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  return getTechnicalEmailsSet().has(normalized);
+}

@@ -10,7 +10,7 @@ describe('ProfileCompletionService', () => {
     emergency_contact_name: null,
     emergency_contact_phone: null,
     emergency_contact_relationship: null,
-  } as Person;
+  } as unknown as Person;
 
   it('exige documento numérico de al menos 6 dígitos', () => {
     expect(service.isDocumentValid('12345')).toBe(false);

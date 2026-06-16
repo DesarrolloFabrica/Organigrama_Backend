@@ -46,7 +46,9 @@ export class GoogleTokenService {
         throw err;
       }
 
-      throw new UnauthorizedException('No se pudo validar el inicio de sesión con Google');
+      throw new UnauthorizedException(
+        'No se pudo validar el inicio de sesión con Google',
+      );
     }
   }
 }

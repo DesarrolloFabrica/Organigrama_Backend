@@ -28,10 +28,7 @@ export class SessionGoogleLoginPhotoProvider implements PhotoSourceProvider {
 
   getCacheKey(context: PhotoResolveContext): string | null {
     const pictureUrl = context.session?.googlePictureUrl?.trim();
-    if (
-      !pictureUrl ||
-      context.session?.personId !== context.personId
-    ) {
+    if (!pictureUrl || context.session?.personId !== context.personId) {
       return null;
     }
     return `${context.personId}:session-google:${pictureUrl}`;

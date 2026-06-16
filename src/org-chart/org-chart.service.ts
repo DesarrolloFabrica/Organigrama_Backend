@@ -35,7 +35,10 @@ import { findActivePeopleByRoleName } from './org-chart-person.query';
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
 import { PhotoUrlBuilder } from './photos/photo-url.builder';
 import { ProfilePhotoLookupService } from './photos/profile-photo-lookup.service';
-import { getApiPublicBaseUrl, isOrgChartPhotosEnabled } from './photos/photo.config';
+import {
+  getApiPublicBaseUrl,
+  isOrgChartPhotosEnabled,
+} from './photos/photo.config';
 import type { GeneralAreaSummaryDto } from './types/general-area-summary.dto';
 import type { OrgPersonDetailResponseDto } from './types/org-person-detail.response';
 import type { OrgPersonFullProfileDto } from './types/org-person-full-profile.dto';
@@ -50,6 +53,8 @@ import {
   redactOrgNodeTreeForViewer,
   redactOrgSummaryItem,
 } from './org-chart-visibility.mapper';
+import type { OrgViewerContext } from './org-viewer-context';
+import { viewerHasGlobalReadAccess } from './org-viewer-context';
 
 // ─── Catalog maps helper ──────────────────────────────────────────────────────
 
@@ -103,8 +108,10 @@ export class OrgChartService {
 
   private readonly catalogsCacheTtlMs = 5 * 60 * 1000;
 
-  private orgChartRootCache: { value: OrgNode; expiresAt: number } | null =
-    null;
+  private orgChartRootCache = new Map<
+    string,
+    { value: OrgNode; expiresAt: number }
+  >();
 
   private orgChartNodeCache = new Map<
     string,
@@ -150,47 +157,70 @@ export class OrgChartService {
     private readonly visibility: OrgChartVisibilityService,
   ) {}
 
+  private nodeCacheKey(versionId: string, personId: string): string {
+    return `${versionId}:${personId}`;
+  }
+
   private async applyTreeVisibility(
     node: OrgNode,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgNode> {
-    const descendants =
-      await this.visibility.getVisibleDescendantIds(viewerPersonId);
-    return redactOrgNodeTreeForViewer(node, viewerPersonId, descendants);
+    if (viewerHasGlobalReadAccess(viewer)) {
+      return node;
+    }
+    const descendants = await this.visibility.getVisibleDescendantIds(
+      viewer,
+      versionId,
+    );
+    return redactOrgNodeTreeForViewer(node, viewer.personId, descendants);
   }
 
   private async applyChildrenVisibility(
     nodes: OrgNode[],
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgNode[]> {
-    const descendants =
-      await this.visibility.getVisibleDescendantIds(viewerPersonId);
+    if (viewerHasGlobalReadAccess(viewer)) {
+      return nodes;
+    }
+    const descendants = await this.visibility.getVisibleDescendantIds(
+      viewer,
+      versionId,
+    );
     return nodes.map((node) =>
-      redactOrgNodeTreeForViewer(node, viewerPersonId, descendants),
+      redactOrgNodeTreeForViewer(node, viewer.personId, descendants),
     );
   }
 
   private async canViewerSeeFullProfile(
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
     targetPersonId: string,
+    versionId: string,
     descendantIds?: Set<string>,
   ): Promise<boolean> {
-    if (String(viewerPersonId) === String(targetPersonId)) {
+    if (viewerHasGlobalReadAccess(viewer)) {
+      return true;
+    }
+    if (String(viewer.personId) === String(targetPersonId)) {
       return true;
     }
     const descendants =
       descendantIds ??
-      (await this.visibility.getVisibleDescendantIds(viewerPersonId));
+      (await this.visibility.getVisibleDescendantIds(viewer, versionId));
     return descendants.has(String(targetPersonId));
   }
 
   private applySummaryVisibility(
     summary: OrgSummaryResponseDto,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
     descendants: Set<string>,
   ): OrgSummaryResponseDto {
+    if (viewerHasGlobalReadAccess(viewer)) {
+      return summary;
+    }
     const canView = (id: string) =>
-      String(viewerPersonId) === String(id) || descendants.has(String(id));
+      String(viewer.personId) === String(id) || descendants.has(String(id));
 
     return {
       general: redactOrgSummaryItem(
@@ -215,7 +245,11 @@ export class OrgChartService {
    * Detección del root: core.role.name ILIKE '%DIRECTOR DE OPERACIONES%'.
    * No usa org_relation ni ninguna tabla externa.
    */
-  async getOrgChartTree(viewerPersonId: string): Promise<OrgNode> {
+  async getOrgChartTree(
+    viewer: OrgViewerContext,
+    versionId: string,
+  ): Promise<OrgNode> {
+    const viewerPersonId = viewer.personId;
     const allRoles = await this.roles.find({ order: { id: 'ASC' } });
     const roleById = this.buildMapById(allRoles);
 
@@ -305,10 +339,11 @@ export class OrgChartService {
       catalogs,
       (nodePerson, nodeCatalogs, nodeChildren) =>
         this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren),
+      versionId,
     );
 
     const node = await this.buildOrgNode(root, catalogs, children);
-    return this.applyTreeVisibility(node, viewerPersonId);
+    return this.applyTreeVisibility(node, viewer, versionId);
   }
 
   // ─── GET /org-chart/team/:id ───────────────────────────────────────────────
@@ -319,7 +354,8 @@ export class OrgChartService {
    */
   async getOrgChartSubtree(
     personId: string,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgNode> {
     // Buscamos la persona raíz del subárbol solicitado.
     const person = await this.persons.findOne({ where: { id: personId } });
@@ -340,15 +376,17 @@ export class OrgChartService {
       catalogs,
       (nodePerson, nodeCatalogs, nodeChildren) =>
         this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren),
+      versionId,
     );
 
     const node = await this.buildOrgNode(person, catalogs, children);
-    return this.applyTreeVisibility(node, viewerPersonId);
+    return this.applyTreeVisibility(node, viewer, versionId);
   }
 
   async getOrgChartChildren(
     personId: string,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgNode[]> {
     return this.withGooglePhotoContext(async () => {
       const person = await this.persons.findOne({ where: { id: personId } });
@@ -371,8 +409,9 @@ export class OrgChartService {
             nodeChildren,
             directReportsCount,
           ),
+        versionId,
       );
-      return this.applyChildrenVisibility(children, viewerPersonId);
+      return this.applyChildrenVisibility(children, viewer, versionId);
     });
   }
 
@@ -382,91 +421,99 @@ export class OrgChartService {
    */
   async getOrgChartNode(
     personId: string,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgNode> {
     const now = Date.now();
-    const cachedNode = this.orgChartNodeCache.get(personId);
+    const cacheKey = this.nodeCacheKey(versionId, personId);
+    const cachedNode = this.orgChartNodeCache.get(cacheKey);
 
     if (cachedNode && cachedNode.expiresAt > now) {
-      this.logOrgChartPerf(`[CacheNode] id=${personId} hit`);
-      return this.applyTreeVisibility(cachedNode.value, viewerPersonId);
+      this.logOrgChartPerf(
+        `[CacheNode] id=${personId} version=${versionId} hit`,
+      );
+      return this.applyTreeVisibility(cachedNode.value, viewer, versionId);
     }
 
-    this.logOrgChartPerf(`[CacheNode] id=${personId} miss`);
+    this.logOrgChartPerf(
+      `[CacheNode] id=${personId} version=${versionId} miss`,
+    );
 
     return this.withGooglePhotoContext(async () => {
-    const perfTotalStart = Date.now();
-    const perfId = personId;
+      const perfTotalStart = Date.now();
+      const perfId = personId;
 
-    const perfFindPersonStart = Date.now();
-    const person = await this.persons.findOne({
-      where: {
-        id: personId,
-        is_active: true,
-      },
-    });
-    this.logOrgChartPerf(
-      `[PerfNode] id=${perfId} findPerson: ${Date.now() - perfFindPersonStart}ms`,
-    );
-
-    if (!person) {
-      throw new NotFoundException(
-        `No existe una persona activa con id ${personId} en Core.`,
+      const perfFindPersonStart = Date.now();
+      const person = await this.persons.findOne({
+        where: {
+          id: personId,
+          is_active: true,
+        },
+      });
+      this.logOrgChartPerf(
+        `[PerfNode] id=${perfId} findPerson: ${Date.now() - perfFindPersonStart}ms`,
       );
-    }
 
-    const perfLoadCatalogsStart = Date.now();
-    const catalogs = await this.loadCatalogsCached();
-    this.logOrgChartPerf(
-      `[PerfNode] id=${perfId} loadCatalogs: ${Date.now() - perfLoadCatalogsStart}ms`,
-    );
+      if (!person) {
+        throw new NotFoundException(
+          `No existe una persona activa con id ${personId} en Core.`,
+        );
+      }
 
-    const perfBuildDirectChildrenStart = Date.now();
-    const children = await this.treeEngine.buildDirectChildrenForPerson(
-      person,
-      catalogs,
-      (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
-        this.buildOrgNode(
-          nodePerson,
-          nodeCatalogs,
-          nodeChildren,
-          directReportsCount,
-        ),
-    );
-    this.logOrgChartPerf(
-      `[PerfNode] id=${perfId} buildDirectChildren: ${Date.now() - perfBuildDirectChildrenStart}ms`,
-    );
+      const perfLoadCatalogsStart = Date.now();
+      const catalogs = await this.loadCatalogsCached();
+      this.logOrgChartPerf(
+        `[PerfNode] id=${perfId} loadCatalogs: ${Date.now() - perfLoadCatalogsStart}ms`,
+      );
 
-    const perfBuildOrgNodeStart = Date.now();
-    const node = await this.buildOrgNode(person, catalogs, children);
-    this.logOrgChartPerf(
-      `[PerfNode] id=${perfId} buildOrgNode: ${Date.now() - perfBuildOrgNodeStart}ms`,
-    );
+      const perfBuildDirectChildrenStart = Date.now();
+      const children = await this.treeEngine.buildDirectChildrenForPerson(
+        person,
+        catalogs,
+        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
+          this.buildOrgNode(
+            nodePerson,
+            nodeCatalogs,
+            nodeChildren,
+            directReportsCount,
+          ),
+        versionId,
+      );
+      this.logOrgChartPerf(
+        `[PerfNode] id=${perfId} buildDirectChildren: ${Date.now() - perfBuildDirectChildrenStart}ms`,
+      );
 
-    this.logOrgChartPerf(
-      `[PerfNode] id=${perfId} total: ${Date.now() - perfTotalStart}ms`,
-    );
+      const perfBuildOrgNodeStart = Date.now();
+      const node = await this.buildOrgNode(person, catalogs, children);
+      this.logOrgChartPerf(
+        `[PerfNode] id=${perfId} buildOrgNode: ${Date.now() - perfBuildOrgNodeStart}ms`,
+      );
 
-    this.pruneExpiredOrgChartNodeCache(now);
-    this.orgChartNodeCache.set(personId, {
-      value: node,
-      expiresAt: now + this.orgChartResponseCacheTtlMs,
-    });
+      this.logOrgChartPerf(
+        `[PerfNode] id=${perfId} total: ${Date.now() - perfTotalStart}ms`,
+      );
 
-    return this.applyTreeVisibility(node, viewerPersonId);
+      this.pruneExpiredOrgChartNodeCache(now);
+      this.orgChartNodeCache.set(cacheKey, {
+        value: node,
+        expiresAt: now + this.orgChartResponseCacheTtlMs,
+      });
+
+      return this.applyTreeVisibility(node, viewer, versionId);
     });
   }
 
   /** Raíz del organigrama sin redacción (uso interno / agregados). */
-  private async fetchOrgChartRootNode(): Promise<OrgNode> {
+  private async fetchOrgChartRootNode(versionId: string): Promise<OrgNode> {
     const now = Date.now();
 
-    if (this.orgChartRootCache && this.orgChartRootCache.expiresAt > now) {
-      this.logOrgChartPerf('[CacheRoot] hit');
-      return this.orgChartRootCache.value;
+    const cachedRoot = this.orgChartRootCache.get(versionId);
+    if (cachedRoot && cachedRoot.expiresAt > now) {
+      this.logOrgChartPerf(`[CacheRoot] version=${versionId} hit`);
+      return cachedRoot.value;
     }
 
-    this.logOrgChartPerf('[CacheRoot] miss');
+    this.logOrgChartPerf(`[CacheRoot] version=${versionId} miss`);
 
     return this.withGooglePhotoContext(async () => {
       const perfTotalStart = Date.now();
@@ -505,6 +552,7 @@ export class OrgChartService {
             nodeChildren,
             directReportsCount,
           ),
+        versionId,
       );
       this.logOrgChartPerf(
         `[PerfRoot] buildDirectChildren: ${Date.now() - perfBuildDirectChildrenStart}ms`,
@@ -516,20 +564,25 @@ export class OrgChartService {
         `[PerfRoot] buildOrgNode: ${Date.now() - perfBuildRootNodeStart}ms`,
       );
 
-      this.logOrgChartPerf(`[PerfRoot] total: ${Date.now() - perfTotalStart}ms`);
+      this.logOrgChartPerf(
+        `[PerfRoot] total: ${Date.now() - perfTotalStart}ms`,
+      );
 
-      this.orgChartRootCache = {
+      this.orgChartRootCache.set(versionId, {
         value: rootNode,
         expiresAt: now + this.orgChartResponseCacheTtlMs,
-      };
+      });
 
       return rootNode;
     });
   }
 
-  async getOrgChartRoot(viewerPersonId: string): Promise<OrgNode> {
-    const rootNode = await this.fetchOrgChartRootNode();
-    return this.applyTreeVisibility(rootNode, viewerPersonId);
+  async getOrgChartRoot(
+    viewer: OrgViewerContext,
+    versionId: string,
+  ): Promise<OrgNode> {
+    const rootNode = await this.fetchOrgChartRootNode(versionId);
+    return this.applyTreeVisibility(rootNode, viewer, versionId);
   }
 
   // ─── GET /org-chart/summary/general-areas ───────────────────────────────────
@@ -538,27 +591,49 @@ export class OrgChartService {
    * Resumen por áreas generales: hijos directos del root visual y total de
    * personas bajo cada jerarquía (todos los descendientes vía org_visual_relation).
    *
-   * `totalPeople` incluye vacantes y personas reales (misma regla que countAllDescendants).
+   * `totalPeople` = personas únicas en el subárbol (sin contar al propio nodo).
    * `vacancies` cuenta solo placeholders con rol vacante en el subárbol del área (incluye el nodo área si aplica).
    */
   async getGeneralAreasSummary(
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<GeneralAreaSummaryDto[]> {
-    const rootNode = await this.fetchOrgChartRootNode();
+    const rootNode = await this.fetchOrgChartRootNode(versionId);
     const generalAreas = rootNode.children;
 
     if (generalAreas.length === 0) {
       return [];
     }
 
-    const descendants =
-      await this.visibility.getVisibleDescendantIds(viewerPersonId);
+    if (viewerHasGlobalReadAccess(viewer)) {
+      return Promise.all(
+        generalAreas.map(async (area) => {
+          const [totalPeople, vacancies] = await Promise.all([
+            this.countAllDescendants(area.id, versionId),
+            this.countVacanciesInSubtree(area.id, true, versionId),
+          ]);
+          return {
+            id: area.id,
+            name: area.name,
+            roleName: area.role?.name ?? null,
+            totalPeople,
+            vacancies,
+            nodeKind: 'person' as const,
+          } satisfies OrgSummaryItemDto;
+        }),
+      );
+    }
+
+    const descendants = await this.visibility.getVisibleDescendantIds(
+      viewer,
+      versionId,
+    );
 
     const summaries = await Promise.all(
       generalAreas.map(async (area) => {
         const [totalPeople, vacancies] = await Promise.all([
-          this.countAllDescendants(area.id),
-          this.countVacanciesInSubtree(area.id, true),
+          this.countAllDescendants(area.id, versionId),
+          this.countVacanciesInSubtree(area.id, true, versionId),
         ]);
 
         const item: OrgSummaryItemDto = {
@@ -573,8 +648,9 @@ export class OrgChartService {
         return redactOrgSummaryItem(
           item,
           await this.canViewerSeeFullProfile(
-            viewerPersonId,
+            viewer,
             area.id,
+            versionId,
             descendants,
           ),
         );
@@ -592,12 +668,13 @@ export class OrgChartService {
    *  - areas: hijos directos que no son vacantes, con totales de su jerarquía.
    *  - vacancyItems: nivel visual 1 → todas las vacantes del subárbol; nivel 2+ → solo vacantes directas.
    *
-   * `totalPeople` incluye vacantes y personas reales bajo el nodo (sin contar al propio nodo).
+   * `totalPeople` = personas únicas bajo el nodo (sin contar al propio nodo).
    * `vacancies` cuenta placeholders con rol vacante (descendientes; en `areas` también el hijo directo si aplica).
    */
   async getNodeSummary(
     personId: string,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgSummaryResponseDto> {
     const person = await this.persons.findOne({
       where: { id: personId, is_active: true },
@@ -618,16 +695,17 @@ export class OrgChartService {
 
     const [totalPeople, directChildRows, subtreeVacancyRows] =
       await Promise.all([
-        this.countAllDescendants(personId),
+        this.countAllDescendants(personId, versionId),
         this.dataSource.query(
           `SELECT child_person_id
              FROM organigrama.org_visual_relation
-            WHERE parent_person_id = $1
+            WHERE version_id = $2
+              AND parent_person_id = $1
               AND is_active = true`,
-          [personId],
-        ) as Promise<{ child_person_id: string }[]>,
+          [personId, versionId],
+        ),
         includeSubtreeVacancies
-          ? this.listVacanciesInSubtree(personId)
+          ? this.listVacanciesInSubtree(personId, versionId)
           : Promise.resolve([]),
       ]);
 
@@ -683,8 +761,8 @@ export class OrgChartService {
             ? catalogs.roleById.get(String(child.role_id))
             : undefined;
           const [childTotal, childVacancies] = await Promise.all([
-            this.countAllDescendants(id),
-            this.countVacanciesInSubtree(id, true),
+            this.countAllDescendants(id, versionId),
+            this.countVacanciesInSubtree(id, true, versionId),
           ]);
 
           return {
@@ -709,7 +787,7 @@ export class OrgChartService {
     }
 
     const generalVacancies = includeSubtreeVacancies
-      ? await this.countVacancyDescendants(personId)
+      ? await this.countVacancyDescendants(personId, versionId)
       : vacancyItems.length;
 
     const generalNodeKind = this.isVacancyPerson(person, catalogs)
@@ -729,9 +807,11 @@ export class OrgChartService {
       vacancyItems,
     };
 
-    const descendants =
-      await this.visibility.getVisibleDescendantIds(viewerPersonId);
-    return this.applySummaryVisibility(response, viewerPersonId, descendants);
+    const descendants = await this.visibility.getVisibleDescendantIds(
+      viewer,
+      versionId,
+    );
+    return this.applySummaryVisibility(response, viewer, descendants);
   }
 
   // ─── GET /org-chart/search?q= ──────────────────────────────────────────────
@@ -742,7 +822,8 @@ export class OrgChartService {
    */
   async searchOrgChart(
     query: string,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgChartSearchHit[]> {
     const term = (query ?? '').trim();
     if (term.length < 2) {
@@ -766,54 +847,58 @@ export class OrgChartService {
     }
 
     const catalogs = await this.loadCatalogs();
-    const descendants =
-      await this.visibility.getVisibleDescendantIds(viewerPersonId);
+    const globalRead = viewerHasGlobalReadAccess(viewer);
+    const descendants = globalRead
+      ? null
+      : await this.visibility.getVisibleDescendantIds(viewer, versionId);
 
     const hits = matches.map((person) => {
-        const role = person.role_id
-          ? (catalogs.roleById.get(String(person.role_id)) ?? null)
-          : null;
-        const hierarchy = person.hierarchy_id
-          ? (catalogs.hierarchyById.get(String(person.hierarchy_id)) ?? null)
-          : null;
+      const role = person.role_id
+        ? (catalogs.roleById.get(String(person.role_id)) ?? null)
+        : null;
+      const hierarchy = person.hierarchy_id
+        ? (catalogs.hierarchyById.get(String(person.hierarchy_id)) ?? null)
+        : null;
 
-        const nodeKind = this.isVacancyPerson(person, catalogs)
-          ? ('vacancy' as const)
-          : ('person' as const);
+      const nodeKind = this.isVacancyPerson(person, catalogs)
+        ? ('vacancy' as const)
+        : ('person' as const);
 
-        const personId = String(person.id);
-        const canView =
-          personId === viewerPersonId || descendants.has(personId);
+      const personId = String(person.id);
+      const canView =
+        globalRead ||
+        personId === viewer.personId ||
+        (descendants?.has(personId) ?? false);
 
-        const hit: OrgChartSearchHit = {
-          id: personId,
-          document: person.document ?? '',
-          name: person.full_name ?? '',
-          nodeKind,
-          role_id: person.role_id,
-          role: role
-            ? {
-                id: String(role.id),
-                name: role.name ?? '',
-                description: role.description,
-              }
-            : null,
-          hierarchy_id: person.hierarchy_id,
-          hierarchy: hierarchy
-            ? {
-                id: String(hierarchy.id),
-                name: hierarchy.name ?? '',
-                description: hierarchy.description,
-              }
-            : null,
-          area_id: person.area_id,
-          school_id: person.school_id,
-          program_id: person.program_id,
-          email: person.email,
-          edu_email: person.edu_email,
-          phone: person.phone,
-          path: [this.buildPathNode(person, role, hierarchy)],
-        };
+      const hit: OrgChartSearchHit = {
+        id: personId,
+        document: person.document ?? '',
+        name: person.full_name ?? '',
+        nodeKind,
+        role_id: person.role_id,
+        role: role
+          ? {
+              id: String(role.id),
+              name: role.name ?? '',
+              description: role.description,
+            }
+          : null,
+        hierarchy_id: person.hierarchy_id,
+        hierarchy: hierarchy
+          ? {
+              id: String(hierarchy.id),
+              name: hierarchy.name ?? '',
+              description: hierarchy.description,
+            }
+          : null,
+        area_id: person.area_id,
+        school_id: person.school_id,
+        program_id: person.program_id,
+        email: person.email,
+        edu_email: person.edu_email,
+        phone: person.phone,
+        path: [this.buildPathNode(person, role, hierarchy)],
+      };
 
       return redactOrgChartSearchHit(hit, canView);
     });
@@ -825,7 +910,8 @@ export class OrgChartService {
 
   async getPersonDetail(
     id: string,
-    viewerPersonId: string,
+    viewer: OrgViewerContext,
+    versionId: string,
   ): Promise<OrgPersonDetailResponseDto> {
     const person = await this.persons.findOne({ where: { id } });
 
@@ -842,8 +928,9 @@ export class OrgChartService {
       nodeKind === 'vacancy' ? null : await this.resolvePhotoUrl(person);
 
     const canViewFullProfile = await this.visibility.canViewFullProfile(
-      viewerPersonId,
+      viewer,
       String(person.id),
+      versionId,
     );
 
     const base: OrgPersonDetailResponseDto = {
@@ -887,6 +974,7 @@ export class OrgChartService {
 
     const directReportsCount = await this.countDirectVisualChildren(
       String(person.id),
+      versionId,
     );
 
     const emergency_contact =
@@ -978,55 +1066,65 @@ export class OrgChartService {
   /**
    * Hijos directos activos en `organigrama.org_visual_relation` (para ficha y acciones).
    */
-  private async countDirectVisualChildren(personId: string): Promise<number> {
+  private async countDirectVisualChildren(
+    personId: string,
+    versionId: string,
+  ): Promise<number> {
     const result = await this.dataSource.query(
       `
-      SELECT COUNT(*)::int AS total
+      SELECT COUNT(DISTINCT r.child_person_id)::int AS total
       FROM organigrama.org_visual_relation r
       INNER JOIN core.person p
         ON p.id = r.child_person_id
         AND p.is_active = true
-      WHERE r.parent_person_id = $1
+      WHERE r.version_id = $2
+        AND r.parent_person_id = $1
         AND r.is_active = true;
       `,
-      [personId],
+      [personId, versionId],
     );
 
     return Number(result?.[0]?.total ?? 0);
   }
 
   /**
-   * Cuenta todas las personas descendientes activas bajo `personId` en el grafo visual.
+   * Cuenta personas únicas descendientes activas bajo `personId` en el grafo visual.
+   * Usa UNION (no UNION ALL) en el CTE recursivo para no inflar por multi-padre.
    */
-  private async countAllDescendants(personId: string): Promise<number> {
+  private async countAllDescendants(
+    personId: string,
+    versionId: string,
+  ): Promise<number> {
     const result = await this.dataSource.query(
       `
       WITH RECURSIVE descendants AS (
         SELECT
-          r.child_person_id
+          r.child_person_id AS person_id
         FROM organigrama.org_visual_relation r
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.parent_person_id = $1
+        WHERE r.version_id = $2
+          AND r.parent_person_id = $1
           AND r.is_active = true
 
-        UNION ALL
+        UNION
 
         SELECT
-          r.child_person_id
+          r.child_person_id AS person_id
         FROM organigrama.org_visual_relation r
         INNER JOIN descendants d
-          ON r.parent_person_id = d.child_person_id
+          ON r.parent_person_id = d.person_id
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.is_active = true
+        WHERE r.version_id = $2
+          AND r.is_active = true
       )
       SELECT COUNT(*)::int AS total
       FROM descendants;
       `,
-      [personId],
+      [personId, versionId],
     );
 
     return Number(result?.[0]?.total ?? 0);
@@ -1035,8 +1133,11 @@ export class OrgChartService {
   /**
    * Placeholders con rol vacante entre los descendientes activos (sin incluir a `personId`).
    */
-  private async countVacancyDescendants(personId: string): Promise<number> {
-    return this.countVacanciesInSubtree(personId, false);
+  private async countVacancyDescendants(
+    personId: string,
+    versionId: string,
+  ): Promise<number> {
+    return this.countVacanciesInSubtree(personId, false, versionId);
   }
 
   /**
@@ -1046,6 +1147,7 @@ export class OrgChartService {
   private async countVacanciesInSubtree(
     rootPersonId: string,
     includeRoot: boolean,
+    versionId: string,
   ): Promise<number> {
     if (includeRoot) {
       const result = await this.dataSource.query(
@@ -1053,7 +1155,7 @@ export class OrgChartService {
         WITH RECURSIVE subtree AS (
           SELECT $1::bigint AS person_id
 
-          UNION ALL
+          UNION
 
           SELECT
             r.child_person_id
@@ -1063,9 +1165,10 @@ export class OrgChartService {
           INNER JOIN core.person p
             ON p.id = r.child_person_id
             AND p.is_active = true
-          WHERE r.is_active = true
+          WHERE r.version_id = $3
+            AND r.is_active = true
         )
-        SELECT COUNT(*)::int AS total
+        SELECT COUNT(DISTINCT s.person_id)::int AS total
         FROM subtree s
         INNER JOIN core.person p
           ON p.id = s.person_id
@@ -1074,7 +1177,7 @@ export class OrgChartService {
           ON ro.id = p.role_id
         WHERE ${VACANCY_PERSON_SQL_WHERE};
         `,
-        [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED],
+        [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
       );
       return Number(result?.[0]?.total ?? 0);
     }
@@ -1088,22 +1191,24 @@ export class OrgChartService {
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.parent_person_id = $1
+        WHERE r.version_id = $3
+          AND r.parent_person_id = $1
           AND r.is_active = true
 
-        UNION ALL
+        UNION
 
         SELECT
-          r.child_person_id
+          r.child_person_id AS person_id
         FROM organigrama.org_visual_relation r
         INNER JOIN descendants d
           ON r.parent_person_id = d.person_id
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.is_active = true
+        WHERE r.version_id = $3
+          AND r.is_active = true
       )
-      SELECT COUNT(*)::int AS total
+      SELECT COUNT(DISTINCT d.person_id)::int AS total
       FROM descendants d
       INNER JOIN core.person p
         ON p.id = d.person_id
@@ -1112,7 +1217,7 @@ export class OrgChartService {
         ON ro.id = p.role_id
       WHERE ${VACANCY_PERSON_SQL_WHERE};
       `,
-      [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED],
+      [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
     );
 
     return Number(result?.[0]?.total ?? 0);
@@ -1123,6 +1228,7 @@ export class OrgChartService {
    */
   private async listVacanciesInSubtree(
     rootPersonId: string,
+    versionId: string,
   ): Promise<{ id: string; name: string; roleName: string | null }[]> {
     const result = await this.dataSource.query<
       { id: string; name: string; role_name: string | null }[]
@@ -1135,22 +1241,24 @@ export class OrgChartService {
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.parent_person_id = $1
+        WHERE r.version_id = $3
+          AND r.parent_person_id = $1
           AND r.is_active = true
 
-        UNION ALL
+        UNION
 
         SELECT
-          r.child_person_id
+          r.child_person_id AS person_id
         FROM organigrama.org_visual_relation r
         INNER JOIN descendants d
           ON r.parent_person_id = d.person_id
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.is_active = true
+        WHERE r.version_id = $3
+          AND r.is_active = true
       )
-      SELECT
+      SELECT DISTINCT ON (p.id)
         p.id::text AS id,
         p.full_name AS name,
         ro.name AS role_name
@@ -1161,9 +1269,9 @@ export class OrgChartService {
       LEFT JOIN core.role ro
         ON ro.id = p.role_id
       WHERE ${VACANCY_PERSON_SQL_WHERE}
-      ORDER BY p.full_name ASC, p.id ASC;
+      ORDER BY p.id, p.full_name ASC;
       `,
-      [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED],
+      [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
     );
 
     return (result ?? []).map((row) => ({
@@ -1179,7 +1287,7 @@ export class OrgChartService {
 
   /** Tras persistir foto de perfil: el JSON cacheado puede omitir `photoUrl`. */
   clearResponseCaches(): void {
-    this.orgChartRootCache = null;
+    this.orgChartRootCache.clear();
     this.orgChartNodeCache.clear();
   }
 
@@ -1378,9 +1486,7 @@ export class OrgChartService {
       this.googlePhotoPersonIds?.has(personId) ??
       (await this.profilePhotoLookup.hasPersistedGooglePhoto(personId));
 
-    if (
-      this.photoUrlBuilder.shouldExposeProxyUrl(person, hasPersisted)
-    ) {
+    if (this.photoUrlBuilder.shouldExposeProxyUrl(person, hasPersisted)) {
       return `${getApiPublicBaseUrl()}/api/org-chart/photos/${person.id}`;
     }
 

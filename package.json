@@ -19,6 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "npm run build && node dist/database/run-seed.js",
+    "org:grant-admin": "npm run build && node dist/database/scripts/grant-admin.js",
     "diag:google-photo": "npm run build && node dist/google-workspace/run-photo-diagnostic.js",
     "diag:org-photo": "npm run build && node dist/org-chart/run-org-node-photo-diagnostic.js"
   },

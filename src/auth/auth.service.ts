@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -9,37 +10,58 @@ import { Repository } from 'typeorm';
 import { Person } from '../person/entities/person.entity';
 import {
   isCollaboratorEduEmail,
+  isTechnicalUser,
   normalizeInstitutionalEmail,
 } from './auth-email.util';
-import type { AuthUserResponse, GoogleLoginResponse, JwtPayload } from './auth.types';
+import type {
+  AuthUserResponse,
+  GoogleLoginResponse,
+  JwtPayload,
+} from './auth.types';
 import type { AuthenticatedSessionContext } from './types/authenticated-session.context';
 import { GoogleTokenService } from './google-token.service';
+import { PersonPermissionService } from '../permissions/person-permission.service';
 
 @Injectable()
 export class AuthService {
+  private readonly log = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(Person)
     private readonly persons: Repository<Person>,
     private readonly googleTokenService: GoogleTokenService,
     private readonly jwtService: JwtService,
+    private readonly permissionService: PersonPermissionService,
   ) {}
 
   async loginWithGoogleIdToken(idToken: string): Promise<GoogleLoginResponse> {
     const identity = await this.googleTokenService.verifyIdToken(idToken);
     const person = await this.resolveCollaboratorByGoogleEmail(identity.email);
 
+    const permissions = await this.permissionService.getPermissionsForPerson(
+      String(person.id),
+      person.edu_email ?? '',
+    );
+
     const session: JwtPayload = {
       personId: String(person.id),
       googleSubject: identity.subject,
       googlePictureUrl: identity.pictureUrl,
       googleEmail: identity.email,
+      eduEmail: person.edu_email,
+      permissions,
     };
 
     const accessToken = await this.jwtService.signAsync(session);
 
     return {
       accessToken,
-      user: this.toAuthUserResponse(person, identity.email, identity.pictureUrl),
+      user: this.toAuthUserResponse(
+        person,
+        identity.email,
+        identity.pictureUrl,
+        permissions,
+      ),
     };
   }
 
@@ -50,7 +72,11 @@ export class AuthService {
       where: { id: session.personId, is_active: true },
     });
 
-    if (!person?.edu_email || !isCollaboratorEduEmail(person.edu_email)) {
+    if (
+      !person?.edu_email ||
+      (!isCollaboratorEduEmail(person.edu_email) &&
+        !isTechnicalUser(person.edu_email))
+    ) {
       throw new UnauthorizedException('Sesión inválida');
     }
 
@@ -58,6 +84,7 @@ export class AuthService {
       person,
       session.googleEmail ?? person.edu_email,
       session.googlePictureUrl ?? null,
+      session.permissions ?? [],
     );
   }
 
@@ -95,10 +122,15 @@ export class AuthService {
       );
     }
 
-    if (!isCollaboratorEduEmail(person.edu_email!)) {
-      throw new ForbiddenException(
-        'Acceso restringido a colaboradores registrados en el organigrama',
-      );
+    const eduEmail = person.edu_email!;
+    if (!isCollaboratorEduEmail(eduEmail)) {
+      if (isTechnicalUser(eduEmail)) {
+        this.log.log(`[Auth] Technical user bypass applied: ${eduEmail}`);
+      } else {
+        throw new ForbiddenException(
+          'Acceso restringido a colaboradores registrados en el organigrama',
+        );
+      }
     }
 
     return person;
@@ -108,6 +140,7 @@ export class AuthService {
     person: Person,
     googleEmail: string,
     pictureUrl: string | null,
+    permissions: string[] = [],
   ): AuthUserResponse {
     return {
       personId: String(person.id),
@@ -115,6 +148,7 @@ export class AuthService {
       eduEmail: person.edu_email,
       googleEmail,
       pictureUrl,
+      permissions,
     };
   }
 }

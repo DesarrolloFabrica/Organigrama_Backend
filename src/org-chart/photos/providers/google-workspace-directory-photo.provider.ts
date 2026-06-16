@@ -12,9 +12,7 @@ import type {
  * GoogleWorkspacePhotoService.
  */
 @Injectable()
-export class GoogleWorkspaceDirectoryPhotoProvider
-  implements PhotoSourceProvider
-{
+export class GoogleWorkspaceDirectoryPhotoProvider implements PhotoSourceProvider {
   readonly id = 'google-workspace' as const;
   readonly priority = 30;
 

@@ -95,7 +95,10 @@ export class OrgChartPhotoService {
     await this.acquireFetchSlot();
 
     try {
-      const result = await this.photoResolver.resolve(context, providersToFetch);
+      const result = await this.photoResolver.resolve(
+        context,
+        providersToFetch,
+      );
 
       if (!result) {
         for (const provider of providersToFetch) {

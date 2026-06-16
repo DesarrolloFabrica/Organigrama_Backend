@@ -5,12 +5,12 @@ import {
 
 describe('auth-email.util', () => {
   it('normaliza punto y guion bajo en el mismo correo', () => {
-    expect(
-      normalizeInstitutionalEmail('camilo.quintero@cun.edu.co'),
-    ).toBe('camilo_quintero@cun.edu.co');
-    expect(
-      normalizeInstitutionalEmail('camilo_quintero@cun.edu.co'),
-    ).toBe('camilo_quintero@cun.edu.co');
+    expect(normalizeInstitutionalEmail('camilo.quintero@cun.edu.co')).toBe(
+      'camilo_quintero@cun.edu.co',
+    );
+    expect(normalizeInstitutionalEmail('camilo_quintero@cun.edu.co')).toBe(
+      'camilo_quintero@cun.edu.co',
+    );
   });
 
   it('rechaza dominios distintos a cun.edu.co', () => {

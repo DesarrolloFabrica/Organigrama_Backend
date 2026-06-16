@@ -21,12 +21,9 @@ describe('org-chart-vacancy', () => {
   });
 
   describe('resolveOrgNodeKindFromRoleName (contrato getPersonDetail / OrgNode)', () => {
-    it.each(VACANCY_ROLE_NAMES)(
-      'rol %s → nodeKind vacancy',
-      (name) => {
-        expect(resolveOrgNodeKindFromRoleName(name)).toBe('vacancy');
-      },
-    );
+    it.each(VACANCY_ROLE_NAMES)('rol %s → nodeKind vacancy', (name) => {
+      expect(resolveOrgNodeKindFromRoleName(name)).toBe('vacancy');
+    });
 
     it('rol operativo → nodeKind person', () => {
       expect(resolveOrgNodeKindFromRoleName('ANALISTA')).toBe('person');
@@ -36,7 +33,9 @@ describe('org-chart-vacancy', () => {
   describe('isVacancyDisplayName', () => {
     it('acepta nombre que empieza por VACANTE', () => {
       expect(
-        isVacancyDisplayName('VACANTE - COORDINADOR FABRICA DE CONTENIDOS - GIF'),
+        isVacancyDisplayName(
+          'VACANTE - COORDINADOR FABRICA DE CONTENIDOS - GIF',
+        ),
       ).toBe(true);
     });
 

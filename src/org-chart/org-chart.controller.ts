@@ -8,21 +8,34 @@ import {
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { getAuthSessionFromRequest } from '../auth/auth-request.util';
 import {
   isOrgChartLegacyEnabled,
   LEGACY_ORG_CHART_DISABLED_MESSAGE,
 } from './org-chart-legacy.config';
 import { OrgChartService } from './org-chart.service';
+import { OrgChartVersionService } from './org-chart-version.service';
+import { resolveOrgChartVersionId } from './org-chart-version-query.util';
+import { buildOrgViewerContext } from './org-chart-viewer.util';
 
 @Controller('org-chart')
 export class OrgChartController {
   private readonly log = new Logger(OrgChartController.name);
 
-  constructor(private readonly orgChartService: OrgChartService) {}
+  constructor(
+    private readonly orgChartService: OrgChartService,
+    private readonly versionService: OrgChartVersionService,
+  ) {}
 
-  private viewerPersonId(req: Request): string {
-    return getAuthSessionFromRequest(req)!.personId;
+  private async resolveVersion(
+    req: Request,
+    versionId?: string,
+    versionCode?: string,
+  ): Promise<string> {
+    const viewer = buildOrgViewerContext(req);
+    return resolveOrgChartVersionId(this.versionService, viewer, {
+      versionId,
+      versionCode,
+    });
   }
 
   /**
@@ -33,7 +46,11 @@ export class OrgChartController {
    * `GET /api/org-chart/children/:id` para carga progresiva.
    */
   @Get()
-  getOrgChart(@Req() req: Request) {
+  async getOrgChart(
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
     if (!isOrgChartLegacyEnabled()) {
       this.log.warn(
         '[OrgChartLegacy] Blocked deprecated endpoint GET /api/org-chart because ORG_CHART_LEGACY_ENABLED=false',
@@ -46,22 +63,55 @@ export class OrgChartController {
     this.log.warn(
       '[OrgChartLegacy] Deprecated endpoint GET /api/org-chart was called',
     );
-    return this.orgChartService.getOrgChartTree(this.viewerPersonId(req));
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.orgChartService.getOrgChartTree(
+      buildOrgViewerContext(req),
+      resolvedVersionId,
+    );
   }
 
   /** Busca personas y devuelve su ruta jerárquica dentro del organigrama. */
   @Get('search')
-  searchOrgChart(@Query('q') query: string, @Req() req: Request) {
+  async searchOrgChart(
+    @Query('q') query: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
     return this.orgChartService.searchOrgChart(
       query,
-      this.viewerPersonId(req),
+      buildOrgViewerContext(req),
+      resolvedVersionId,
     );
   }
 
   /** Detalle de persona con visibilidad jerárquica. */
   @Get('person/:id')
-  getPersonDetail(@Param('id') id: string, @Req() req: Request) {
-    return this.orgChartService.getPersonDetail(id, this.viewerPersonId(req));
+  async getPersonDetail(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.orgChartService.getPersonDetail(
+      id,
+      buildOrgViewerContext(req),
+      resolvedVersionId,
+    );
   }
 
   /**
@@ -71,7 +121,12 @@ export class OrgChartController {
    * Usar `GET /api/org-chart/node/:id` y `GET /api/org-chart/children/:id`.
    */
   @Get('team/:id')
-  getOrgChartTeamRoot(@Param('id') id: string, @Req() req: Request) {
+  async getOrgChartTeamRoot(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
     if (!isOrgChartLegacyEnabled()) {
       this.log.warn(
         '[OrgChartLegacy] Blocked deprecated endpoint GET /api/org-chart/team/:id because ORG_CHART_LEGACY_ENABLED=false',
@@ -84,47 +139,111 @@ export class OrgChartController {
     this.log.warn(
       '[OrgChartLegacy] Deprecated endpoint GET /api/org-chart/team/:id was called',
     );
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
     return this.orgChartService.getOrgChartSubtree(
       id,
-      this.viewerPersonId(req),
+      buildOrgViewerContext(req),
+      resolvedVersionId,
     );
   }
 
   /** Persona como raíz del lienzo + solo hijos directos (carga superficial). */
   @Get('node/:id')
-  getOrgChartNode(@Param('id') id: string, @Req() req: Request) {
-    return this.orgChartService.getOrgChartNode(id, this.viewerPersonId(req));
+  async getOrgChartNode(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.orgChartService.getOrgChartNode(
+      id,
+      buildOrgViewerContext(req),
+      resolvedVersionId,
+    );
   }
 
   /** Devuelve solo los hijos directos de una persona. */
   @Get('children/:id')
-  getOrgChartChildren(@Param('id') id: string, @Req() req: Request) {
+  async getOrgChartChildren(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
     return this.orgChartService.getOrgChartChildren(
       id,
-      this.viewerPersonId(req),
+      buildOrgViewerContext(req),
+      resolvedVersionId,
     );
   }
 
   /** Devuelve la raíz del organigrama con solo sus hijos directos. */
   @Get('root')
-  getOrgChartRoot(@Req() req: Request) {
-    return this.orgChartService.getOrgChartRoot(this.viewerPersonId(req));
+  async getOrgChartRoot(
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.orgChartService.getOrgChartRoot(
+      buildOrgViewerContext(req),
+      resolvedVersionId,
+    );
   }
 
   /** Resumen por áreas generales (hijos directos del root + totales bajo jerarquía). */
   @Get('summary/general-areas')
-  getGeneralAreasSummary(@Req() req: Request) {
+  async getGeneralAreasSummary(
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
     return this.orgChartService.getGeneralAreasSummary(
-      this.viewerPersonId(req),
+      buildOrgViewerContext(req),
+      resolvedVersionId,
     );
   }
 
   /** Resumen jerárquico de un nodo: general + desglose por hijos directos. */
   @Get('summary/:personId')
-  getNodeSummary(@Param('personId') personId: string, @Req() req: Request) {
+  async getNodeSummary(
+    @Param('personId') personId: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ) {
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
     return this.orgChartService.getNodeSummary(
       personId,
-      this.viewerPersonId(req),
+      buildOrgViewerContext(req),
+      resolvedVersionId,
     );
   }
 }

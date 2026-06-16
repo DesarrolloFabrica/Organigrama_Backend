@@ -6,6 +6,13 @@ import { OrgChartService } from './org-chart.service';
 import { ProfilePhotoLookupService } from './photos/profile-photo-lookup.service';
 import { isOrgChartPhotosEnabled } from './photos/photo.config';
 import type { OrgNode } from './types/org-node.type';
+import type { OrgViewerContext } from './org-viewer-context';
+
+function diagViewer(personId: string): OrgViewerContext {
+  return { personId, eduEmail: null, permissions: [] };
+}
+
+const DIAG_VERSION_ID = '1';
 
 const TARGET_NAME = 'JOSE ALEJANDRO CAMACHO COBOS';
 
@@ -70,23 +77,34 @@ async function main() {
 
     orgChart.clearResponseCaches();
     const diagViewerId = process.env.ORG_CHART_DIAG_VIEWER_ID ?? '1144';
-    const rootFresh = await orgChart.getOrgChartRoot(diagViewerId);
+    const vCtx = diagViewer(diagViewerId);
+    const rootFresh = await orgChart.getOrgChartRoot(vCtx, DIAG_VERSION_ID);
     const nodeFresh = findNodeByName(rootFresh, TARGET_NAME);
 
-    console.log('\n--- GET /api/org-chart/root (caché limpiada, servicio directo) ---');
+    console.log(
+      '\n--- GET /api/org-chart/root (caché limpiada, servicio directo) ---',
+    );
     if (!nodeFresh) {
       console.log(`No se encontró nodo "${TARGET_NAME}" en el root.`);
       console.log(
         'Hijos directos del root:',
-        rootFresh.children.map((c) => ({ id: c.id, name: c.name, photoUrl: c.photoUrl })),
+        rootFresh.children.map((c) => ({
+          id: c.id,
+          name: c.name,
+          photoUrl: c.photoUrl,
+        })),
       );
     } else {
       console.log(JSON.stringify(pickNodeFields(nodeFresh), null, 2));
     }
 
-    const rootCached = await orgChart.getOrgChartRoot(diagViewerId);
-    const nodeCached = nodeFresh ? findNodeByName(rootCached, TARGET_NAME) : null;
-    console.log('\n--- Segunda llamada getOrgChartRoot (puede ser cache hit) ---');
+    const rootCached = await orgChart.getOrgChartRoot(vCtx, DIAG_VERSION_ID);
+    const nodeCached = nodeFresh
+      ? findNodeByName(rootCached, TARGET_NAME)
+      : null;
+    console.log(
+      '\n--- Segunda llamada getOrgChartRoot (puede ser cache hit) ---',
+    );
     console.log(
       JSON.stringify(
         nodeCached ? pickNodeFields(nodeCached) : { found: false },
@@ -97,7 +115,7 @@ async function main() {
 
     const personId =
       nodeFresh?.id ??
-      (googleIds.length === 1 ? googleIds[0] : googleIds[0] ?? null);
+      (googleIds.length === 1 ? googleIds[0] : (googleIds[0] ?? null));
 
     if (personId) {
       const state = await profilePhoto.findGooglePhotoState(personId);
@@ -117,7 +135,11 @@ async function main() {
       );
 
       orgChart.clearResponseCaches();
-      const detail = await orgChart.getPersonDetail(personId, diagViewerId);
+      const detail = await orgChart.getPersonDetail(
+        personId,
+        vCtx,
+        DIAG_VERSION_ID,
+      );
       console.log('\n--- GET /api/org-chart/person/:id (servicio directo) ---');
       console.log(
         JSON.stringify(
@@ -133,11 +155,17 @@ async function main() {
       );
 
       orgChart.clearResponseCaches();
-      const nodeAsRoot = await orgChart.getOrgChartNode(personId, diagViewerId);
-      console.log('\n--- GET /api/org-chart/node/:id (persona como raíz del lienzo) ---');
+      const nodeAsRoot = await orgChart.getOrgChartNode(
+        personId,
+        vCtx,
+        DIAG_VERSION_ID,
+      );
+      console.log(
+        '\n--- GET /api/org-chart/node/:id (persona como raíz del lienzo) ---',
+      );
       console.log(JSON.stringify(pickNodeFields(nodeAsRoot), null, 2));
 
-      const parentRows = (await dataSource.query(
+      const parentRows = await dataSource.query(
         `
         SELECT parent_person_id::text AS parent_id
         FROM organigrama.org_visual_relation
@@ -145,16 +173,19 @@ async function main() {
         LIMIT 5
         `,
         [personId],
-      )) as { parent_id: string }[];
+      );
 
-      console.log('\n--- Padres visuales en organigrama.org_visual_relation ---');
+      console.log(
+        '\n--- Padres visuales en organigrama.org_visual_relation ---',
+      );
       console.log(JSON.stringify(parentRows, null, 2));
 
       for (const row of parentRows) {
         orgChart.clearResponseCaches();
         const siblings = await orgChart.getOrgChartChildren(
           row.parent_id,
-          diagViewerId,
+          vCtx,
+          DIAG_VERSION_ID,
         );
         const self = siblings.find(
           (c) =>
@@ -179,10 +210,12 @@ async function main() {
 
       const children = await orgChart.getOrgChartChildren(
         String(rootFresh.id),
-        diagViewerId,
+        vCtx,
+        DIAG_VERSION_ID,
       );
       const selfInChildren = children.find(
-        (c) => c.name?.trim().toUpperCase() === TARGET_NAME.trim().toUpperCase(),
+        (c) =>
+          c.name?.trim().toUpperCase() === TARGET_NAME.trim().toUpperCase(),
       );
       console.log('\n--- GET /api/org-chart/children/:parentId (root id) ---');
       if (selfInChildren) {
@@ -206,10 +239,12 @@ async function main() {
         googleSubject: 'diag',
         googleEmail: 'diag@cun.edu.co',
         googlePictureUrl: null,
+        permissions: [],
       });
 
-      const base = (process.env.API_PUBLIC_BASE_URL ?? 'http://localhost:3000')
-        .replace(/\/$/, '');
+      const base = (
+        process.env.API_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+      ).replace(/\/$/, '');
       const headers = {
         Accept: 'application/json',
         Authorization: `Bearer ${token}`,
@@ -234,7 +269,10 @@ async function main() {
           httpAvailable = false;
           continue;
         }
-        const body = (await res.json()) as OrgNode | OrgNode[] | Record<string, unknown>;
+        const body = (await res.json()) as
+          | OrgNode
+          | OrgNode[]
+          | Record<string, unknown>;
         console.log(`\n--- HTTP ${path} status=${res.status} ---`);
 
         if (path.includes('/person/')) {

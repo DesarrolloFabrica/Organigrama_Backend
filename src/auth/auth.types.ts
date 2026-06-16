@@ -6,6 +6,8 @@ export type AuthUserResponse = {
   eduEmail: string | null;
   googleEmail: string;
   pictureUrl: string | null;
+  /** Permisos técnicos de aplicación. Solo para uso de UI en el frontend; la seguridad real vive en backend. */
+  permissions: string[];
 };
 
 export type GoogleLoginResponse = {

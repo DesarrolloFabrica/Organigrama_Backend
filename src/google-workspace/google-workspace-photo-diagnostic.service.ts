@@ -167,7 +167,8 @@ export class GoogleWorkspacePhotoDiagnosticService {
     thumbnailPhotoUrl: string,
   ): Promise<PhotoBytesProbe> {
     try {
-      const headers = await this.googleWorkspaceAuth.getAuthorizedFetchHeaders();
+      const headers =
+        await this.googleWorkspaceAuth.getAuthorizedFetchHeaders();
       const response = await fetch(thumbnailPhotoUrl, { headers });
 
       if (!response.ok) {
@@ -227,7 +228,8 @@ function toGoogleApiErrorDetail(err: unknown): GoogleApiErrorDetail {
     return {
       code: numericCode,
       status: apiError?.status ?? err.response?.statusText,
-      message: apiError?.message ?? err.message ?? 'Error desconocido de Google',
+      message:
+        apiError?.message ?? err.message ?? 'Error desconocido de Google',
       reason: firstReason,
     };
   }

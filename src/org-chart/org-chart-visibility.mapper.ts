@@ -2,8 +2,6 @@ import type { OrgChartSearchHit, OrgNode } from './types/org-node.type';
 
 import type { OrgSummaryItemDto } from './types/org-summary.dto';
 
-
-
 /**
 
  * Metadatos de organigrama (nivel, rol, tipo de nodo) necesarios para colores,
@@ -12,26 +10,18 @@ import type { OrgSummaryItemDto } from './types/org-summary.dto';
 
  */
 
-function preserveOrgChartTechnicalFields(node: OrgNode): Pick<
-
+function preserveOrgChartTechnicalFields(
+  node: OrgNode,
+): Pick<
   OrgNode,
-
   | 'nodeKind'
-
   | 'hierarchy_id'
-
   | 'hierarchy'
-
   | 'role_id'
-
   | 'role'
-
   | 'direct_reports_count'
-
 > {
-
   return {
-
     nodeKind: node.nodeKind,
 
     hierarchy_id: node.hierarchy_id,
@@ -43,33 +33,21 @@ function preserveOrgChartTechnicalFields(node: OrgNode): Pick<
     role: node.role,
 
     direct_reports_count: node.direct_reports_count,
-
   };
-
 }
-
-
 
 /** Campos permitidos en nodos del árbol cuando no hay ficha completa. */
 
 export function redactOrgNode(
-
   node: OrgNode,
 
   canViewFullProfile: boolean,
-
 ): OrgNode {
-
   if (canViewFullProfile) {
-
     return node;
-
   }
 
-
-
   return {
-
     id: node.id,
 
     name: node.name,
@@ -109,65 +87,40 @@ export function redactOrgNode(
     email: null,
 
     phone: null,
-
   };
-
 }
 
-
-
 export function redactOrgNodeTreeForViewer(
-
   node: OrgNode,
 
   viewerPersonId: string,
 
   visibleDescendantIds: Set<string>,
-
 ): OrgNode {
-
   const canView =
-
     node.id === viewerPersonId || visibleDescendantIds.has(node.id);
-
-
 
   const redacted = redactOrgNode(node, canView);
 
   return {
-
     ...redacted,
 
     children: node.children.map((child) =>
-
       redactOrgNodeTreeForViewer(child, viewerPersonId, visibleDescendantIds),
-
     ),
-
   };
-
 }
 
-
-
 export function redactOrgChartSearchHit(
-
   hit: OrgChartSearchHit,
 
   canViewFullProfile: boolean,
-
 ): OrgChartSearchHit {
-
   if (canViewFullProfile) {
-
     return hit;
-
   }
 
-
-
   return {
-
     id: hit.id,
 
     name: hit.name,
@@ -197,36 +150,23 @@ export function redactOrgChartSearchHit(
     phone: null,
 
     path: [],
-
   };
-
 }
-
-
 
 /** Resumen jerárquico: sin permiso solo nombre (métricas de conteo se conservan). */
 
 export function redactOrgSummaryItem(
-
   item: OrgSummaryItemDto,
 
   canViewFullProfile: boolean,
-
 ): OrgSummaryItemDto {
-
   if (canViewFullProfile) {
-
     return item;
-
   }
 
   return {
-
     ...item,
 
     roleName: null,
-
   };
-
 }
-

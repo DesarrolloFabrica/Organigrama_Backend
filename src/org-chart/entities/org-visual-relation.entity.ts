@@ -7,10 +7,13 @@ import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
  * Solo define cómo el proyecto Organigrama interpreta la relación padre → hijo.
  */
 @Entity({ name: 'org_visual_relation', schema: 'organigrama' })
-@Unique(['parent_person_id', 'child_person_id'])
+@Unique(['version_id', 'parent_person_id', 'child_person_id'])
 export class OrgVisualRelation {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: string;
+
+  @Column({ type: 'bigint' })
+  version_id!: string;
 
   @Column({ type: 'bigint' })
   parent_person_id!: string;

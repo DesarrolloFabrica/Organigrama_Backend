@@ -9,7 +9,9 @@ import { Area } from '../catalogs/entities/area.entity';
  * Inserta catálogos mínimos, personas demo y relaciones si `person` está vacía.
  * Idempotente: no hace nada si ya hay filas en `person`.
  */
-export async function seedOrganigramaDemoIfEmpty(ds: DataSource): Promise<void> {
+export async function seedOrganigramaDemoIfEmpty(
+  ds: DataSource,
+): Promise<void> {
   const personRepo = ds.getRepository(Person);
   if ((await personRepo.count()) > 0) {
     return;
@@ -106,7 +108,9 @@ export async function seedOrganigramaDemoIfEmpty(ds: DataSource): Promise<void> 
     );
 
     await qr.commitTransaction();
-    console.log('[seed] organigrama demo: catálogos, personas y org_relation creados.');
+    console.log(
+      '[seed] organigrama demo: catálogos, personas y org_relation creados.',
+    );
   } catch (e) {
     await qr.rollbackTransaction();
     throw e;

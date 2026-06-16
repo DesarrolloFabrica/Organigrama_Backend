@@ -7,9 +7,11 @@ import { OrgVisualRelation } from './entities/org-visual-relation.entity';
 export async function findActiveVisualRelationsByParentId(
   relations: Repository<OrgVisualRelation>,
   parentPersonId: string,
+  versionId: string,
 ): Promise<OrgVisualRelation[]> {
   return relations.find({
     where: {
+      version_id: versionId,
       parent_person_id: parentPersonId,
       is_active: true,
     },

@@ -48,7 +48,7 @@ export class GoogleWorkspaceAuthService {
       key: credentials.private_key,
       scopes: [GOOGLE_DIRECTORY_USER_READONLY_SCOPE],
       subject: adminEmail,
-    }) as JWT;
+    });
 
     const token = await auth.getAccessToken();
     if (!token) {

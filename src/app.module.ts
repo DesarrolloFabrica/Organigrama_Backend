@@ -21,9 +21,11 @@ import {
 } from './database/typeorm-data-source.factory';
 import { GoogleWorkspaceModule } from './google-workspace/google-workspace.module';
 import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.entity';
+import { OrgChartVersion } from './org-chart/entities/org-chart-version.entity';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { PersonProfileState } from './profile/entities/person-profile-state.entity';
+import { PersonPermission } from './permissions/entities/person-permission.entity';
 
 @Module({
   imports: [
@@ -82,7 +84,9 @@ import { PersonProfileState } from './profile/entities/person-profile-state.enti
             ContractType,
             Region,
             OrgVisualRelation,
+            OrgChartVersion,
             PersonProfileState,
+            PersonPermission,
           ],
           /**
            * Solo para desarrollo: genera/actualiza tablas desde las entidades.

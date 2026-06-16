@@ -1368,4 +1368,167 @@ Este diseño evita cuentas estudiantiles o correos sin convención de colaborado
 
 ---
 
+## Apéndice R — Usuarios técnicos y sistema de permisos
+
+### Tres conceptos distintos
+
+| Concepto | Variable / tabla | Qué controla |
+|----------|-----------------|--------------|
+| **Usuario técnico** | `ORG_TECHNICAL_EMAILS` | Puede autenticarse aunque su `edu_email` no contenga `_` |
+| **Permisos administrativos** | `ORG_ADMIN_EMAILS` / `core.person_permission` | Ve toda la información sin redacción (`ORG_READ_ALL`, `ORG_ADMIN`) |
+| **Jerarquía visual** | `organigrama.org_visual_relation` | Aparece como nodo en el organigrama |
+
+Estos tres conceptos son independientes. Un usuario técnico (`ORG_TECHNICAL_EMAILS`) normalmente también necesita permisos administrativos (`ORG_ADMIN_EMAILS`), pero son configuraciones separadas.
+
+Los usuarios técnicos pueden autenticarse sin cumplir la regla institucional del `_`, pero **no aparecen en el organigrama** salvo que tengan relaciones activas en `organigrama.org_visual_relation`.
+
+### Variable `ORG_TECHNICAL_EMAILS`
+
+Lista de correos institucionales que pueden autenticarse aunque su parte local no contenga `_`. Separados por coma, normalizados a `trim().toLowerCase()`.
+
+```env
+ORG_TECHNICAL_EMAILS=desarrollofabrica@cun.edu.co
+```
+
+Cuando se aplica la excepción, el backend registra:
+
+```
+[Auth] Technical user bypass applied: desarrollofabrica@cun.edu.co
+```
+
+La regla del `_` para los demás usuarios **no se elimina**; el bypass es explícito y controlado por esta variable.
+
+### Flujo de login para usuario técnico
+
+```
+POST /api/auth/google { idToken: 'token de desarrollofabrica@cun.edu.co' }
+  → GoogleTokenService.verifyIdToken() — verifica con Google
+  → normalizeInstitutionalEmail()     — OK (dominio @cun.edu.co válido)
+  → Busca Person en core.person       — OK (si existe con is_active=true)
+  → isCollaboratorEduEmail()          — FALLA (no tiene '_')
+  → isTechnicalUser()                 — OK (está en ORG_TECHNICAL_EMAILS)
+  → Log: [Auth] Technical user bypass applied: desarrollofabrica@cun.edu.co
+  → PersonPermissionService          — carga ORG_READ_ALL, ORG_ADMIN
+  → JWT emitido con permissions       — acceso total al organigrama
+```
+
+---
+
+### Propósito (permisos técnicos)
+
+Permitir que un usuario técnico (p. ej. el desarrollador) acceda a toda la información del organigrama sin alterar la estructura jerárquica visual. Este usuario puede autenticarse, ver fichas completas y buscar cualquier persona, pero **no aparece como nodo en el organigrama**.
+
+### Tabla `core.person_permission`
+
+Creada con la migración `migrations/004_core_person_permission.sql`:
+
+```sql
+CREATE TABLE IF NOT EXISTS core.person_permission (
+  person_id       BIGINT       NOT NULL REFERENCES core.person(id),
+  permission_code VARCHAR(100) NOT NULL,
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (person_id, permission_code)
+);
+```
+
+Códigos de permiso disponibles:
+
+| Código | Significado |
+|--------|-------------|
+| `ORG_READ_ALL` | Acceso total sin redacción a todos los nodos, fichas, búsquedas y resúmenes del organigrama |
+| `ORG_ADMIN` | Permiso de administración técnica de la aplicación |
+
+### Variable de entorno `ORG_ADMIN_EMAILS`
+
+Fallback de arranque para reconocer admins sin requerir un registro en `core.person_permission`. Útil en entornos de desarrollo o migraciones iniciales.
+
+```
+ORG_ADMIN_EMAILS=jose_camachoc@cun.edu.co,otro@cun.edu.co
+```
+
+Los correos se separan por coma. La normalización aplica `.trim().toLowerCase()`. Si el usuario está en esta lista y no tiene registro en `core.person_permission`, igualmente recibe `ORG_READ_ALL` y `ORG_ADMIN` en su JWT.
+
+### Otorgar permisos de administrador
+
+Para persistir los permisos en la base de datos:
+
+```bash
+npm run org:grant-admin -- jose_camachoc@cun.edu.co
+```
+
+El script:
+1. Busca la persona activa en `core.person` por `edu_email`.
+2. Inserta `ORG_READ_ALL` y `ORG_ADMIN` con `ON CONFLICT DO NOTHING`.
+3. Imprime confirmación o error claro.
+4. **Nunca** inserta en `organigrama.org_visual_relation`.
+
+### Diferencia entre permisos técnicos y jerarquía visual
+
+| Aspecto | Jerarquía visual (`org_visual_relation`) | Permisos técnicos (`person_permission`) |
+|---------|------------------------------------------|-----------------------------------------|
+| Propósito | Define el árbol del organigrama | Control de acceso de aplicación |
+| Afecta visibilidad | Sí (descendientes ven ficha completa) | Sí (ORG_READ_ALL elimina redacción) |
+| Aparece en el mapa | Sí | No |
+| Gestión | Sincronización con Core | `npm run org:grant-admin` |
+
+### Advertencias
+
+- **NUNCA** insertar un admin técnico en `organigrama.org_visual_relation`. Si se hace, aparecerá como nodo visual, lo que rompe el modelo.
+- Los permisos se incluyen en el JWT al hacer login. Si se modifican en `core.person_permission`, **el usuario debe cerrar sesión y volver a iniciar** para que el JWT y el `sessionStorage` del frontend reflejen el cambio.
+- La autorización real vive exclusivamente en el backend. El frontend recibe `permissions[]` solo para decisiones de UI.
+
+### Flujo técnico al hacer login
+
+```
+POST /api/auth/google
+  → PersonPermissionService.getPermissionsForPerson(personId, eduEmail)
+      → consulta core.person_permission
+      → combina con ORG_ADMIN_EMAILS (fallback)
+  → JWT incluye permissions: ['ORG_READ_ALL', 'ORG_ADMIN']  ← solo si aplica
+  → AuthUserResponse.permissions devuelta al frontend
+```
+
+### Flujo técnico en cada request del organigrama
+
+```
+GET /api/org-chart/*
+  → JwtAuthGuard decodifica el token
+  → OrgChartController.viewerContext(req)
+      → { personId, permissions: ['ORG_READ_ALL', ...] }
+  → OrgChartService recibe OrgViewerContext
+  → viewerHasGlobalReadAccess(viewer) === true → sin redacción
+```
+
+### Casos de prueba manuales
+
+**Caso A — Usuario normal:**
+- Solo ve ficha completa de sí mismo y sus descendientes.
+- Personas fuera de su jerarquía aparecen redactadas.
+
+**Caso B — Admin técnico con ORG_READ_ALL:**
+- Entra con Google normalmente.
+- Ve el root normal (Director de Operaciones).
+- Puede abrir cualquier ficha completa.
+- Puede buscar cualquier persona y ver datos completos.
+- Puede navegar a `/org/team/:id` de cualquier persona.
+- El resumen (`summary/:id`) muestra datos sin redacción.
+- **No aparece como nodo visual** (no tiene relación en `org_visual_relation`).
+
+**Caso C — Admin sin relación visual:**
+- Login exitoso.
+- Root sigue siendo Director de Operaciones.
+- No se renderiza como nodo huérfano.
+
+### Apéndice S — Versionamiento por periodo
+
+Ver documentación completa en [`docs/org-chart-versioning.md`](../docs/org-chart-versioning.md).
+
+- Migración: `migrations/005_org_chart_version.sql`
+- Tablas: `organigrama.org_chart_version`, columna `version_id` en `org_visual_relation`
+- Endpoints: `GET/POST /api/org-chart/versions` (solo `personId=1229` + `desarrollofabrica@cun.edu.co`)
+- Lecturas del árbol aceptan `?versionId=` solo para ese usuario técnico
+
+---
+
 *Organigrama OP Backend — CUN, Dirección de Operaciones.*
