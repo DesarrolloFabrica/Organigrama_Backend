@@ -18,6 +18,7 @@ import { City } from '../catalogs/entities/city.entity';
 import { ContractType } from '../catalogs/entities/contract-type.entity';
 import { Region } from '../catalogs/entities/region.entity';
 import { Person } from '../person/entities/person.entity';
+import { OrgChartPersonOverride } from './entities/org-chart-person-override.entity';
 import type {
   OrgChartSearchHit,
   OrgNode,
@@ -118,6 +119,11 @@ export class OrgChartService {
     { value: OrgNode; expiresAt: number }
   >();
 
+  private roleOverrideCache = new Map<
+    string,
+    { value: Map<string, string>; expiresAt: number }
+  >();
+
   private readonly orgChartResponseCacheTtlMs = 60 * 1000;
 
   private readonly enableOrgChartPerfLogs =
@@ -134,6 +140,8 @@ export class OrgChartService {
     private readonly dataSource: DataSource,
     @InjectRepository(Person)
     private readonly persons: Repository<Person>,
+    @InjectRepository(OrgChartPersonOverride)
+    private readonly personOverrides: Repository<OrgChartPersonOverride>,
     @InjectRepository(Role)
     private readonly roles: Repository<Role>,
     @InjectRepository(Hierarchy)
@@ -338,11 +346,11 @@ export class OrgChartService {
       root,
       catalogs,
       (nodePerson, nodeCatalogs, nodeChildren) =>
-        this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren),
+        this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren, undefined, versionId),
       versionId,
     );
 
-    const node = await this.buildOrgNode(root, catalogs, children);
+    const node = await this.buildOrgNode(root, catalogs, children, undefined, versionId);
     return this.applyTreeVisibility(node, viewer, versionId);
   }
 
@@ -375,11 +383,11 @@ export class OrgChartService {
       person,
       catalogs,
       (nodePerson, nodeCatalogs, nodeChildren) =>
-        this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren),
+        this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren, undefined, versionId),
       versionId,
     );
 
-    const node = await this.buildOrgNode(person, catalogs, children);
+    const node = await this.buildOrgNode(person, catalogs, children, undefined, versionId);
     return this.applyTreeVisibility(node, viewer, versionId);
   }
 
@@ -408,6 +416,7 @@ export class OrgChartService {
             nodeCatalogs,
             nodeChildren,
             directReportsCount,
+            versionId,
           ),
         versionId,
       );
@@ -476,6 +485,7 @@ export class OrgChartService {
             nodeCatalogs,
             nodeChildren,
             directReportsCount,
+            versionId,
           ),
         versionId,
       );
@@ -484,7 +494,13 @@ export class OrgChartService {
       );
 
       const perfBuildOrgNodeStart = Date.now();
-      const node = await this.buildOrgNode(person, catalogs, children);
+      const node = await this.buildOrgNode(
+        person,
+        catalogs,
+        children,
+        undefined,
+        versionId,
+      );
       this.logOrgChartPerf(
         `[PerfNode] id=${perfId} buildOrgNode: ${Date.now() - perfBuildOrgNodeStart}ms`,
       );
@@ -551,6 +567,7 @@ export class OrgChartService {
             nodeCatalogs,
             nodeChildren,
             directReportsCount,
+            versionId,
           ),
         versionId,
       );
@@ -559,7 +576,13 @@ export class OrgChartService {
       );
 
       const perfBuildRootNodeStart = Date.now();
-      const rootNode = await this.buildOrgNode(root, catalogs, children);
+      const rootNode = await this.buildOrgNode(
+        root,
+        catalogs,
+        children,
+        undefined,
+        versionId,
+      );
       this.logOrgChartPerf(
         `[PerfRoot] buildOrgNode: ${Date.now() - perfBuildRootNodeStart}ms`,
       );
@@ -687,9 +710,7 @@ export class OrgChartService {
     }
 
     const catalogs = await this.loadCatalogsCached();
-    const role = person.role_id
-      ? catalogs.roleById.get(String(person.role_id))
-      : undefined;
+    const role = await this.getEffectiveRole(person, catalogs, versionId);
     const viewerVisualLevel = resolveOrgLevelFromRoleName(role?.name);
     const includeSubtreeVacancies = viewerVisualLevel === 1;
 
@@ -740,26 +761,32 @@ export class OrgChartService {
             vacancies: 0,
             nodeKind: 'vacancy' as const,
           }))
-        : directVacancyPeople.map((child) => {
-            const childRole = child.role_id
-              ? catalogs.roleById.get(String(child.role_id))
-              : undefined;
-            return {
-              id: String(child.id),
-              name: child.full_name,
-              roleName: childRole?.name ?? null,
-              totalPeople: 0,
-              vacancies: 0,
-              nodeKind: 'vacancy' as const,
-            };
-          });
+        : await Promise.all(
+            directVacancyPeople.map(async (child) => {
+              const childRole = await this.getEffectiveRole(
+                child,
+                catalogs,
+                versionId,
+              );
+              return {
+                id: String(child.id),
+                name: child.full_name,
+                roleName: childRole?.name ?? null,
+                totalPeople: 0,
+                vacancies: 0,
+                nodeKind: 'vacancy' as const,
+              };
+            }),
+          );
 
       areas = await Promise.all(
         directTeamPeople.map(async (child) => {
           const id = String(child.id);
-          const childRole = child.role_id
-            ? catalogs.roleById.get(String(child.role_id))
-            : undefined;
+          const childRole = await this.getEffectiveRole(
+            child,
+            catalogs,
+            versionId,
+          );
           const [childTotal, childVacancies] = await Promise.all([
             this.countAllDescendants(id, versionId),
             this.countVacanciesInSubtree(id, true, versionId),
@@ -852,17 +879,17 @@ export class OrgChartService {
       ? null
       : await this.visibility.getVisibleDescendantIds(viewer, versionId);
 
-    const hits = matches.map((person) => {
-      const role = person.role_id
-        ? (catalogs.roleById.get(String(person.role_id)) ?? null)
-        : null;
+    const hits = await Promise.all(
+      matches.map(async (person) => {
+        const roleId = await this.getEffectiveRoleId(person, versionId);
+        const role = roleId
+          ? (catalogs.roleById.get(String(roleId)) ?? null)
+          : null;
       const hierarchy = person.hierarchy_id
         ? (catalogs.hierarchyById.get(String(person.hierarchy_id)) ?? null)
         : null;
 
-      const nodeKind = this.isVacancyPerson(person, catalogs)
-        ? ('vacancy' as const)
-        : ('person' as const);
+        const nodeKind = resolveOrgNodeKindFromPerson(person, role);
 
       const personId = String(person.id);
       const canView =
@@ -875,7 +902,7 @@ export class OrgChartService {
         document: person.document ?? '',
         name: person.full_name ?? '',
         nodeKind,
-        role_id: person.role_id,
+          role_id: roleId,
         role: role
           ? {
               id: String(role.id),
@@ -897,11 +924,12 @@ export class OrgChartService {
         email: person.email,
         edu_email: person.edu_email,
         phone: person.phone,
-        path: [this.buildPathNode(person, role, hierarchy)],
+          path: [this.buildPathNode(person, role, hierarchy, roleId)],
       };
 
-      return redactOrgChartSearchHit(hit, canView);
-    });
+        return redactOrgChartSearchHit(hit, canView);
+      }),
+    );
 
     return hits;
   }
@@ -920,9 +948,8 @@ export class OrgChartService {
     }
 
     const catalogs = await this.loadCatalogs();
-    const role = person.role_id
-      ? (catalogs.roleById.get(String(person.role_id)) ?? null)
-      : null;
+    const roleId = await this.getEffectiveRoleId(person, versionId);
+    const role = roleId ? (catalogs.roleById.get(String(roleId)) ?? null) : null;
     const nodeKind = resolveOrgNodeKindFromPerson(person, role);
     const photoUrl =
       nodeKind === 'vacancy' ? null : await this.resolvePhotoUrl(person);
@@ -984,7 +1011,7 @@ export class OrgChartService {
       document: person.document,
       type_document: person.type_document,
       full_name: person.full_name,
-      role_id: person.role_id,
+      role_id: roleId,
       role: role
         ? {
             id: String(role.id),
@@ -1047,7 +1074,7 @@ export class OrgChartService {
         city: city ? { id: String(city.id), name: city.name } : null,
         campus: campus ? { id: Number(campus.id), name: campus.name } : null,
       },
-      hierarchy_path: [this.buildPathNode(person, role, hierarchy)],
+      hierarchy_path: [this.buildPathNode(person, role, hierarchy, roleId)],
       direct_reports_count: directReportsCount,
       direct_reports: [],
     } as OrgPersonFullProfileDto;
@@ -1056,6 +1083,49 @@ export class OrgChartService {
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private async getRoleOverrideMap(
+    versionId: string,
+  ): Promise<Map<string, string>> {
+    const now = Date.now();
+    const cached = this.roleOverrideCache.get(versionId);
+    if (cached && cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    const rows = await this.personOverrides.find({
+      where: { version_id: versionId },
+    });
+    const value = new Map<string, string>();
+    for (const row of rows) {
+      if (row.role_id_override) {
+        value.set(String(row.person_id), String(row.role_id_override));
+      }
+    }
+
+    this.roleOverrideCache.set(versionId, {
+      value,
+      expiresAt: now + this.orgChartResponseCacheTtlMs,
+    });
+    return value;
+  }
+
+  private async getEffectiveRoleId(
+    person: Person,
+    versionId: string,
+  ): Promise<string | null> {
+    const overrides = await this.getRoleOverrideMap(versionId);
+    return overrides.get(String(person.id)) ?? person.role_id ?? null;
+  }
+
+  private async getEffectiveRole(
+    person: Person,
+    catalogs: OrgCatalogs,
+    versionId: string,
+  ): Promise<Role | null> {
+    const roleId = await this.getEffectiveRoleId(person, versionId);
+    return roleId ? (catalogs.roleById.get(String(roleId)) ?? null) : null;
+  }
 
   private logOrgChartPerf(message: string): void {
     if (this.enableOrgChartPerfLogs) {
@@ -1289,6 +1359,7 @@ export class OrgChartService {
   clearResponseCaches(): void {
     this.orgChartRootCache.clear();
     this.orgChartNodeCache.clear();
+    this.roleOverrideCache.clear();
   }
 
   private async withGooglePhotoContext<T>(fn: () => Promise<T>): Promise<T> {
@@ -1367,10 +1438,12 @@ export class OrgChartService {
     catalogs: OrgCatalogs,
     children: OrgNode[],
     directReportsCount?: number,
+    versionId?: string,
   ): Promise<OrgNode> {
-    const role = person.role_id
-      ? (catalogs.roleById.get(String(person.role_id)) ?? null)
-      : null;
+    const roleId = versionId
+      ? await this.getEffectiveRoleId(person, versionId)
+      : (person.role_id ?? null);
+    const role = roleId ? (catalogs.roleById.get(String(roleId)) ?? null) : null;
     const hierarchy = person.hierarchy_id
       ? (catalogs.hierarchyById.get(String(person.hierarchy_id)) ?? null)
       : null;
@@ -1403,7 +1476,7 @@ export class OrgChartService {
       document: person.document ?? '',
       name: person.full_name ?? '',
       nodeKind,
-      role_id: person.role_id,
+      role_id: roleId,
       role: role
         ? {
             id: String(role.id),
@@ -1497,6 +1570,7 @@ export class OrgChartService {
     person: Person,
     role: Role | null,
     hierarchy: Hierarchy | null,
+    roleId?: string | null,
   ): {
     id: string;
     name: string;
@@ -1508,7 +1582,7 @@ export class OrgChartService {
     return {
       id: String(person.id),
       name: person.full_name ?? '',
-      role_id: person.role_id,
+      role_id: roleId ?? person.role_id,
       role: role
         ? {
             id: String(role.id),

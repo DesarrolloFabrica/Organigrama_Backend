@@ -115,6 +115,15 @@ describe('OrgChartVersionService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
+    it('403 si usuario normal envía versionId y versionCode', async () => {
+      await expect(
+        service.resolveVersionForRequest(normalViewer(), {
+          versionId: '2',
+          versionCode: 'borrador',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
     it('404 si versión no existe', async () => {
       versionsRepo.findOne.mockResolvedValueOnce(null);
 

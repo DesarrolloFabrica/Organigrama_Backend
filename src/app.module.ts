@@ -22,6 +22,7 @@ import {
 import { GoogleWorkspaceModule } from './google-workspace/google-workspace.module';
 import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.entity';
 import { OrgChartVersion } from './org-chart/entities/org-chart-version.entity';
+import { OrgChartPersonOverride } from './org-chart/entities/org-chart-person-override.entity';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { PersonProfileState } from './profile/entities/person-profile-state.entity';
@@ -85,6 +86,7 @@ import { PersonPermission } from './permissions/entities/person-permission.entit
             Region,
             OrgVisualRelation,
             OrgChartVersion,
+            OrgChartPersonOverride,
             PersonProfileState,
             PersonPermission,
           ],

@@ -323,18 +323,18 @@ export class OrgChartVersionService {
     const versionIdParam = params.versionId?.trim();
     const versionCodeParam = params.versionCode?.trim();
 
-    if (versionIdParam && versionCodeParam) {
-      throw new BadRequestException(
-        'Use solo versionId o versionCode, no ambos a la vez.',
-      );
-    }
-
     if (!versionIdParam && !versionCodeParam) {
       const active = await this.getActiveVersion();
       return String(active.id);
     }
 
     await this.ensureCanUseVersioning(viewer);
+
+    if (versionIdParam && versionCodeParam) {
+      throw new BadRequestException(
+        'Use solo versionId o versionCode, no ambos a la vez.',
+      );
+    }
 
     let version: OrgChartVersion;
     if (versionIdParam) {
