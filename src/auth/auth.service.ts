@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -8,11 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Person } from '../person/entities/person.entity';
-import {
-  isCollaboratorEduEmail,
-  isTechnicalUser,
-  normalizeInstitutionalEmail,
-} from './auth-email.util';
+import { normalizeInstitutionalEmail } from './auth-email.util';
 import type {
   AuthUserResponse,
   GoogleLoginResponse,
@@ -36,33 +33,28 @@ export class AuthService {
 
   async loginWithGoogleIdToken(idToken: string): Promise<GoogleLoginResponse> {
     const identity = await this.googleTokenService.verifyIdToken(idToken);
-    const person = await this.resolveCollaboratorByGoogleEmail(identity.email);
+    const person = await this.resolvePersonByInstitutionalEmail(identity.email);
 
-    const permissions = await this.permissionService.getPermissionsForPerson(
-      String(person.id),
-      person.edu_email ?? '',
-    );
-
-    const session: JwtPayload = {
-      personId: String(person.id),
+    return this.issueLoginResponse(person, {
       googleSubject: identity.subject,
-      googlePictureUrl: identity.pictureUrl,
       googleEmail: identity.email,
-      eduEmail: person.edu_email,
-      permissions,
-    };
+      googlePictureUrl: identity.pictureUrl,
+    });
+  }
 
-    const accessToken = await this.jwtService.signAsync(session);
+  async loginWithDevEmail(email: string): Promise<GoogleLoginResponse> {
+    const trimmed = email?.trim();
+    if (!trimmed) {
+      throw new BadRequestException('El correo es obligatorio');
+    }
 
-    return {
-      accessToken,
-      user: this.toAuthUserResponse(
-        person,
-        identity.email,
-        identity.pictureUrl,
-        permissions,
-      ),
-    };
+    const person = await this.resolvePersonByInstitutionalEmail(trimmed);
+
+    return this.issueLoginResponse(person, {
+      googleSubject: `dev:${person.id}`,
+      googleEmail: trimmed,
+      googlePictureUrl: null,
+    });
   }
 
   async getUserFromSession(
@@ -72,11 +64,7 @@ export class AuthService {
       where: { id: session.personId, is_active: true },
     });
 
-    if (
-      !person?.edu_email ||
-      (!isCollaboratorEduEmail(person.edu_email) &&
-        !isTechnicalUser(person.edu_email))
-    ) {
+    if (!person?.edu_email) {
       throw new UnauthorizedException('Sesión inválida');
     }
 
@@ -96,10 +84,45 @@ export class AuthService {
     }
   }
 
-  private async resolveCollaboratorByGoogleEmail(
-    googleEmail: string,
+  private async issueLoginResponse(
+    person: Person,
+    identity: {
+      googleSubject: string;
+      googleEmail: string;
+      googlePictureUrl: string | null;
+    },
+  ): Promise<GoogleLoginResponse> {
+    const permissions = await this.permissionService.getPermissionsForPerson(
+      String(person.id),
+      person.edu_email ?? '',
+    );
+
+    const session: JwtPayload = {
+      personId: String(person.id),
+      googleSubject: identity.googleSubject,
+      googlePictureUrl: identity.googlePictureUrl,
+      googleEmail: identity.googleEmail,
+      eduEmail: person.edu_email,
+      permissions,
+    };
+
+    const accessToken = await this.jwtService.signAsync(session);
+
+    return {
+      accessToken,
+      user: this.toAuthUserResponse(
+        person,
+        identity.googleEmail,
+        identity.googlePictureUrl,
+        permissions,
+      ),
+    };
+  }
+
+  private async resolvePersonByInstitutionalEmail(
+    email: string,
   ): Promise<Person> {
-    const normalized = normalizeInstitutionalEmail(googleEmail);
+    const normalized = normalizeInstitutionalEmail(email);
     if (!normalized) {
       throw new ForbiddenException(
         'Solo pueden acceder cuentas institucionales @cun.edu.co',
@@ -120,17 +143,6 @@ export class AuthService {
       throw new ForbiddenException(
         'No tienes acceso: tu correo no está registrado en el organigrama',
       );
-    }
-
-    const eduEmail = person.edu_email!;
-    if (!isCollaboratorEduEmail(eduEmail)) {
-      if (isTechnicalUser(eduEmail)) {
-        this.log.log(`[Auth] Technical user bypass applied: ${eduEmail}`);
-      } else {
-        throw new ForbiddenException(
-          'Acceso restringido a colaboradores registrados en el organigrama',
-        );
-      }
     }
 
     return person;

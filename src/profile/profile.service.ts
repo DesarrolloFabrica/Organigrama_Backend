@@ -8,16 +8,13 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, QueryFailedError, Repository } from 'typeorm';
 import { Area } from '../catalogs/entities/area.entity';
 import { Hierarchy } from '../catalogs/entities/hierarchy.entity';
 import { Program } from '../catalogs/entities/program.entity';
 import { Role } from '../catalogs/entities/role.entity';
 import { School } from '../catalogs/entities/school.entity';
-import {
-  isCollaboratorEduEmail,
-  normalizeInstitutionalEmail,
-} from '../auth/auth-email.util';
+import { normalizeInstitutionalEmail } from '../auth/auth-email.util';
 import { Person } from '../person/entities/person.entity';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import { PersonProfileState } from './entities/person-profile-state.entity';
@@ -171,8 +168,20 @@ export class ProfileService {
       );
     }
 
+    if (dto.document !== undefined) {
+      await this.assertDocumentNotTakenByOther(personId, person.document);
+    }
+
+    if (dto.email !== undefined && person.email) {
+      await this.assertEmailNotTakenByOther(personId, person.email);
+    }
+
     t = Date.now();
-    await this.persons.save(person);
+    try {
+      await this.persons.save(person);
+    } catch (error) {
+      this.rethrowPersonSaveError(error);
+    }
     step('persons.save', t);
 
     state.profile_updated_by_user_at = new Date();
@@ -246,11 +255,96 @@ export class ProfileService {
       where: { id: personId, is_active: true },
     });
 
-    if (!person?.edu_email || !isCollaboratorEduEmail(person.edu_email)) {
+    if (!person?.edu_email) {
       throw new UnauthorizedException('Sesión inválida para perfil');
     }
 
     return person;
+  }
+
+  /**
+   * Verifica que el documento no pertenezca a OTRA persona (id distinto al
+   * actual) antes de persistir. La fila propia se excluye explícitamente, de
+   * modo que un usuario siempre puede volver a guardar su mismo documento.
+   *
+   * El constraint único `person_document_key` sigue siendo el respaldo final
+   * (ver rethrowPersonSaveError) para condiciones de carrera.
+   */
+  private async assertDocumentNotTakenByOther(
+    personId: string,
+    document: string,
+  ): Promise<void> {
+    const conflicting = await this.persons.findOne({
+      where: { document, id: Not(personId) },
+      select: { id: true },
+    });
+
+    if (conflicting) {
+      this.log.warn(
+        `[Profile] Document conflict: currentPersonId=${personId} conflictingPersonId=${conflicting.id} document=${document}`,
+      );
+      throw new BadRequestException(
+        'Ese número de documento ya está registrado por otra persona',
+      );
+    }
+  }
+
+  /**
+   * Verifica que el correo personal no pertenezca a OTRA persona (id distinto
+   * al actual) antes de persistir. La fila propia se excluye explícitamente,
+   * de modo que un usuario siempre puede volver a guardar su mismo correo.
+   *
+   * El constraint único `person_email_key` sigue siendo el respaldo final
+   * (ver rethrowPersonSaveError) para condiciones de carrera.
+   */
+  private async assertEmailNotTakenByOther(
+    personId: string,
+    email: string,
+  ): Promise<void> {
+    const conflicting = await this.persons.findOne({
+      where: { email, id: Not(personId) },
+      select: { id: true },
+    });
+
+    if (conflicting) {
+      this.log.warn(
+        `[Profile] Email conflict: currentPersonId=${personId} conflictingPersonId=${conflicting.id} email=${email}`,
+      );
+      throw new BadRequestException(
+        'Ese correo personal ya está registrado por otra persona',
+      );
+    }
+  }
+
+  private rethrowPersonSaveError(error: unknown): never {
+    if (error instanceof QueryFailedError) {
+      const pgError = error.driverError as {
+        code?: string;
+        constraint?: string;
+      };
+
+      if (pgError?.code === '23505') {
+        if (pgError.constraint === 'person_document_key') {
+          throw new BadRequestException(
+            'Ese número de documento ya está registrado por otra persona',
+          );
+        }
+
+        if (pgError.constraint === 'person_email_key') {
+          throw new BadRequestException(
+            'Ese correo personal ya está registrado por otra persona',
+          );
+        }
+      }
+
+      if (pgError?.code === '42703') {
+        throw new BadRequestException(
+          'Faltan columnas de contacto de emergencia en la base de datos. Ejecuta migrations/003_core_person_emergency_contact.sql',
+        );
+      }
+    }
+
+    throw error;
   }
 
   private async ensureProfileState(

@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Person } from '../person/entities/person.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthDevGuard } from './auth-dev.guard';
 import { getJwtExpiresIn, getJwtSecret } from './auth.config';
 import { GoogleTokenService } from './google-token.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -24,6 +25,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthDevGuard,
     GoogleTokenService,
     {
       provide: APP_GUARD,
