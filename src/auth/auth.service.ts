@@ -18,6 +18,7 @@ import type {
 import type { AuthenticatedSessionContext } from './types/authenticated-session.context';
 import { GoogleTokenService } from './google-token.service';
 import { PersonPermissionService } from '../permissions/person-permission.service';
+import { ProfilePhotoSyncService } from '../profile/profile-photo-sync.service';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly googleTokenService: GoogleTokenService,
     private readonly jwtService: JwtService,
     private readonly permissionService: PersonPermissionService,
+    private readonly profilePhotoSync: ProfilePhotoSyncService,
   ) {}
 
   async loginWithGoogleIdToken(idToken: string): Promise<GoogleLoginResponse> {
@@ -105,6 +107,12 @@ export class AuthService {
       eduEmail: person.edu_email,
       permissions,
     };
+
+    await this.profilePhotoSync.syncGooglePhotoOnLogin(
+      String(person.id),
+      identity.googleEmail,
+      identity.googlePictureUrl,
+    );
 
     const accessToken = await this.jwtService.signAsync(session);
 

@@ -5,5 +5,8 @@ dist
 .env.core
 coverage
 secrets/
+*.token.json
+google-drive-token.json
+google-drive-oauth-client.json
 tools/
 cloud-sql-proxy.exe

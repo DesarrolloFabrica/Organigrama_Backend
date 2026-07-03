@@ -10,6 +10,7 @@ import { ProfileDevController } from './dev/profile-dev.controller';
 import { ProfileDevGuard } from './dev/profile-dev.guard';
 import { PersonProfileState } from './entities/person-profile-state.entity';
 import { ProfileCompletionService } from './profile-completion.service';
+import { ProfilePhotoSyncService } from './profile-photo-sync.service';
 import { OrgChartModule } from '../org-chart/org-chart.module';
 import { OrgChartPhotosModule } from '../org-chart/photos/org-chart-photos.module';
 import { ProfileController } from './profile.controller';
@@ -30,7 +31,12 @@ import { ProfileService } from './profile.service';
     ]),
   ],
   controllers: [ProfileController, ProfileDevController],
-  providers: [ProfileService, ProfileCompletionService, ProfileDevGuard],
-  exports: [ProfileService, ProfileCompletionService],
+  providers: [
+    ProfileService,
+    ProfileCompletionService,
+    ProfilePhotoSyncService,
+    ProfileDevGuard,
+  ],
+  exports: [ProfileService, ProfileCompletionService, ProfilePhotoSyncService],
 })
 export class ProfileModule {}

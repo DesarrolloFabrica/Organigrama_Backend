@@ -14,8 +14,12 @@ import {
 } from './org-chart-legacy.config';
 import { OrgChartService } from './org-chart.service';
 import { OrgChartVersionService } from './org-chart-version.service';
+import { OrgChartCvService } from './org-chart-cv.service';
+import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
+import type { PersonCvResponseDto } from './dto/person-cv.response.dto';
+import type { VacancyListResponseDto } from './vacancies/dto/vacancy.response.dto';
 
 @Controller('org-chart')
 export class OrgChartController {
@@ -24,6 +28,8 @@ export class OrgChartController {
   constructor(
     private readonly orgChartService: OrgChartService,
     private readonly versionService: OrgChartVersionService,
+    private readonly cvService: OrgChartCvService,
+    private readonly vacancyService: OrgChartVacancyService,
   ) {}
 
   private async resolveVersion(
@@ -94,6 +100,17 @@ export class OrgChartController {
     );
   }
 
+  /**
+   * Lista las vacantes desde el schema externo `vacancies` (solo lectura).
+   *
+   * Devuelve un DTO limpio para el frontend, enriquecido con nombres de core
+   * (área, escuela, programa) cuando existe la referencia por ID.
+   */
+  @Get('vacancies')
+  async getVacancies(): Promise<VacancyListResponseDto> {
+    return this.vacancyService.getVacancies();
+  }
+
   /** Detalle de persona con visibilidad jerárquica. */
   @Get('person/:id')
   async getPersonDetail(
@@ -112,6 +129,37 @@ export class OrgChartController {
       buildOrgViewerContext(req),
       resolvedVersionId,
     );
+  }
+
+  /**
+   * Devuelve si una persona tiene hoja de vida (CV) y la URL almacenada.
+   *
+   * El CV es información SENSIBLE: aplica la MISMA política de visibilidad
+   * jerárquica que la ficha completa (self / jefes-descendientes / ORG_READ_ALL).
+   * Si el viewer no tiene permiso, el servicio responde { hasCv: false } sin
+   * revelar la existencia del archivo.
+   *
+   * Lee desde organigrama.person_cv (no consulta Google Drive en tiempo real).
+   * Hereda el mismo guard global de autenticación (JwtAuthGuard) que el resto
+   * de endpoints de org-chart.
+   */
+  @Get('person/:personId/cv')
+  async getPersonCv(
+    @Param('personId') personId: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ): Promise<PersonCvResponseDto> {
+    // Construimos el contexto del usuario autenticado desde el JWT
+    // (personId, email y permisos) y resolvemos la versión vigente para
+    // evaluar la jerarquía con la misma base que el resto del organigrama.
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.cvService.getPersonCv(viewer, personId, resolvedVersionId);
   }
 
   /**
@@ -151,13 +199,20 @@ export class OrgChartController {
     );
   }
 
-  /** Persona como raíz del lienzo + solo hijos directos (carga superficial). */
+  /**
+   * Persona como raíz del lienzo + solo hijos directos (carga superficial).
+   *
+   * `relationId` (opcional): posición visual (`org_visual_relation.id`) que ocupa
+   * la persona. Si se provee y la posición tiene equipo propio, los hijos se
+   * resuelven para esa posición; si no, comportamiento por `parent_person_id`.
+   */
   @Get('node/:id')
   async getOrgChartNode(
     @Param('id') id: string,
     @Req() req: Request,
     @Query('versionId') versionId?: string,
     @Query('versionCode') versionCode?: string,
+    @Query('relationId') relationId?: string,
   ) {
     const resolvedVersionId = await this.resolveVersion(
       req,
@@ -168,16 +223,24 @@ export class OrgChartController {
       id,
       buildOrgViewerContext(req),
       resolvedVersionId,
+      relationId ?? null,
     );
   }
 
-  /** Devuelve solo los hijos directos de una persona. */
+  /**
+   * Devuelve solo los hijos directos de una persona.
+   *
+   * `relationId` (opcional): si viene, se buscan primero los hijos colgados de
+   * esa posición visual; si la posición no tiene equipo propio, se cae al
+   * comportamiento actual por `parent_person_id`.
+   */
   @Get('children/:id')
   async getOrgChartChildren(
     @Param('id') id: string,
     @Req() req: Request,
     @Query('versionId') versionId?: string,
     @Query('versionCode') versionCode?: string,
+    @Query('relationId') relationId?: string,
   ) {
     const resolvedVersionId = await this.resolveVersion(
       req,
@@ -188,6 +251,7 @@ export class OrgChartController {
       id,
       buildOrgViewerContext(req),
       resolvedVersionId,
+      relationId ?? null,
     );
   }
 

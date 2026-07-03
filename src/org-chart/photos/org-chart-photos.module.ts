@@ -11,6 +11,7 @@ import { PhotoUrlBuilder } from './photo-url.builder';
 import { DevMockPhotoProvider } from './providers/dev-mock-photo.provider';
 import { GoogleWorkspaceDirectoryPhotoProvider } from './providers/google-workspace-directory-photo.provider';
 import { PersistedGoogleProfilePhotoProvider } from './providers/persisted-google-profile-photo.provider';
+import { PersistedUploadProfilePhotoProvider } from './providers/persisted-upload-profile-photo.provider';
 import { SessionGoogleLoginPhotoProvider } from './providers/session-google-login-photo.provider';
 import { ProfilePhotoLookupService } from './profile-photo-lookup.service';
 
@@ -27,6 +28,7 @@ import { ProfilePhotoLookupService } from './profile-photo-lookup.service';
     PhotoUrlBuilder,
     ProfilePhotoLookupService,
     PersistedGoogleProfilePhotoProvider,
+    PersistedUploadProfilePhotoProvider,
     DevMockPhotoProvider,
     GoogleWorkspaceDirectoryPhotoProvider,
     SessionGoogleLoginPhotoProvider,

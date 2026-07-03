@@ -86,12 +86,33 @@ export type OrgChartSearchHit = {
   path: OrgHierarchyPathSegment[];
 };
 
+/** Estado de asignación visible para una posición/relación específica. */
+export type OrgAssignmentStatus = 'PERMANENT' | 'TEMPORAL';
+
 export type OrgNode = {
   id: string;
   document: string;
   name: string;
   role_id: string | null;
   role: OrgNodeRole | null;
+  /**
+   * Identidad visual de la posición: arista `org_visual_relation.id` que produjo
+   * este nodo. `null` para el nodo raíz/padre y para nodos del fallback por rol.
+   * Permite al frontend diferenciar posiciones de la misma persona (multi-padre).
+   */
+  relation_id: string | null;
+  /** Padre de esta posición (de la relación). `null` si no proviene de una arista. */
+  parent_person_id: string | null;
+  /**
+   * Estado de asignación visible (proviene de un override por relación).
+   * `null` cuando no hay override para la relación que produjo este nodo.
+   */
+  assignment_status: string | null;
+  /**
+   * Etiqueta visible de la asignación (proviene de un override por relación).
+   * `null` cuando no hay override.
+   */
+  assignment_label: string | null;
   hierarchy_id: string | null;
   area_id: string | null;
   school_id: string | null;

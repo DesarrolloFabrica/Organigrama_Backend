@@ -8,17 +8,17 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Person } from '../person/entities/person.entity';
 import { OrgChartVersion } from './entities/org-chart-version.entity';
-import {
-  ORG_CHART_VERSIONING_EDU_EMAIL,
-  ORG_CHART_VERSIONING_PERSON_ID,
-} from './org-chart-versioning.constants';
+import { DEFAULT_ORG_CHART_VERSION_ADMIN_EMAILS } from './org-chart-versioning.constants';
 import { OrgChartVersionService } from './org-chart-version.service';
 import type { OrgViewerContext } from './org-viewer-context';
 
-function technicalViewer(): OrgViewerContext {
+function versionAdminViewer(
+  eduEmail: string = DEFAULT_ORG_CHART_VERSION_ADMIN_EMAILS[0],
+  personId = '1229',
+): OrgViewerContext {
   return {
-    personId: ORG_CHART_VERSIONING_PERSON_ID,
-    eduEmail: ORG_CHART_VERSIONING_EDU_EMAIL,
+    personId,
+    eduEmail,
     permissions: ['ORG_READ_ALL', 'ORG_ADMIN'],
   };
 }
@@ -28,14 +28,6 @@ function normalViewer(): OrgViewerContext {
     personId: '999',
     eduEmail: 'otro_usuario@cun.edu.co',
     permissions: [],
-  };
-}
-
-function adminViewerWrongId(): OrgViewerContext {
-  return {
-    personId: '100',
-    eduEmail: ORG_CHART_VERSIONING_EDU_EMAIL,
-    permissions: ['ORG_READ_ALL', 'ORG_ADMIN'],
   };
 }
 
@@ -73,22 +65,33 @@ describe('OrgChartVersionService', () => {
   });
 
   describe('canUseVersioning', () => {
-    it('true solo para personId 1229 y email desarrollofabrica', () => {
-      expect(service.canUseVersioning(technicalViewer())).toBe(true);
-    });
+    it.each(DEFAULT_ORG_CHART_VERSION_ADMIN_EMAILS)(
+      'true para correo autorizado %s',
+      (eduEmail) => {
+        expect(
+          service.canUseVersioning(versionAdminViewer(eduEmail, '100')),
+        ).toBe(true);
+      },
+    );
 
     it('false para usuario normal', () => {
       expect(service.canUseVersioning(normalViewer())).toBe(false);
     });
 
-    it('false para ORG_READ_ALL sin personId 1229', () => {
-      expect(service.canUseVersioning(adminViewerWrongId())).toBe(false);
+    it('false para ORG_READ_ALL sin correo autorizado', () => {
+      expect(
+        service.canUseVersioning({
+          personId: '100',
+          eduEmail: 'admin.generico@cun.edu.co',
+          permissions: ['ORG_READ_ALL', 'ORG_ADMIN'],
+        }),
+      ).toBe(false);
     });
 
     it('false si falta email correcto', () => {
       expect(
         service.canUseVersioning({
-          personId: ORG_CHART_VERSIONING_PERSON_ID,
+          personId: '1229',
           eduEmail: 'otro@cun.edu.co',
           permissions: [],
         }),
@@ -128,7 +131,7 @@ describe('OrgChartVersionService', () => {
       versionsRepo.findOne.mockResolvedValueOnce(null);
 
       await expect(
-        service.resolveVersionForRequest(technicalViewer(), {
+        service.resolveVersionForRequest(versionAdminViewer(), {
           versionId: '99',
         }),
       ).rejects.toBeInstanceOf(NotFoundException);
@@ -142,7 +145,7 @@ describe('OrgChartVersionService', () => {
       } as OrgChartVersion);
 
       await expect(
-        service.resolveVersionForRequest(technicalViewer(), { versionId: '2' }),
+        service.resolveVersionForRequest(versionAdminViewer(), { versionId: '2' }),
       ).resolves.toBe('2');
     });
   });
@@ -164,7 +167,7 @@ describe('OrgChartVersionService', () => {
         .mockResolvedValueOnce({ id: '5', code: 'dup' } as OrgChartVersion);
 
       await expect(
-        service.createSnapshot(technicalViewer(), {
+        service.createSnapshot(versionAdminViewer(), {
           sourceVersionId: 1,
           code: 'dup',
           name: 'Dup',
@@ -183,7 +186,7 @@ describe('OrgChartVersionService', () => {
       } as OrgChartVersion);
 
       await expect(
-        service.assertVersionEditable(technicalViewer(), '4'),
+        service.assertVersionEditable(versionAdminViewer(), '4'),
       ).resolves.toMatchObject({ code: 'borrador-nueva-plantilla' });
     });
 
@@ -202,7 +205,7 @@ describe('OrgChartVersionService', () => {
       } as OrgChartVersion);
 
       await expect(
-        service.assertVersionEditable(technicalViewer(), '3'),
+        service.assertVersionEditable(versionAdminViewer(), '3'),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
@@ -215,7 +218,7 @@ describe('OrgChartVersionService', () => {
       } as OrgChartVersion);
 
       await expect(
-        service.assertVersionEditable(technicalViewer(), '1'),
+        service.assertVersionEditable(versionAdminViewer(), '1'),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });

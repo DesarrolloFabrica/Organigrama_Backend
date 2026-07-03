@@ -21,8 +21,11 @@ import {
 } from './database/typeorm-data-source.factory';
 import { GoogleWorkspaceModule } from './google-workspace/google-workspace.module';
 import { OrgVisualRelation } from './org-chart/entities/org-visual-relation.entity';
+import { OrgVisualRelationOverride } from './org-chart/entities/org-visual-relation-override.entity';
+import { OrgVisualRelationPositionChild } from './org-chart/entities/org-visual-relation-position-child.entity';
 import { OrgChartVersion } from './org-chart/entities/org-chart-version.entity';
 import { OrgChartPersonOverride } from './org-chart/entities/org-chart-person-override.entity';
+import { Vacancy } from './org-chart/vacancies/entities/vacancy.entity';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { PersonProfileState } from './profile/entities/person-profile-state.entity';
@@ -85,8 +88,11 @@ import { PersonPermission } from './permissions/entities/person-permission.entit
             ContractType,
             Region,
             OrgVisualRelation,
+            OrgVisualRelationOverride,
+            OrgVisualRelationPositionChild,
             OrgChartVersion,
             OrgChartPersonOverride,
+            Vacancy,
             PersonProfileState,
             PersonPermission,
           ],

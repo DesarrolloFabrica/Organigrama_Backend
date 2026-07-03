@@ -30,6 +30,21 @@ export function getApiPublicBaseUrl(): string {
   return `http://localhost:${port}`;
 }
 
+/**
+ * Base pública usada para resolver URLs de foto relativas (p. ej. fotos
+ * subidas y servidas por el frontend). Cae a PUBLIC_ASSET_BASE_URL,
+ * luego al frontend y por último a la base de la API.
+ */
+export function getPublicAssetBaseUrl(): string {
+  const configured =
+    process.env.PUBLIC_ASSET_BASE_URL?.trim() ||
+    process.env.FRONTEND_PUBLIC_BASE_URL?.trim();
+  if (configured) {
+    return configured.replace(/\/$/, '');
+  }
+  return getApiPublicBaseUrl();
+}
+
 export function getPhotoCacheTtlMs(): number {
   const raw = process.env.ORG_CHART_PHOTO_CACHE_TTL_MS?.trim();
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;

@@ -15,7 +15,9 @@ import { findActivePeopleByRoleName } from './org-chart-person.query';
 import { getEdgesForParentRole } from './org-chart.visual-map';
 import type { OrgNode } from './types/org-node.type';
 import { OrgVisualRelation } from './entities/org-visual-relation.entity';
+import { OrgVisualRelationPositionChild } from './entities/org-visual-relation-position-child.entity';
 import { findActiveVisualRelationsByParentId } from './org-visual-relation.query';
+import { findActivePositionChildrenByParentRelationId } from './org-visual-relation-position-child.query';
 
 /**
  * Mapas de catálogo Core necesarios para enriquecer nodos (misma forma que en el servicio).
@@ -42,6 +44,12 @@ export type BuildOrgNodeFn = (
   catalogs: OrgChartCatalogs,
   children: OrgNode[],
   directReportsCount?: number,
+  /**
+   * Relación visual que produjo este nodo (padre→persona). Permite aplicar
+   * overrides por relación específica. Es `undefined` para el nodo raíz/padre
+   * y para los nodos resueltos por el fallback de rol (sin arista en BD).
+   */
+  relation?: OrgVisualRelation,
 ) => OrgNode | Promise<OrgNode>;
 
 /**
@@ -55,6 +63,9 @@ export class OrgChartTreeEngine {
 
     @InjectRepository(OrgVisualRelation)
     private readonly visualRelations: Repository<OrgVisualRelation>,
+
+    @InjectRepository(OrgVisualRelationPositionChild)
+    private readonly positionChildren: Repository<OrgVisualRelationPositionChild>,
   ) {}
 
   async buildChildrenForPerson(
@@ -62,7 +73,48 @@ export class OrgChartTreeEngine {
     catalogs: OrgChartCatalogs,
     buildOrgNode: BuildOrgNodeFn,
     versionId: string,
+    /**
+     * Posición (arista `org_visual_relation.id`) que produjo a `parent`. Si se
+     * provee y existen hijos por posición, se usan esos como equipo en lugar de
+     * los hijos por `parent_person_id`. Permite que la misma persona tenga
+     * equipos distintos según la posición que ocupa.
+     */
+    parentRelationId?: string | null,
   ): Promise<OrgNode[]> {
+    // 1) Hijos por POSICIÓN: si el nodo viene de una arista concreta y esa
+    //    posición tiene hijos propios, tienen prioridad (compatibilidad: si no
+    //    hay, se cae al comportamiento por persona más abajo).
+    if (parentRelationId) {
+      const positionChildren =
+        await findActivePositionChildrenByParentRelationId(
+          this.positionChildren,
+          String(parentRelationId),
+          versionId,
+        );
+
+      if (positionChildren.length > 0) {
+        const orderedChildren =
+          await this.loadActivePersonsOrderedByRelationIds(
+            positionChildren.map((c) => String(c.child_person_id)),
+          );
+
+        const nodes: OrgNode[] = [];
+        for (const child of orderedChildren) {
+          // Los hijos por posición no provienen de una arista
+          // `org_visual_relation`, así que sus propios hijos se resuelven por
+          // `parent_person_id` (sin relación, parentRelationId = undefined).
+          const nestedChildren = await this.buildChildrenForPerson(
+            child,
+            catalogs,
+            buildOrgNode,
+            versionId,
+          );
+          nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
+        }
+        return nodes;
+      }
+    }
+
     const visualRelations = await findActiveVisualRelationsByParentId(
       this.visualRelations,
       String(parent.id),
@@ -87,9 +139,12 @@ export class OrgChartTreeEngine {
           catalogs,
           buildOrgNode,
           versionId,
+          String(relation.id),
         );
 
-        nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
+        nodes.push(
+          await buildOrgNode(child, catalogs, nestedChildren, undefined, relation),
+        );
       }
 
       return nodes;
@@ -137,7 +192,52 @@ export class OrgChartTreeEngine {
     catalogs: OrgChartCatalogs,
     buildOrgNode: BuildOrgNodeFn,
     versionId: string,
+    /**
+     * Posición (arista `org_visual_relation.id`) cuya descendencia se pide. Si
+     * se provee y la posición tiene hijos propios, se usan esos en lugar de los
+     * hijos por `parent_person_id`. Si no hay, se mantiene el comportamiento
+     * actual (compatibilidad hacia atrás).
+     */
+    parentRelationId?: string | null,
   ): Promise<OrgNode[]> {
+    // 1) Hijos por POSICIÓN específica (tienen prioridad sobre los de persona).
+    if (parentRelationId) {
+      const positionChildren =
+        await findActivePositionChildrenByParentRelationId(
+          this.positionChildren,
+          String(parentRelationId),
+          versionId,
+        );
+
+      if (positionChildren.length > 0) {
+        const orderedChildren =
+          await this.loadActivePersonsOrderedByRelationIds(
+            positionChildren.map((c) => String(c.child_person_id)),
+          );
+
+        // El conteo de reportes de cada hijo por posición se calcula por
+        // `parent_person_id` (sus propios hijos siguen el modelo actual).
+        const countMap = await this.countActiveDirectChildrenByParentIds(
+          orderedChildren.map((c) => String(c.id)),
+          versionId,
+        );
+
+        return Promise.all(
+          orderedChildren.map(async (child) => {
+            const directCount = await this.resolveDirectReportsCount(
+              child,
+              catalogs,
+              countMap,
+              versionId,
+            );
+            // Sin arista `org_visual_relation`: el nodo no expone relation_id,
+            // por lo que su expansión usará el fallback por persona.
+            return await buildOrgNode(child, catalogs, [], directCount);
+          }),
+        );
+      }
+    }
+
     const visualRelations = await findActiveVisualRelationsByParentId(
       this.visualRelations,
       String(parent.id),
@@ -149,20 +249,42 @@ export class OrgChartTreeEngine {
         visualRelations.map((r) => String(r.child_person_id)),
       );
 
+      // Conserva la relación (arista) asociada a cada hijo para aplicar
+      // overrides por relación específica en `buildOrgNode`.
+      const relationByChildId = new Map<string, OrgVisualRelation>(
+        visualRelations.map((r) => [String(r.child_person_id), r]),
+      );
+
       const countMap = await this.countActiveDirectChildrenByParentIds(
         orderedChildren.map((c) => String(c.id)),
         versionId,
       );
 
+      // Conteo de hijos por POSICIÓN por arista: si una posición tiene equipo
+      // propio, su conteo manda sobre el de persona (refleja el equipo correcto
+      // de esa posición específica, p. ej. el cargo temporal).
+      const positionCountByRelationId =
+        await this.countActivePositionChildrenByParentRelationIds(
+          visualRelations.map((r) => String(r.id)),
+          versionId,
+        );
+
       return Promise.all(
         orderedChildren.map(async (child) => {
-          const directCount = await this.resolveDirectReportsCount(
-            child,
-            catalogs,
-            countMap,
-            versionId,
-          );
-          return await buildOrgNode(child, catalogs, [], directCount);
+          const relation = relationByChildId.get(String(child.id));
+          const positionCount = relation
+            ? positionCountByRelationId.get(String(relation.id))
+            : undefined;
+          const directCount =
+            positionCount !== undefined && positionCount > 0
+              ? positionCount
+              : await this.resolveDirectReportsCount(
+                  child,
+                  catalogs,
+                  countMap,
+                  versionId,
+                );
+          return await buildOrgNode(child, catalogs, [], directCount, relation);
         }),
       );
     }
@@ -259,6 +381,41 @@ export class OrgChartTreeEngine {
 
     for (const row of rows) {
       map.set(String(row.parentId), Number(row.cnt));
+    }
+
+    return map;
+  }
+
+  /**
+   * Conteo de hijos activos por POSICIÓN (`parent_relation_id`) en la versión,
+   * agrupado por arista. Solo cuenta personas activas.
+   */
+  private async countActivePositionChildrenByParentRelationIds(
+    parentRelationIds: string[],
+    versionId: string,
+  ): Promise<Map<string, number>> {
+    const map = new Map<string, number>();
+    if (parentRelationIds.length === 0) {
+      return map;
+    }
+
+    const uniqueIds = [...new Set(parentRelationIds)];
+    const rows = await this.positionChildren
+      .createQueryBuilder('pc')
+      .innerJoin(Person, 'p', 'p.id = pc.child_person_id')
+      .select('pc.parent_relation_id', 'relationId')
+      .addSelect('COUNT(DISTINCT pc.child_person_id)', 'cnt')
+      .where('pc.version_id = :versionId', { versionId })
+      .andWhere('pc.parent_relation_id IN (:...relationIds)', {
+        relationIds: uniqueIds,
+      })
+      .andWhere('pc.is_active = :pcActive', { pcActive: true })
+      .andWhere('p.is_active = :personActive', { personActive: true })
+      .groupBy('pc.parent_relation_id')
+      .getRawMany<{ relationId: string; cnt: string }>();
+
+    for (const row of rows) {
+      map.set(String(row.relationId), Number(row.cnt));
     }
 
     return map;

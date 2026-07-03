@@ -12,6 +12,10 @@ function sampleNode(overrides: Partial<OrgNode> = {}): OrgNode {
     nodeKind: 'person',
     role_id: 'r1',
     role: { id: 'r1', name: 'COORDINADOR', description: null },
+    relation_id: null,
+    parent_person_id: null,
+    assignment_status: null,
+    assignment_label: null,
     hierarchy_id: 'h2',
     hierarchy: {
       id: 'h2',

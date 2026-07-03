@@ -19,6 +19,8 @@ import { ContractType } from '../catalogs/entities/contract-type.entity';
 import { Region } from '../catalogs/entities/region.entity';
 import { Person } from '../person/entities/person.entity';
 import { OrgChartPersonOverride } from './entities/org-chart-person-override.entity';
+import { OrgVisualRelation } from './entities/org-visual-relation.entity';
+import { OrgVisualRelationOverride } from './entities/org-visual-relation-override.entity';
 import type {
   OrgChartSearchHit,
   OrgNode,
@@ -38,8 +40,10 @@ import { PhotoUrlBuilder } from './photos/photo-url.builder';
 import { ProfilePhotoLookupService } from './photos/profile-photo-lookup.service';
 import {
   getApiPublicBaseUrl,
+  getPublicAssetBaseUrl,
   isOrgChartPhotosEnabled,
 } from './photos/photo.config';
+import { resolvePublicPhotoUrl } from './photos/profile-photo-url.util';
 import type { GeneralAreaSummaryDto } from './types/general-area-summary.dto';
 import type { OrgPersonDetailResponseDto } from './types/org-person-detail.response';
 import type { OrgPersonFullProfileDto } from './types/org-person-full-profile.dto';
@@ -58,6 +62,13 @@ import type { OrgViewerContext } from './org-viewer-context';
 import { viewerHasGlobalReadAccess } from './org-viewer-context';
 
 // ─── Catalog maps helper ──────────────────────────────────────────────────────
+
+/** Datos efectivos de un override por relación (ya normalizados a string|null). */
+interface RelationOverrideData {
+  roleIdOverride: string | null;
+  assignmentStatus: string | null;
+  assignmentLabel: string | null;
+}
 
 interface OrgCatalogs {
   roleById: Map<string, Role>;
@@ -124,13 +135,25 @@ export class OrgChartService {
     { value: Map<string, string>; expiresAt: number }
   >();
 
-  private readonly orgChartResponseCacheTtlMs = 60 * 1000;
+  /** Cache por versión: relation_id → override activo de esa relación. */
+  private relationOverrideCache = new Map<
+    string,
+    { value: Map<string, RelationOverrideData>; expiresAt: number }
+  >();
+
+  private readonly orgChartResponseCacheTtlMs = 3 * 60 * 1000;
 
   private readonly enableOrgChartPerfLogs =
     process.env.ORG_CHART_PERF_LOGS === 'true';
 
   /** Set de person_id con foto Google persistida (ámbito de una petición de árbol). */
   private googlePhotoPersonIds: Set<string> | null = null;
+
+  /**
+   * Mapa person_id → URL pública absoluta de foto directa (no-Google, p. ej.
+   * 'upload'). Precargado por petición de árbol para evitar N+1.
+   */
+  private directPhotoUrlByPersonId: Map<string, string> | null = null;
 
   constructor(
     private readonly treeEngine: OrgChartTreeEngine,
@@ -142,6 +165,8 @@ export class OrgChartService {
     private readonly persons: Repository<Person>,
     @InjectRepository(OrgChartPersonOverride)
     private readonly personOverrides: Repository<OrgChartPersonOverride>,
+    @InjectRepository(OrgVisualRelationOverride)
+    private readonly relationOverrides: Repository<OrgVisualRelationOverride>,
     @InjectRepository(Role)
     private readonly roles: Repository<Role>,
     @InjectRepository(Hierarchy)
@@ -165,8 +190,16 @@ export class OrgChartService {
     private readonly visibility: OrgChartVisibilityService,
   ) {}
 
-  private nodeCacheKey(versionId: string, personId: string): string {
-    return `${versionId}:${personId}`;
+  private nodeCacheKey(
+    versionId: string,
+    personId: string,
+    relationId?: string | null,
+  ): string {
+    // La posición (relationId) cambia el equipo del nodo, así que forma parte de
+    // la clave para no mezclar el equipo de dos posiciones de la misma persona.
+    return relationId
+      ? `${versionId}:${personId}:rel:${relationId}`
+      : `${versionId}:${personId}`;
   }
 
   private async applyTreeVisibility(
@@ -345,8 +378,15 @@ export class OrgChartService {
     const children = await this.treeEngine.buildChildrenForPerson(
       root,
       catalogs,
-      (nodePerson, nodeCatalogs, nodeChildren) =>
-        this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren, undefined, versionId),
+      (nodePerson, nodeCatalogs, nodeChildren, directReportsCount, nodeRelation) =>
+        this.buildOrgNode(
+          nodePerson,
+          nodeCatalogs,
+          nodeChildren,
+          directReportsCount,
+          versionId,
+          nodeRelation,
+        ),
       versionId,
     );
 
@@ -382,8 +422,15 @@ export class OrgChartService {
     const children = await this.treeEngine.buildChildrenForPerson(
       person,
       catalogs,
-      (nodePerson, nodeCatalogs, nodeChildren) =>
-        this.buildOrgNode(nodePerson, nodeCatalogs, nodeChildren, undefined, versionId),
+      (nodePerson, nodeCatalogs, nodeChildren, directReportsCount, nodeRelation) =>
+        this.buildOrgNode(
+          nodePerson,
+          nodeCatalogs,
+          nodeChildren,
+          directReportsCount,
+          versionId,
+          nodeRelation,
+        ),
       versionId,
     );
 
@@ -395,6 +442,12 @@ export class OrgChartService {
     personId: string,
     viewer: OrgViewerContext,
     versionId: string,
+    /**
+     * Posición visual (`org_visual_relation.id`) de la que se piden hijos. Si se
+     * provee y la posición tiene equipo propio, se devuelven esos hijos; si no,
+     * se mantiene el comportamiento por `parent_person_id` (compatibilidad).
+     */
+    relationId?: string | null,
   ): Promise<OrgNode[]> {
     return this.withGooglePhotoContext(async () => {
       const person = await this.persons.findOne({ where: { id: personId } });
@@ -410,15 +463,17 @@ export class OrgChartService {
       const children = await this.treeEngine.buildDirectChildrenForPerson(
         person,
         catalogs,
-        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
+        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount, nodeRelation) =>
           this.buildOrgNode(
             nodePerson,
             nodeCatalogs,
             nodeChildren,
             directReportsCount,
             versionId,
+            nodeRelation,
           ),
         versionId,
+        relationId ?? null,
       );
       return this.applyChildrenVisibility(children, viewer, versionId);
     });
@@ -432,9 +487,15 @@ export class OrgChartService {
     personId: string,
     viewer: OrgViewerContext,
     versionId: string,
+    /**
+     * Posición visual (`org_visual_relation.id`) que ocupa esta persona. Si se
+     * provee, los hijos directos del nodo se resuelven para esa posición; si no,
+     * comportamiento actual por `parent_person_id`.
+     */
+    relationId?: string | null,
   ): Promise<OrgNode> {
     const now = Date.now();
-    const cacheKey = this.nodeCacheKey(versionId, personId);
+    const cacheKey = this.nodeCacheKey(versionId, personId, relationId);
     const cachedNode = this.orgChartNodeCache.get(cacheKey);
 
     if (cachedNode && cachedNode.expiresAt > now) {
@@ -479,15 +540,17 @@ export class OrgChartService {
       const children = await this.treeEngine.buildDirectChildrenForPerson(
         person,
         catalogs,
-        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
+        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount, nodeRelation) =>
           this.buildOrgNode(
             nodePerson,
             nodeCatalogs,
             nodeChildren,
             directReportsCount,
             versionId,
+            nodeRelation,
           ),
         versionId,
+        relationId ?? null,
       );
       this.logOrgChartPerf(
         `[PerfNode] id=${perfId} buildDirectChildren: ${Date.now() - perfBuildDirectChildrenStart}ms`,
@@ -501,6 +564,11 @@ export class OrgChartService {
         undefined,
         versionId,
       );
+      // Conserva la identidad de la posición pedida para que el frontend siga
+      // solicitando hijos de ESTA posición al expandir/refrescar el lienzo.
+      if (relationId) {
+        node.relation_id = String(relationId);
+      }
       this.logOrgChartPerf(
         `[PerfNode] id=${perfId} buildOrgNode: ${Date.now() - perfBuildOrgNodeStart}ms`,
       );
@@ -561,13 +629,14 @@ export class OrgChartService {
       const children = await this.treeEngine.buildDirectChildrenForPerson(
         root,
         catalogs,
-        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount) =>
+        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount, nodeRelation) =>
           this.buildOrgNode(
             nodePerson,
             nodeCatalogs,
             nodeChildren,
             directReportsCount,
             versionId,
+            nodeRelation,
           ),
         versionId,
       );
@@ -1118,6 +1187,48 @@ export class OrgChartService {
     return overrides.get(String(person.id)) ?? person.role_id ?? null;
   }
 
+  /**
+   * Mapa por versión: relation_id → override activo (rol y asignación).
+   * Solo incluye overrides con is_active = true para la versión dada.
+   */
+  private async getRelationOverrideMap(
+    versionId: string,
+  ): Promise<Map<string, RelationOverrideData>> {
+    const now = Date.now();
+    const cached = this.relationOverrideCache.get(versionId);
+    if (cached && cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    const rows = await this.relationOverrides.find({
+      where: { version_id: versionId, is_active: true },
+    });
+    const value = new Map<string, RelationOverrideData>();
+    for (const row of rows) {
+      value.set(String(row.relation_id), {
+        roleIdOverride: row.role_id_override
+          ? String(row.role_id_override)
+          : null,
+        assignmentStatus: row.assignment_status ?? null,
+        assignmentLabel: row.assignment_label ?? null,
+      });
+    }
+
+    this.relationOverrideCache.set(versionId, {
+      value,
+      expiresAt: now + this.orgChartResponseCacheTtlMs,
+    });
+    return value;
+  }
+
+  private async getRelationOverride(
+    versionId: string,
+    relationId: string,
+  ): Promise<RelationOverrideData | null> {
+    const map = await this.getRelationOverrideMap(versionId);
+    return map.get(relationId) ?? null;
+  }
+
   private async getEffectiveRole(
     person: Person,
     catalogs: OrgCatalogs,
@@ -1360,15 +1471,36 @@ export class OrgChartService {
     this.orgChartRootCache.clear();
     this.orgChartNodeCache.clear();
     this.roleOverrideCache.clear();
+    this.relationOverrideCache.clear();
   }
 
   private async withGooglePhotoContext<T>(fn: () => Promise<T>): Promise<T> {
-    const ids = await this.profilePhotoLookup.findAllGooglePhotoPersonIds();
+    const [ids, directStates] = await Promise.all([
+      this.profilePhotoLookup.findAllGooglePhotoPersonIds(),
+      this.profilePhotoLookup.findAllDirectPhotoStates(),
+    ]);
     this.googlePhotoPersonIds = new Set(ids);
+
+    const directMap = new Map<string, string>();
+    const publicBaseUrl = getPublicAssetBaseUrl();
+    for (const state of directStates) {
+      const resolved = resolvePublicPhotoUrl(state.url, {
+        personId: state.personId,
+        source: state.source,
+        publicBaseUrl,
+        logger: this.log,
+      });
+      if (resolved) {
+        directMap.set(state.personId, resolved);
+      }
+    }
+    this.directPhotoUrlByPersonId = directMap;
+
     try {
       return await fn();
     } finally {
       this.googlePhotoPersonIds = null;
+      this.directPhotoUrlByPersonId = null;
     }
   }
 
@@ -1439,10 +1571,33 @@ export class OrgChartService {
     children: OrgNode[],
     directReportsCount?: number,
     versionId?: string,
+    relation?: OrgVisualRelation,
   ): Promise<OrgNode> {
-    const roleId = versionId
+    // Rol base: override por persona/versión si existe, si no core.person.role_id.
+    let roleId = versionId
       ? await this.getEffectiveRoleId(person, versionId)
       : (person.role_id ?? null);
+
+    // Sin override de relación, la asignación es null (DTO por defecto).
+    let assignmentStatus: string | null = null;
+    let assignmentLabel: string | null = null;
+
+    // El override POR RELACIÓN tiene prioridad sobre el rol base para esta
+    // posición específica. No modifica core.person ni el override por persona.
+    if (versionId && relation) {
+      const relOverride = await this.getRelationOverride(
+        versionId,
+        String(relation.id),
+      );
+      if (relOverride) {
+        if (relOverride.roleIdOverride) {
+          roleId = relOverride.roleIdOverride;
+        }
+        assignmentStatus = relOverride.assignmentStatus;
+        assignmentLabel = relOverride.assignmentLabel;
+      }
+    }
+
     const role = roleId ? (catalogs.roleById.get(String(roleId)) ?? null) : null;
     const hierarchy = person.hierarchy_id
       ? (catalogs.hierarchyById.get(String(person.hierarchy_id)) ?? null)
@@ -1484,6 +1639,10 @@ export class OrgChartService {
             description: role.description,
           }
         : null,
+      relation_id: relation ? String(relation.id) : null,
+      parent_person_id: relation ? String(relation.parent_person_id) : null,
+      assignment_status: assignmentStatus,
+      assignment_label: assignmentLabel,
       hierarchy_id: person.hierarchy_id,
       hierarchy: hierarchy
         ? {
@@ -1555,6 +1714,18 @@ export class OrgChartService {
     }
 
     const personId = String(person.id);
+
+    // 1) Foto directa (no-Google, p. ej. 'upload'): si hay URL pública
+    // absoluta resuelta, se devuelve tal cual sin pasar por el proxy.
+    const directUrl =
+      this.directPhotoUrlByPersonId !== null
+        ? (this.directPhotoUrlByPersonId.get(personId) ?? null)
+        : await this.resolveDirectPhotoUrl(personId);
+    if (directUrl) {
+      return directUrl;
+    }
+
+    // 2) Foto Google persistida / mock root / Workspace: se expone vía proxy.
     const hasPersisted =
       this.googlePhotoPersonIds?.has(personId) ??
       (await this.profilePhotoLookup.hasPersistedGooglePhoto(personId));
@@ -1564,6 +1735,23 @@ export class OrgChartService {
     }
 
     return null;
+  }
+
+  /** Resuelve la URL pública absoluta de una foto directa (no-Google). */
+  private async resolveDirectPhotoUrl(
+    personId: string,
+  ): Promise<string | null> {
+    const state = await this.profilePhotoLookup.findDirectPhotoState(personId);
+    if (!state) {
+      return null;
+    }
+
+    return resolvePublicPhotoUrl(state.profile_photo_url, {
+      personId,
+      source: state.profile_photo_source,
+      publicBaseUrl: getPublicAssetBaseUrl(),
+      logger: this.log,
+    });
   }
 
   private buildPathNode(

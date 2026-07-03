@@ -12,11 +12,17 @@ import { OrgChartVersionController } from './org-chart-version.controller';
 
 import { OrgChartService } from './org-chart.service';
 
+import { OrgChartCvService } from './org-chart-cv.service';
+
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
 
 import { OrgChartVisibilityService } from './org-chart-visibility.service';
 
 import { OrgChartVersionService } from './org-chart-version.service';
+
+import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
+
+import { Vacancy } from './vacancies/entities/vacancy.entity';
 
 import { Hierarchy } from '../catalogs/entities/hierarchy.entity';
 
@@ -35,6 +41,10 @@ import { Campus } from '../catalogs/entities/campus.entity';
 import { ContractType } from '../catalogs/entities/contract-type.entity';
 
 import { OrgVisualRelation } from './entities/org-visual-relation.entity';
+
+import { OrgVisualRelationOverride } from './entities/org-visual-relation-override.entity';
+
+import { OrgVisualRelationPositionChild } from './entities/org-visual-relation-position-child.entity';
 
 import { OrgChartVersion } from './entities/org-chart-version.entity';
 
@@ -71,9 +81,15 @@ import { ProfileModule } from '../profile/profile.module';
 
       OrgVisualRelation,
 
+      OrgVisualRelationOverride,
+
+      OrgVisualRelationPositionChild,
+
       OrgChartVersion,
 
       OrgChartPersonOverride,
+
+      Vacancy,
     ]),
 
     OrgChartPhotosModule,
@@ -84,11 +100,15 @@ import { ProfileModule } from '../profile/profile.module';
   providers: [
     OrgChartService,
 
+    OrgChartCvService,
+
     OrgChartTreeEngine,
 
     OrgChartVisibilityService,
 
     OrgChartVersionService,
+
+    OrgChartVacancyService,
   ],
 
   exports: [OrgChartService, OrgChartVisibilityService, OrgChartVersionService],

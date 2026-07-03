@@ -1,4 +1,7 @@
-/** Usuario técnico único autorizado para versionamiento del organigrama. */
-export const ORG_CHART_VERSIONING_PERSON_ID = '1229';
-
-export const ORG_CHART_VERSIONING_EDU_EMAIL = 'desarrollofabrica@cun.edu.co';
+/** Correos por defecto si ORG_CHART_VERSION_ADMIN_EMAILS no está definida. */
+export const DEFAULT_ORG_CHART_VERSION_ADMIN_EMAILS = [
+  'desarrollofabrica@cun.edu.co',
+  'iron_fuentes@cun.edu.co',
+  'raul_valencia@cun.edu.co',
+  'haider_bello@cun.edu.co',
+] as const;

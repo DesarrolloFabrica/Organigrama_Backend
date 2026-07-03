@@ -8,6 +8,7 @@ export type PhotoPayload = {
 
 export type PhotoSourceId =
   | 'profile-google'
+  | 'profile-upload'
   | 'dev-mock'
   | 'google-workspace'
   | 'session-google'

@@ -13,10 +13,7 @@ import type { CreateOrgChartSnapshotDto } from './dto/create-org-chart-snapshot.
 import type { OrgChartVersionCompareDto } from './dto/org-chart-version-compare.dto';
 import type { OrgChartVersionDto } from './dto/org-chart-version.dto';
 import { OrgChartVersion } from './entities/org-chart-version.entity';
-import {
-  ORG_CHART_VERSIONING_EDU_EMAIL,
-  ORG_CHART_VERSIONING_PERSON_ID,
-} from './org-chart-versioning.constants';
+import { isOrgChartVersionAdminEmail } from './org-chart-versioning.util';
 import type { OrgViewerContext } from './org-viewer-context';
 
 export type ResolveVersionParams = {
@@ -37,15 +34,13 @@ export class OrgChartVersionService {
   ) {}
 
   /**
-   * Versionamiento habilitado únicamente para personId=1229 y desarrollofabrica@cun.edu.co.
+   * Versionamiento habilitado solo para correos en ORG_CHART_VERSION_ADMIN_EMAILS.
    * No usa ORG_READ_ALL ni permisos admin genéricos.
    */
   canUseVersioning(viewer: OrgViewerContext): boolean {
     const personId = String(viewer.personId).trim();
     const email = this.normalizeEmail(viewer.eduEmail);
-    const allowed =
-      personId === ORG_CHART_VERSIONING_PERSON_ID &&
-      email === ORG_CHART_VERSIONING_EDU_EMAIL;
+    const allowed = isOrgChartVersionAdminEmail(email);
 
     if (allowed) {
       this.log.log(
@@ -389,7 +384,7 @@ export class OrgChartVersionService {
         is_locked: false,
         created_at: now,
         updated_at: now,
-        created_by_person_id: ORG_CHART_VERSIONING_PERSON_ID,
+        created_by_person_id: viewer.personId,
         updated_by_person_id: null,
       });
 

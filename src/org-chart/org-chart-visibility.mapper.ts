@@ -19,6 +19,10 @@ function preserveOrgChartTechnicalFields(
   | 'hierarchy'
   | 'role_id'
   | 'role'
+  | 'relation_id'
+  | 'parent_person_id'
+  | 'assignment_status'
+  | 'assignment_label'
   | 'direct_reports_count'
 > {
   return {
@@ -31,6 +35,14 @@ function preserveOrgChartTechnicalFields(
     role_id: node.role_id,
 
     role: node.role,
+
+    relation_id: node.relation_id ?? null,
+
+    parent_person_id: node.parent_person_id ?? null,
+
+    assignment_status: node.assignment_status ?? null,
+
+    assignment_label: node.assignment_label ?? null,
 
     direct_reports_count: node.direct_reports_count,
   };

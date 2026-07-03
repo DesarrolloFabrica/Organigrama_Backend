@@ -7,7 +7,6 @@ import { getPhotoFetchConcurrency, isRootMockEligible } from './photo.config';
 import { PhotoCacheService } from './photo-cache.service';
 import { ProfilePhotoLookupService } from './profile-photo-lookup.service';
 import { PhotoResolverService } from './photo-resolver.service';
-import { PROFILE_PHOTO_SOURCE_GOOGLE } from '../../profile/profile-photo.constants';
 import type { PhotoPayload } from './types/photo.types';
 
 @Injectable()
@@ -40,7 +39,7 @@ export class OrgChartPhotoService {
     }
 
     const profilePhotoState =
-      await this.profilePhotoLookup.findGooglePhotoState(normalizedId);
+      await this.profilePhotoLookup.findPhotoStateWithUrl(normalizedId);
 
     const context = {
       personId: normalizedId,

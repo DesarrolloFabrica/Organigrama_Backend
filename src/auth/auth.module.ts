@@ -10,6 +10,7 @@ import { getJwtExpiresIn, getJwtSecret } from './auth.config';
 import { GoogleTokenService } from './google-token.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PermissionsModule } from '../permissions/permissions.module';
+import { ProfileModule } from '../profile/profile.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
       },
     }),
     PermissionsModule,
+    ProfileModule,
   ],
   controllers: [AuthController],
   providers: [

@@ -27,6 +27,38 @@ function buildCorsOrigins(): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Determina la interfaz de red en la que Nest escucha.
+ *
+ * - En producción (Cloud Run) se usa `0.0.0.0` para exponer el servicio.
+ * - En desarrollo local se usa `::` (dual-stack IPv4 + IPv6) para que tanto
+ *   `127.0.0.1` como `localhost` (que en Windows suele resolver a `::1`)
+ *   respondan y no aparezca ERR_CONNECTION_REFUSED.
+ * - Puede forzarse manualmente con la variable de entorno `HOST`.
+ */
+function resolveHost(): string {
+  const explicitHost = process.env.HOST?.trim();
+  if (explicitHost) {
+    return explicitHost;
+  }
+
+  return process.env.NODE_ENV === 'production' ? '0.0.0.0' : '::';
+}
+
+/** Construye las URLs legibles para mostrar en consola al arrancar. */
+function buildReachableUrls(host: string, port: number): string[] {
+  // Con dual-stack (`::`) o cualquiera (`0.0.0.0`) el API es accesible por
+  // ambos nombres locales; los listamos para facilitar las pruebas.
+  if (host === '::' || host === '0.0.0.0') {
+    return [
+      `http://127.0.0.1:${port}`,
+      `http://localhost:${port}`,
+    ];
+  }
+
+  return [`http://${host}:${port}`];
+}
+
 function applyCorsMiddleware(
   req: Request,
   res: Response,
@@ -66,6 +98,7 @@ function applyCorsMiddleware(
 async function bootstrap() {
   const corsOrigins = buildCorsOrigins();
   const port = Number(process.env.PORT ?? 3000);
+  const host = resolveHost();
 
   // Crea la instancia base de Express usada por Nest
   const expressApp = express();
@@ -116,11 +149,18 @@ async function bootstrap() {
   // Abre el puerto antes de inicializar Nest para que Cloud Run tenga health check temprano
   await new Promise<void>((resolve, reject) => {
     expressApp
-      .listen(port, '0.0.0.0', () => {
-        console.log(`Puerto ${port} abierto (/api/health/live)`);
+      .listen(port, host, () => {
+        console.log(`Puerto ${port} abierto en host ${host} (/api/health/live)`);
         resolve();
       })
-      .on('error', reject);
+      .on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(
+            `El puerto ${port} ya está en uso. Cierra el proceso que lo ocupa o cambia la variable PORT.`,
+          );
+        }
+        reject(err);
+      });
   });
 
   bootStartedAt = Date.now();
@@ -152,8 +192,14 @@ async function bootstrap() {
 
   bootStatus = 'ready';
 
-  console.log(`Organigrama API lista en 0.0.0.0:${port}`);
-  console.log(`CORS origins: ${corsOrigins.join(', ')}`);
+  const reachableUrls = buildReachableUrls(host, port);
+
+  console.log('----------------------------------------------------');
+  console.log(`Organigrama API lista (host=${host}, puerto=${port})`);
+  console.log(`URLs API:      ${reachableUrls.map((u) => `${u}/api`).join('  |  ')}`);
+  console.log(`Health check:  ${reachableUrls[0]}/api/health`);
+  console.log(`CORS origins:  ${corsOrigins.join(', ')}`);
+  console.log('----------------------------------------------------');
 }
 
 bootstrap().catch((err: unknown) => {
