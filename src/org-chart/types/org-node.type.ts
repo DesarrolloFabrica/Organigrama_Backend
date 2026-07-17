@@ -86,8 +86,14 @@ export type OrgChartSearchHit = {
   path: OrgHierarchyPathSegment[];
 };
 
-/** Estado de asignación visible para una posición/relación específica. */
-export type OrgAssignmentStatus = 'PERMANENT' | 'TEMPORAL';
+/**
+ * Estado de asignación visible para una posición/relación específica.
+ * `MATERNITY_LEAVE` se muestra en el nodo como «LICENCIA DE MATERNIDAD».
+ */
+export type OrgAssignmentStatus =
+  | 'PERMANENT'
+  | 'TEMPORAL'
+  | 'MATERNITY_LEAVE';
 
 export type OrgNode = {
   id: string;

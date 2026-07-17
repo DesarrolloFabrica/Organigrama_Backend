@@ -29,7 +29,7 @@ export class OrgVisualRelationOverride {
   @Column({ type: 'bigint', nullable: true })
   role_id_override!: string | null;
 
-  /** Estado de asignación visible, p. ej. 'PERMANENT' | 'TEMPORAL'. */
+  /** Estado de asignación visible, p. ej. PERMANENT | TEMPORAL | MATERNITY_LEAVE. */
   @Column({ type: 'varchar', length: 32, nullable: true })
   assignment_status!: string | null;
 
