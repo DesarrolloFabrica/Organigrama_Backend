@@ -8,5 +8,6 @@ secrets/
 *.token.json
 google-drive-token.json
 google-drive-oauth-client.json
+tmp/
 tools/
 cloud-sql-proxy.exe

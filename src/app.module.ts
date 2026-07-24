@@ -30,6 +30,37 @@ import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { PersonProfileState } from './profile/entities/person-profile-state.entity';
 import { PersonPermission } from './permissions/entities/person-permission.entity';
+import { CvSkillsModule } from './cv-skills/cv-skills.module';
+import { CvSkillsEnrichmentModule } from './cv-skills-enrichment/cv-skills-enrichment.module';
+import { CvEvidenceModule } from './cv-evidence/cv-evidence.module';
+import {
+  CvEvidenceEvaluation,
+  CvEvidenceEvaluationItem,
+} from './cv-evidence/entities';
+import { CvAttributesModule } from './cv-attributes/cv-attributes.module';
+import {
+  CvAttributeCatalogVersion,
+  CvAttributeResultSkill,
+  CvAttributeRun,
+  CvMacroattribute,
+  CvMacroattributeResult,
+  CvSkillAttributeMapping,
+  CvSubattribute,
+  CvSubattributeResult,
+} from './cv-attributes/entities';
+import {
+  CvSkillEnrichment,
+  CvSkillEnrichmentBlock,
+  CvSkillEnrichmentItem,
+} from './cv-skills-enrichment/entities';
+import {
+  CvExtraction,
+  CvExtractionCertification,
+  CvExtractionLanguage,
+  CvExtractionSkill,
+  CvSkill,
+  CvSkillAlias,
+} from './cv-skills/entities';
 
 @Module({
   imports: [
@@ -95,6 +126,25 @@ import { PersonPermission } from './permissions/entities/person-permission.entit
             Vacancy,
             PersonProfileState,
             PersonPermission,
+            CvSkill,
+            CvSkillAlias,
+            CvExtraction,
+            CvExtractionSkill,
+            CvExtractionLanguage,
+            CvExtractionCertification,
+            CvSkillEnrichment,
+            CvSkillEnrichmentBlock,
+            CvSkillEnrichmentItem,
+            CvEvidenceEvaluation,
+            CvEvidenceEvaluationItem,
+            CvAttributeCatalogVersion,
+            CvMacroattribute,
+            CvSubattribute,
+            CvSkillAttributeMapping,
+            CvAttributeRun,
+            CvSubattributeResult,
+            CvMacroattributeResult,
+            CvAttributeResultSkill,
           ],
           /**
            * Solo para desarrollo: genera/actualiza tablas desde las entidades.
@@ -119,6 +169,10 @@ import { PersonPermission } from './permissions/entities/person-permission.entit
     HealthModule,
     OrgChartModule,
     GoogleWorkspaceModule,
+    CvSkillsModule,
+    CvSkillsEnrichmentModule,
+    CvEvidenceModule,
+    CvAttributesModule,
   ],
   controllers: [AppController],
   providers: [OrganigramaDemoSeedBootstrap],

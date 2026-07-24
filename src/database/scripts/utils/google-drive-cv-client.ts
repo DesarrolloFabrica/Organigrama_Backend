@@ -3,9 +3,9 @@
  *
  * Responsabilidad ÚNICA: leer Google Drive en modo SOLO LECTURA.
  * - Autentica vía OAuth usando un token local guardado en disco.
- * - Lee el folder ID y la ruta del token desde variables de entorno.
- * - Crea un cliente de Google Drive API v3.
- * - Lista los PDFs ubicados DIRECTAMENTE dentro de la carpeta (sin subcarpetas).
+ * - Inventario RECURSIVO de PDFs bajo GOOGLE_DRIVE_CV_FOLDER_ID (cualquier profundidad).
+ * - Descarga el contenido de un PDF por file ID (`downloadCvPdfBuffer`).
+ * - (Auxiliar) Busca un PDF por cédula sobre el inventario recursivo.
  *
  * Esta utilidad NO toca la base de datos ni modifica nada en Drive.
  */
@@ -13,6 +13,27 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { google, drive_v3 } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library';
+import { buildDriveCvFile } from './drive-cv-path';
+import type {
+  DriveCvFile,
+  DriveCvInventoryStats,
+  DriveCvPdfFile,
+  DriveFolderChild,
+} from './drive-cv-types';
+import { toLegacyDriveCvPdfFile } from './drive-cv-types';
+
+export type {
+  DriveCvFile,
+  DriveCvInventoryStats,
+  DriveCvPdfFile,
+  DriveFolderChild,
+} from './drive-cv-types';
+export { toLegacyDriveCvPdfFile } from './drive-cv-types';
+
+/** MIME de carpeta en Google Drive. */
+export const DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
+/** MIME de PDF. */
+export const DRIVE_PDF_MIME = 'application/pdf';
 
 /**
  * Scope mínimo necesario: solo lectura sobre Drive.
@@ -20,14 +41,6 @@ import type { OAuth2Client } from 'google-auth-library';
  */
 export const GOOGLE_DRIVE_READONLY_SCOPE =
   'https://www.googleapis.com/auth/drive.readonly';
-
-/** Estructura mínima que devolvemos por cada archivo PDF encontrado. */
-export type DriveCvPdfFile = {
-  id: string;
-  name: string;
-  mimeType: string;
-  webViewLink: string | null;
-};
 
 /**
  * Lee y valida el folder ID desde GOOGLE_DRIVE_CV_FOLDER_ID.
@@ -69,15 +82,6 @@ export function getDriveCvTokenPath(): string {
   return absolutePath;
 }
 
-/**
- * Forma flexible del JSON de token que aceptamos.
- *
- * Soportamos dos casos comunes:
- *  1) Un token "plano" que mezcla credenciales de cliente + tokens:
- *     { client_id, client_secret, refresh_token, access_token, ... }
- *  2) Un JSON estilo Google OAuth con wrapper "installed" o "web" para las
- *     credenciales de cliente, más los tokens en el mismo objeto.
- */
 type OAuthTokenFile = {
   client_id?: string;
   client_secret?: string;
@@ -92,14 +96,6 @@ type OAuthTokenFile = {
   web?: OAuthTokenFile;
 };
 
-/**
- * Construye un cliente OAuth2 a partir del token local.
- *
- * - Las credenciales de cliente (client_id/secret) permiten refrescar el
- *   access_token cuando expira, siempre que exista refresh_token.
- * - setCredentials() carga los tokens guardados; googleapis se encarga del
- *   refresco automático si dispone de client_id + client_secret + refresh_token.
- */
 function loadOAuthClient(): OAuth2Client {
   const absolutePath = getDriveCvTokenPath();
 
@@ -113,8 +109,6 @@ function loadOAuthClient(): OAuth2Client {
     );
   }
 
-  // Las credenciales de cliente pueden venir dentro de "installed"/"web"
-  // (formato típico de Google) o directamente en la raíz del archivo.
   const clientInfo = parsed.installed ?? parsed.web ?? parsed;
 
   const redirectUri =
@@ -129,7 +123,6 @@ function loadOAuthClient(): OAuth2Client {
     redirectUri,
   );
 
-  // Los tokens (access/refresh) viven en la raíz del archivo en ambos formatos.
   oauth2Client.setCredentials({
     access_token: parsed.access_token,
     refresh_token: parsed.refresh_token,
@@ -148,59 +141,313 @@ function loadOAuthClient(): OAuth2Client {
   return oauth2Client;
 }
 
-/**
- * Crea el cliente de Google Drive API v3 ya autenticado vía OAuth.
- */
+/** Crea el cliente de Google Drive API v3 ya autenticado vía OAuth. */
 export function createDriveCvClient(): drive_v3.Drive {
   const auth = loadOAuthClient();
   return google.drive({ version: 'v3', auth });
 }
 
+/** Metadatos mínimos de una carpeta (id + nombre). */
+export type DriveFolderMeta = {
+  id: string;
+  name: string;
+};
+
 /**
- * Lista TODOS los PDFs ubicados directamente dentro de la carpeta configurada.
- *
- * - Filtra por mimeType application/pdf y por la carpeta como padre directo.
- * - No desciende a subcarpetas (no usa búsqueda recursiva).
- * - Maneja paginación (la carpeta puede tener cientos de archivos).
- * - Trae los campos mínimos: id, name, mimeType, webViewLink.
+ * Obtiene id y nombre de una carpeta de Drive.
  */
-export async function listCvPdfFiles(): Promise<DriveCvPdfFile[]> {
-  const drive = createDriveCvClient();
-  const folderId = getDriveCvFolderId();
+export async function getDriveFolderMeta(
+  folderId: string,
+  drive?: drive_v3.Drive,
+): Promise<DriveFolderMeta> {
+  const client = drive ?? createDriveCvClient();
+  try {
+    const response = await client.files.get({
+      fileId: folderId,
+      fields: 'id, name, mimeType',
+      supportsAllDrives: true,
+    });
+    return {
+      id: response.data.id ?? folderId,
+      name: response.data.name ?? '(sin nombre)',
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `No se pudo leer la carpeta de Drive folderId=${folderId}: ${message}`,
+    );
+  }
+}
 
-  // Query: solo hijos directos de la carpeta, no en papelera y solo PDFs.
-  const query = `'${folderId}' in parents and trashed = false and mimeType = 'application/pdf'`;
+/**
+ * Lista TODOS los hijos directos de una carpeta (carpetas, PDFs y otros),
+ * con paginación y soporte de Shared Drives. No desciende.
+ */
+export async function listFolderChildren(
+  folderId: string,
+  options?: {
+    drive?: drive_v3.Drive;
+    /** Ruta legible solo para mensajes de error. */
+    pathLabel?: string;
+  },
+): Promise<DriveFolderChild[]> {
+  const drive = options?.drive ?? createDriveCvClient();
+  const pathLabel = options?.pathLabel ?? folderId;
+  const query = `'${folderId}' in parents and trashed = false`;
 
-  const files: DriveCvPdfFile[] = [];
+  const children: DriveFolderChild[] = [];
   let pageToken: string | undefined;
 
-  // Recorremos todas las páginas hasta agotar nextPageToken.
-  do {
-    const response = await drive.files.list({
-      q: query,
-      // Pedimos solo los campos que necesitamos para que la respuesta sea liviana.
-      fields: 'nextPageToken, files(id, name, mimeType, webViewLink)',
-      pageSize: 1000,
-      spaces: 'drive',
-      // Soporte para Unidades compartidas (Shared Drives) por si la carpeta vive ahí.
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-      pageToken,
+  try {
+    do {
+      const response = await drive.files.list({
+        q: query,
+        fields:
+          'nextPageToken, files(id, name, mimeType, webViewLink, parents, modifiedTime, md5Checksum, size)',
+        pageSize: 1000,
+        spaces: 'drive',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        pageToken,
+      });
+
+      for (const file of response.data.files ?? []) {
+        const sizeRaw = file.size;
+        let size: number | null = null;
+        if (sizeRaw != null && sizeRaw !== '') {
+          const n = Number(sizeRaw);
+          size = Number.isFinite(n) ? n : null;
+        }
+
+        children.push({
+          id: file.id ?? '',
+          name: file.name ?? '',
+          mimeType: file.mimeType ?? '',
+          webViewLink: file.webViewLink ?? null,
+          parents: file.parents ?? [],
+          modifiedTime: file.modifiedTime ?? null,
+          md5Checksum: file.md5Checksum ?? null,
+          size,
+        });
+      }
+
+      pageToken = response.data.nextPageToken ?? undefined;
+    } while (pageToken);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Error listando hijos de Drive folderId=${folderId} path="${pathLabel}": ${message}`,
+    );
+  }
+
+  return children.filter((c) => c.id);
+}
+
+function childToDriveCvFile(
+  child: DriveFolderChild,
+  parentFolderId: string,
+  folderPath: string[],
+): DriveCvFile {
+  return buildDriveCvFile({
+    driveFileId: child.id,
+    driveFileName: child.name,
+    parentFolderId,
+    folderPath,
+    driveWebUrl: child.webViewLink ?? '',
+    mimeType: child.mimeType || DRIVE_PDF_MIME,
+    modifiedTime: child.modifiedTime,
+    md5Checksum: child.md5Checksum,
+    fileSize: child.size,
+  });
+}
+
+/**
+ * Inventario recursivo de PDFs bajo una carpeta raíz.
+ *
+ * - Recorre carpetas con Set de visitados (evita ciclos).
+ * - Ignora papelera (trashed=false en la query).
+ * - No descarga contenido.
+ * - Ordena por relativePath y luego driveFileId.
+ */
+export async function inventoryCvPdfFiles(
+  rootFolderId?: string,
+  drive?: drive_v3.Drive,
+): Promise<DriveCvInventoryStats> {
+  const client = drive ?? createDriveCvClient();
+  const folderId = (rootFolderId ?? getDriveCvFolderId()).trim();
+  if (!folderId) {
+    throw new Error('folderId vacío: no se puede inventariar Drive.');
+  }
+
+  let rootFolderName: string | null = null;
+  try {
+    const meta = await getDriveFolderMeta(folderId, client);
+    rootFolderName = meta.name;
+  } catch {
+    rootFolderName = null;
+  }
+
+  const pdfs: DriveCvFile[] = [];
+  let nonPdfFileCount = 0;
+  const visited = new Set<string>();
+
+  type QueueItem = { folderId: string; folderPath: string[] };
+  const queue: QueueItem[] = [{ folderId, folderPath: [] }];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current.folderId)) {
+      continue;
+    }
+    visited.add(current.folderId);
+
+    const pathLabel =
+      current.folderPath.length > 0
+        ? current.folderPath.join('/')
+        : '(raíz)';
+
+    const children = await listFolderChildren(current.folderId, {
+      drive: client,
+      pathLabel,
     });
 
-    const batch = response.data.files ?? [];
-    for (const file of batch) {
-      // id y name siempre deberían venir; los normalizamos por seguridad.
-      files.push({
-        id: file.id ?? '',
-        name: file.name ?? '',
-        mimeType: file.mimeType ?? 'application/pdf',
-        webViewLink: file.webViewLink ?? null,
-      });
+    for (const child of children) {
+      if (child.mimeType === DRIVE_FOLDER_MIME) {
+        queue.push({
+          folderId: child.id,
+          folderPath: [...current.folderPath, child.name],
+        });
+        continue;
+      }
+
+      if (child.mimeType === DRIVE_PDF_MIME) {
+        pdfs.push(
+          childToDriveCvFile(child, current.folderId, current.folderPath),
+        );
+        continue;
+      }
+
+      nonPdfFileCount += 1;
     }
+  }
 
-    pageToken = response.data.nextPageToken ?? undefined;
-  } while (pageToken);
+  pdfs.sort((a, b) => {
+    const byPath = a.relativePath.localeCompare(b.relativePath, 'es');
+    if (byPath !== 0) return byPath;
+    return a.driveFileId.localeCompare(b.driveFileId);
+  });
 
-  return files;
+  return {
+    rootFolderId: folderId,
+    rootFolderName,
+    foldersVisited: visited.size,
+    pdfCount: pdfs.length,
+    nonPdfFileCount,
+    files: pdfs,
+  };
+}
+
+/**
+ * Lista todos los PDFs bajo la carpeta raíz (recursivo).
+ * Por defecto usa GOOGLE_DRIVE_CV_FOLDER_ID.
+ */
+export async function listCvPdfFiles(
+  rootFolderId?: string,
+): Promise<DriveCvFile[]> {
+  const inventory = await inventoryCvPdfFiles(rootFolderId);
+  return inventory.files;
+}
+
+/**
+ * Busca un PDF por cédula sobre el inventario recursivo.
+ *
+ * - 0 coincidencias → null
+ * - 1 coincidencia → DriveCvFile
+ * - >1 → Error explícito (nunca toma el primero en silencio)
+ */
+export async function findCvPdfByDocument(
+  document: string,
+  rootFolderId?: string,
+): Promise<DriveCvFile | null> {
+  const trimmed = document.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(
+      `Documento inválido "${document}": se esperan solo dígitos (cédula).`,
+    );
+  }
+
+  const files = await listCvPdfFiles(rootFolderId);
+  const matches = files.filter((f) => f.document === trimmed);
+
+  if (matches.length === 0) {
+    return null;
+  }
+  if (matches.length > 1) {
+    const paths = matches.map((m) => m.relativePath).join(', ');
+    throw new Error(
+      `Documento ${trimmed} duplicado en Drive (${matches.length} archivos): ${paths}`,
+    );
+  }
+
+  return matches[0];
+}
+
+/**
+ * Variante legacy: lanza si no encuentra (compatibilidad con callers antiguos).
+ * Preferir `findCvPdfByDocument` que puede devolver null.
+ */
+export async function findCvPdfByDocumentOrThrow(
+  document: string,
+  rootFolderId?: string,
+): Promise<DriveCvPdfFile> {
+  const found = await findCvPdfByDocument(document, rootFolderId);
+  if (!found) {
+    throw new Error(
+      `No se encontró el PDF "${document}.pdf" en el inventario recursivo de Drive.`,
+    );
+  }
+  return toLegacyDriveCvPdfFile(found);
+}
+
+/**
+ * Descarga el contenido binario de un archivo de Drive por su file ID.
+ *
+ * - Reutiliza el mismo cliente OAuth readonly (`createDriveCvClient`).
+ * - Usa `files.get` con `alt: 'media'` (no escribe nada en disco).
+ * - Valida que el Buffer no esté vacío.
+ *
+ * Ruta principal esperada: `person_cv.drive_file_id` → este método.
+ * No depende del folder ID ni de la ubicación del archivo.
+ */
+export async function downloadCvPdfBuffer(fileId: string): Promise<Buffer> {
+  const trimmedId = fileId.trim();
+  if (!trimmedId) {
+    throw new Error('drive_file_id vacío: no se puede descargar el PDF.');
+  }
+
+  const drive = createDriveCvClient();
+
+  const response = await drive.files.get(
+    {
+      fileId: trimmedId,
+      alt: 'media',
+      supportsAllDrives: true,
+    },
+    {
+      responseType: 'arraybuffer',
+    },
+  );
+
+  const data = response.data;
+  const buffer = Buffer.isBuffer(data)
+    ? data
+    : Buffer.from(data as ArrayBuffer);
+
+  if (buffer.length === 0) {
+    throw new Error(
+      `La descarga de Drive para fileId="${trimmedId}" devolvió un Buffer vacío.`,
+    );
+  }
+
+  return buffer;
 }
