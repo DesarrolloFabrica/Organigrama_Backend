@@ -14,6 +14,8 @@ import { OrgChartService } from './org-chart.service';
 
 import { OrgChartCvService } from './org-chart-cv.service';
 
+import { OrgChartCompetenciesService } from './org-chart-competencies.service';
+
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
 
 import { OrgChartVisibilityService } from './org-chart-visibility.service';
@@ -101,6 +103,8 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartService,
 
     OrgChartCvService,
+
+    OrgChartCompetenciesService,
 
     OrgChartTreeEngine,
 

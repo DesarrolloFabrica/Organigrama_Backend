@@ -48,6 +48,19 @@ import {
   CvSubattribute,
   CvSubattributeResult,
 } from './cv-attributes/entities';
+import { McCatalogModule } from './mc-catalog/mc-catalog.module';
+import {
+  McCatalogVersion,
+  McDomain,
+  McEvaluationSet,
+  McEvaluationSetDomain,
+  McMappingPackRelease,
+  McProfileEvaluation,
+  McProfileSpecialtyResult,
+  McSkillDomainClassification,
+  McSkillSpecialtyMapping,
+  McSpecialty,
+} from './mc-catalog/entities';
 import {
   CvSkillEnrichment,
   CvSkillEnrichmentBlock,
@@ -145,6 +158,16 @@ import {
             CvSubattributeResult,
             CvMacroattributeResult,
             CvAttributeResultSkill,
+            McCatalogVersion,
+            McDomain,
+            McSpecialty,
+            McSkillDomainClassification,
+            McSkillSpecialtyMapping,
+            McProfileEvaluation,
+            McProfileSpecialtyResult,
+            McMappingPackRelease,
+            McEvaluationSet,
+            McEvaluationSetDomain,
           ],
           /**
            * Solo para desarrollo: genera/actualiza tablas desde las entidades.
@@ -173,6 +196,7 @@ import {
     CvSkillsEnrichmentModule,
     CvEvidenceModule,
     CvAttributesModule,
+    McCatalogModule,
   ],
   controllers: [AppController],
   providers: [OrganigramaDemoSeedBootstrap],

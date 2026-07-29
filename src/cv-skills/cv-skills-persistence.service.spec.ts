@@ -225,6 +225,28 @@ describe('CvSkillsPersistenceService', () => {
     });
   });
 
+  it('MC1.5.2C: hash PDF distinto no reutiliza extracción (idempotencia por sha256)', async () => {
+    extractionsRepo.findOne.mockResolvedValue(null);
+
+    const found = await service.findExistingSucceededExtraction({
+      personId: 1163,
+      pdfSha256: '467d7dbea064e77535fe2c3742e58c6adfff499fc98745f3a68844d62f86f3a6',
+      model: 'gemini-3.6-flash',
+      promptVersion: 'c2.1-2026-07-24',
+      extractorVersion: '1.1.0',
+    });
+
+    expect(found).toBeNull();
+    expect(extractionsRepo.findOne).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        person_id: '1163',
+        pdf_sha256:
+          '467d7dbea064e77535fe2c3742e58c6adfff499fc98745f3a68844d62f86f3a6',
+        status: 'SUCCEEDED',
+      }),
+    });
+  });
+
   it('crea una extracción RUNNING', async () => {
     extractionsRepo.save.mockImplementation(async (x) => ({ id: '11', ...x }));
 

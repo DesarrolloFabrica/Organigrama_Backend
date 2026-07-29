@@ -84,6 +84,10 @@ async function main(): Promise<void> {
         console.warn(
           `${TAG} ADVERTENCIA: pdfSha256 vivo (${prepared.pdfSha256}) ≠ extracción (${runInput.pdfSha256}).`,
         );
+        console.warn(
+          `${TAG} Se analiza el PDF vivo, pero el Enrichment se vincula al pdfSha256 ` +
+            `de la extracción para permitir activación (inventario 87 intacto).`,
+        );
       }
 
       const runner = app
@@ -97,7 +101,8 @@ async function main(): Promise<void> {
           extractionId: runInput.extractionId!,
           personId: runInput.personId!,
           personCvId: runInput.personCvId,
-          pdfSha256: prepared.pdfSha256,
+          // Identidad = hash de la extracción (no el PDF vivo), para no bloquear activate.
+          pdfSha256: runInput.pdfSha256,
         },
         model: args.model,
         blockConfig: {

@@ -16,10 +16,17 @@ import { OrgChartService } from './org-chart.service';
 import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartCvService } from './org-chart-cv.service';
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
+import { OrgChartCompetenciesService } from './org-chart-competencies.service';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
 import type { PersonCvResponseDto } from './dto/person-cv.response.dto';
 import type { VacancyListResponseDto } from './vacancies/dto/vacancy.response.dto';
+import type {
+  CompetencyDomainDetailDto,
+  CompetencyExplorerSummaryDto,
+  CompetencyProfessionalProfileDto,
+  CompetencySpecialtyDetailDto,
+} from './dto/competencies.response.dto';
 
 @Controller('org-chart')
 export class OrgChartController {
@@ -30,6 +37,7 @@ export class OrgChartController {
     private readonly versionService: OrgChartVersionService,
     private readonly cvService: OrgChartCvService,
     private readonly vacancyService: OrgChartVacancyService,
+    private readonly competenciesService: OrgChartCompetenciesService,
   ) {}
 
   private async resolveVersion(
@@ -160,6 +168,135 @@ export class OrgChartController {
       versionCode,
     );
     return this.cvService.getPersonCv(viewer, personId, resolvedVersionId);
+  }
+
+  /**
+   * Resumen del Explorador de Competencias (MC1.3.4).
+   * Misma política de visibilidad que la ficha completa.
+   * Lee evaluaciones PA2 persistidas; no recalcula.
+   *
+   * Query:
+   *  - includeHidden=true → incluye especialidades HIDDEN (auditoría)
+   *  - includeAudit=true → metadatos de evaluación (soporte)
+   */
+  @Get('person/:personId/competencies')
+  async getPersonCompetencies(
+    @Param('personId') personId: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+    @Query('includeHidden') includeHidden?: string,
+    @Query('includeAudit') includeAudit?: string,
+  ): Promise<CompetencyExplorerSummaryDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.competenciesService.getExplorerSummary(
+      viewer,
+      personId,
+      resolvedVersionId,
+      {
+        includeHidden: includeHidden === 'true',
+        includeAudit: includeAudit === 'true',
+      },
+    );
+  }
+
+  /**
+   * Perfil profesional multidominio (piloto MC1).
+   * Dominios publicables de la extracción activa + default determinístico.
+   * CDR solo si existe persistido (hoy: null).
+   */
+  @Get('person/:personId/competencies/professional-profile')
+  async getPersonProfessionalProfile(
+    @Param('personId') personId: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+    @Query('includeHidden') includeHidden?: string,
+    @Query('includeAudit') includeAudit?: string,
+  ): Promise<CompetencyProfessionalProfileDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.competenciesService.getProfessionalProfile(
+      viewer,
+      personId,
+      resolvedVersionId,
+      {
+        includeHidden: includeHidden === 'true',
+        includeAudit: includeAudit === 'true',
+      },
+    );
+  }
+
+  /**
+   * Detalle de un área profesional evaluada (p. ej. SOFTWARE).
+   */
+  @Get('person/:personId/competencies/domains/:domainCode')
+  async getPersonCompetencyDomain(
+    @Param('personId') personId: string,
+    @Param('domainCode') domainCode: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+    @Query('includeHidden') includeHidden?: string,
+    @Query('includeAudit') includeAudit?: string,
+  ): Promise<CompetencyDomainDetailDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.competenciesService.getDomainDetail(
+      viewer,
+      personId,
+      domainCode,
+      resolvedVersionId,
+      {
+        includeHidden: includeHidden === 'true',
+        includeAudit: includeAudit === 'true',
+      },
+    );
+  }
+
+  /**
+   * Detalle de especialidad con skills y evidencias fragmentarias permitidas.
+   * Las evidencias completas van aquí (no en el resumen inicial).
+   */
+  @Get(
+    'person/:personId/competencies/domains/:domainCode/specialties/:specialtyCode',
+  )
+  async getPersonCompetencySpecialty(
+    @Param('personId') personId: string,
+    @Param('domainCode') domainCode: string,
+    @Param('specialtyCode') specialtyCode: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+    @Query('includeAudit') includeAudit?: string,
+  ): Promise<CompetencySpecialtyDetailDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.competenciesService.getSpecialtyDetail(
+      viewer,
+      personId,
+      domainCode,
+      specialtyCode,
+      resolvedVersionId,
+      { includeAudit: includeAudit === 'true' },
+    );
   }
 
   /**

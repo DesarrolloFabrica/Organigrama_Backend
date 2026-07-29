@@ -3,6 +3,8 @@ dist
 .env
 .env.local
 .env.core
+.env.mc1-local
+.env.mc1-local-admin
 coverage
 secrets/
 *.token.json

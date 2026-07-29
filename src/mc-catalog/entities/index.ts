@@ -1,0 +1,10 @@
+export { McCatalogVersion } from './mc-catalog-version.entity';
+export { McDomain } from './mc-domain.entity';
+export { McSpecialty } from './mc-specialty.entity';
+export { McSkillDomainClassification } from './mc-skill-domain-classification.entity';
+export { McSkillSpecialtyMapping } from './mc-skill-specialty-mapping.entity';
+export { McProfileEvaluation } from './mc-profile-evaluation.entity';
+export { McProfileSpecialtyResult } from './mc-profile-specialty-result.entity';
+export { McMappingPackRelease } from './mc-mapping-pack-release.entity';
+export { McEvaluationSet } from './mc-evaluation-set.entity';
+export { McEvaluationSetDomain } from './mc-evaluation-set-domain.entity';

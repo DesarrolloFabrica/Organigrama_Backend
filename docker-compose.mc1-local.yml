@@ -1,0 +1,28 @@
+# PostgreSQL local aislado para validación MC1.1B.
+# No usa el compose principal ni Cloud SQL.
+#
+# Uso:
+#   docker compose -f docker-compose.mc1-local.yml up -d
+#   docker compose -f docker-compose.mc1-local.yml down -v
+
+services:
+  postgres-mc1-local:
+    image: postgres:16-alpine
+    container_name: mc1-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mc1_local
+      POSTGRES_PASSWORD: mc1_local_password
+      POSTGRES_DB: mc1_local
+    ports:
+      - '5433:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mc1_local -d mc1_local']
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - mc1_local_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mc1_local_pgdata:
