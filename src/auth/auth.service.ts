@@ -16,6 +16,7 @@ import type {
   JwtPayload,
 } from './auth.types';
 import type { AuthenticatedSessionContext } from './types/authenticated-session.context';
+import { CentralLoginLogService } from './central-login-log.service';
 import { GoogleTokenService } from './google-token.service';
 import { PersonPermissionService } from '../permissions/person-permission.service';
 import { ProfilePhotoSyncService } from '../profile/profile-photo-sync.service';
@@ -31,6 +32,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly permissionService: PersonPermissionService,
     private readonly profilePhotoSync: ProfilePhotoSyncService,
+    private readonly centralLoginLogs: CentralLoginLogService,
   ) {}
 
   async loginWithGoogleIdToken(idToken: string): Promise<GoogleLoginResponse> {
@@ -115,6 +117,11 @@ export class AuthService {
     );
 
     const accessToken = await this.jwtService.signAsync(session);
+
+    this.centralLoginLogs.record(
+      identity.googleEmail ?? person.edu_email ?? '',
+      'organigrama',
+    );
 
     return {
       accessToken,
