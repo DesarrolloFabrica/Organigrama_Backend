@@ -16,6 +16,14 @@ export const MC_PA2_RULES_VERSION_VISUAL_V100 = 'pa2-visual-design-1.0.0';
 export const MC_PA2_RULES_VERSION_VISUAL_V110 = 'pa2-visual-design-1.1.0';
 export const MC_PA2_RULES_VERSION_AUDIOVISUAL_V100 =
   'pa2-audiovisual-production-1.0.0';
+export const MC_PA2_RULES_VERSION_OPERATIONS_V100 =
+  'pa2-operations-management-1.0.0';
+export const MC_PA2_RULES_VERSION_TALENT_V100 =
+  'pa2-talent-management-1.0.0';
+export const MC_PA2_RULES_VERSION_EDUCATION_V100 =
+  'pa2-education-management-1.0.0';
+export const MC_PA2_RULES_VERSION_MARKETING_V100 =
+  'pa2-marketing-management-1.0.0';
 
 /** Default global histórico — no subir silenciosamente a 1.1.0. */
 export const MC_PA2_ENGINE_RULES_VERSION = MC_PA2_RULES_VERSION_V100;
@@ -299,6 +307,168 @@ export function getMcPa2EngineConfigAudiovisualProductionV100(): McPa2EngineConf
   };
 }
 
+/**
+ * pa2-operations-management-1.0.0 — LEXICOGRAPHIC + anti-tool companion.
+ * Golden profile: un eje scaffold OPS_GENERAL (sin taxonomía definitiva).
+ */
+export function getMcPa2EngineConfigOperationsManagementV100(): McPa2EngineConfig {
+  return {
+    engineRulesVersion: MC_PA2_RULES_VERSION_OPERATIONS_V100,
+    rankingStrategy: 'LEXICOGRAPHIC',
+    activeCoverageThreshold: 0.4,
+    minimumActiveStrength: 15,
+    minimumMappedSkills: 3,
+    minimumEvidencedSkills: 3,
+    singleSkillDominanceThreshold: 0.95,
+    requireProfessionalCompanionForVisible: true,
+    professionalCompanionSkillTypes: [
+      'PROFESSIONAL_KNOWLEDGE',
+      'METHODOLOGY',
+    ],
+    strongEvidenceLowCardinalityOverride: {
+      enabled: true,
+      maxMappedSkills: 4,
+      maxEvidencedSkills: 3,
+      minAggregatedStrength: 60,
+      requirePrimaryStrong: true,
+    },
+    ranking: {
+      coverageWeight: 40,
+      strengthWeight: 0.25,
+      confidenceWeight: 15,
+      evidencedCountWeight: 2,
+      mappedCountWeight: 1,
+      primaryStrongCountWeight: 12,
+    },
+    normalizedRanking: { ...NORMALIZED_WEIGHTS },
+    releaseNotes:
+      'MC1.9 golden: PA2 Gestión de Operaciones. LEXICOGRAPHIC + anti-tool; ' +
+      'scaffold OPS_GENERAL; pack operations-management-mappings@1.0.0.',
+  };
+}
+
+/**
+ * pa2-talent-management-1.0.0 — LEXICOGRAPHIC + anti-tool companion.
+ * Cinco especialidades TM_* (curación ChatGPT; sin scaffolds).
+ */
+export function getMcPa2EngineConfigTalentManagementV100(): McPa2EngineConfig {
+  return {
+    engineRulesVersion: MC_PA2_RULES_VERSION_TALENT_V100,
+    rankingStrategy: 'LEXICOGRAPHIC',
+    activeCoverageThreshold: 0.4,
+    minimumActiveStrength: 15,
+    minimumMappedSkills: 3,
+    minimumEvidencedSkills: 3,
+    singleSkillDominanceThreshold: 0.95,
+    requireProfessionalCompanionForVisible: true,
+    professionalCompanionSkillTypes: [
+      'PROFESSIONAL_KNOWLEDGE',
+      'METHODOLOGY',
+    ],
+    strongEvidenceLowCardinalityOverride: {
+      enabled: true,
+      maxMappedSkills: 4,
+      maxEvidencedSkills: 3,
+      minAggregatedStrength: 60,
+      requirePrimaryStrong: true,
+    },
+    ranking: {
+      coverageWeight: 40,
+      strengthWeight: 0.25,
+      confidenceWeight: 15,
+      evidencedCountWeight: 2,
+      mappedCountWeight: 1,
+      primaryStrongCountWeight: 12,
+    },
+    normalizedRanking: { ...NORMALIZED_WEIGHTS },
+    releaseNotes:
+      'MC1.10: PA2 Gestión del Talento. LEXICOGRAPHIC + anti-tool; ' +
+      '5 especialidades TM_*; pack talent-management-mappings@1.0.0.',
+  };
+}
+
+/**
+ * pa2-education-management-1.0.0 — LEXICOGRAPHIC + anti-tool companion.
+ * Cinco especialidades EM_* (curación ChatGPT; sin scaffolds).
+ * No altera umbrales globales de otros dominios.
+ */
+export function getMcPa2EngineConfigEducationManagementV100(): McPa2EngineConfig {
+  return {
+    engineRulesVersion: MC_PA2_RULES_VERSION_EDUCATION_V100,
+    rankingStrategy: 'LEXICOGRAPHIC',
+    activeCoverageThreshold: 0.4,
+    minimumActiveStrength: 15,
+    minimumMappedSkills: 3,
+    minimumEvidencedSkills: 3,
+    singleSkillDominanceThreshold: 0.95,
+    requireProfessionalCompanionForVisible: true,
+    professionalCompanionSkillTypes: [
+      'PROFESSIONAL_KNOWLEDGE',
+      'METHODOLOGY',
+    ],
+    strongEvidenceLowCardinalityOverride: {
+      enabled: true,
+      maxMappedSkills: 4,
+      maxEvidencedSkills: 3,
+      minAggregatedStrength: 60,
+      requirePrimaryStrong: true,
+    },
+    ranking: {
+      coverageWeight: 40,
+      strengthWeight: 0.25,
+      confidenceWeight: 15,
+      evidencedCountWeight: 2,
+      mappedCountWeight: 1,
+      primaryStrongCountWeight: 12,
+    },
+    normalizedRanking: { ...NORMALIZED_WEIGHTS },
+    releaseNotes:
+      'MC1.11: PA2 Gestión Educativa. LEXICOGRAPHIC + anti-tool; ' +
+      '5 especialidades EM_*; pack education-management-mappings@1.0.0.',
+  };
+}
+
+/**
+ * pa2-marketing-management-1.0.0 — LEXICOGRAPHIC + anti-tool companion.
+ * Cinco especialidades MM_* (curación ChatGPT; sin scaffolds).
+ * No altera umbrales globales de otros dominios.
+ */
+export function getMcPa2EngineConfigMarketingManagementV100(): McPa2EngineConfig {
+  return {
+    engineRulesVersion: MC_PA2_RULES_VERSION_MARKETING_V100,
+    rankingStrategy: 'LEXICOGRAPHIC',
+    activeCoverageThreshold: 0.4,
+    minimumActiveStrength: 15,
+    minimumMappedSkills: 3,
+    minimumEvidencedSkills: 3,
+    singleSkillDominanceThreshold: 0.95,
+    requireProfessionalCompanionForVisible: true,
+    professionalCompanionSkillTypes: [
+      'PROFESSIONAL_KNOWLEDGE',
+      'METHODOLOGY',
+    ],
+    strongEvidenceLowCardinalityOverride: {
+      enabled: true,
+      maxMappedSkills: 4,
+      maxEvidencedSkills: 3,
+      minAggregatedStrength: 60,
+      requirePrimaryStrong: true,
+    },
+    ranking: {
+      coverageWeight: 40,
+      strengthWeight: 0.25,
+      confidenceWeight: 15,
+      evidencedCountWeight: 2,
+      mappedCountWeight: 1,
+      primaryStrongCountWeight: 12,
+    },
+    normalizedRanking: { ...NORMALIZED_WEIGHTS },
+    releaseNotes:
+      'MC1.12: PA2 Marketing Estratégico. LEXICOGRAPHIC + anti-tool; ' +
+      '5 especialidades MM_*; pack marketing-management-mappings@1.0.0.',
+  };
+}
+
 /** Default global = 1.0.0 (no subir silenciosamente). */
 export function getDefaultMcPa2EngineConfig(): McPa2EngineConfig {
   return getMcPa2EngineConfigV100();
@@ -319,6 +489,14 @@ export function resolveMcPa2EngineConfig(
       return getMcPa2EngineConfigVisualDesignV110();
     case MC_PA2_RULES_VERSION_AUDIOVISUAL_V100:
       return getMcPa2EngineConfigAudiovisualProductionV100();
+    case MC_PA2_RULES_VERSION_OPERATIONS_V100:
+      return getMcPa2EngineConfigOperationsManagementV100();
+    case MC_PA2_RULES_VERSION_TALENT_V100:
+      return getMcPa2EngineConfigTalentManagementV100();
+    case MC_PA2_RULES_VERSION_EDUCATION_V100:
+      return getMcPa2EngineConfigEducationManagementV100();
+    case MC_PA2_RULES_VERSION_MARKETING_V100:
+      return getMcPa2EngineConfigMarketingManagementV100();
     default:
       throw new Error(
         `Versión de reglas PA2 desconocida: ${version}. ` +
@@ -334,6 +512,10 @@ export function listMcPa2RulesVersions(): string[] {
     MC_PA2_RULES_VERSION_VISUAL_V100,
     MC_PA2_RULES_VERSION_VISUAL_V110,
     MC_PA2_RULES_VERSION_AUDIOVISUAL_V100,
+    MC_PA2_RULES_VERSION_OPERATIONS_V100,
+    MC_PA2_RULES_VERSION_TALENT_V100,
+    MC_PA2_RULES_VERSION_EDUCATION_V100,
+    MC_PA2_RULES_VERSION_MARKETING_V100,
   ];
 }
 

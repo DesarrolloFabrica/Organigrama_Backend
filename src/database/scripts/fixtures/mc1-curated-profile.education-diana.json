@@ -1,0 +1,429 @@
+{
+  "schemaVersion": "mc1-curated-profile-1.1.0",
+  "source": {
+    "type": "MANUAL_CURATED",
+    "method": "CHATGPT_HUMAN_REVIEW",
+    "reviewStatus": "REVIEWED",
+    "reviewedAt": "2026-07-30T05:30:00.000Z",
+    "notes": "MC1.11 Diana Paola Gómez González — estructura semántica ChatGPT (EDUCATION_MANAGEMENT, 5 EM_*). Sin scaffolds. Coberturas ChatGPT diferenciadas (no normalizar a 100%). Herramientas OUTSIDE del radar."
+  },
+  "person": {
+    "document": "50935341"
+  },
+  "profile": {
+    "primaryDomainCode": "EDUCATION_MANAGEMENT",
+    "summary": "Perfil de gestión educativa: proyectos académicos, currículo y pedagogía, gestión docente, analítica académica e innovación/educación virtual."
+  },
+  "domain": {
+    "code": "EDUCATION_MANAGEMENT",
+    "name": "Gestión Educativa",
+    "confidence": 0.93
+  },
+  "specialties": [
+    {
+      "code": "EM_ACADEMIC_PROJECTS",
+      "name": "Gestión de Proyectos Académicos",
+      "confidence": 0.95,
+      "skills": [
+        {
+          "canonicalName": "Planificación de proyectos académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.97,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Lideré la planificación táctica de Saber Pro, diseñando fases, cronograma y flujos para asegurar una ejecución eficiente del proyecto.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de Saber Pro y Saber TyT",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.98,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Desarrollé análisis estadísticos de pruebas Saber TyT y Saber Pro, estableciendo planes de refuerzo para mejorar competencias evaluadas.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Diseño de cronogramas académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.95,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Diseñando fases, cronograma y flujos para asegurar una ejecución eficiente del proyecto.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Seguimiento de hitos académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.94,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Realizando seguimiento continuo para cumplir los hitos.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Coordinación de equipos multidisciplinarios",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.95,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Coordiné equipos multidisciplinarios asignando responsabilidades por fase.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_CURRICULUM_PEDAGOGY",
+      "name": "Gestión Curricular y Pedagógica",
+      "confidence": 0.91,
+      "skills": [
+        {
+          "canonicalName": "Diseño curricular",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.94,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Dirigí [...] comités curriculares para el control de planes de estudio.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Ajuste de syllabus",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Gestioné la selección y asignación de carga docente de Ciencias Básicas, presidiendo comités y ajustando el syllabus.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Diseño de estrategias pedagógicas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.89,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Impartí cátedra en física y matemáticas, aplicando estrategias de aprendizaje activo e innovador.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Aprendizaje activo",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.91,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Aplicando estrategias de aprendizaje activo e innovador.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Diseño de cursos de razonamiento cuantitativo",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Diseñé y apliqué cursos Saber Pro y Razonamiento Cuantitativo en aulas Moodle.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Investigación educativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.82,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Lideré un semillero de investigación orientando a los estudiantes en el desarrollo de competencias y habilidades científicas.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_FACULTY_QUALITY",
+      "name": "Gestión Docente y Calidad Académica",
+      "confidence": 0.93,
+      "skills": [
+        {
+          "canonicalName": "Selección docente",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Gestioné la selección y asignación de carga docente de Ciencias Básicas.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Asignación de carga académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.97,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Dirigí la selección docente, asignación de cargas académicas y comités curriculares.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Seguimiento al cumplimiento docente",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.95,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Supervisé el cumplimiento de horas cátedra, evaluaciones y clases virtuales.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Coevaluación docente",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.94,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Dirigiendo además el proceso de coevaluación docente.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Control de planes de estudio",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Comités curriculares para el control de planes de estudio.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de tutorías y monitorias",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.88,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Gestioné el sistema de tutorías, monitorias y consejería para estudiantes.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_ACADEMIC_ANALYTICS",
+      "name": "Analítica y Evaluación Académica",
+      "confidence": 0.9,
+      "skills": [
+        {
+          "canonicalName": "Análisis estadístico de resultados académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.97,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Desarrollé análisis estadísticos de pruebas Saber TyT y Saber Pro.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Análisis de datos académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "El CV declara experiencia sostenida en análisis de datos académicos y la aplica sobre resultados Saber TyT y Saber Pro.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "PROFILE_SUMMARY"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Diseño de planes de refuerzo académico",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.94,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Estableciendo planes de refuerzo para mejorar competencias evaluadas.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Evaluación de competencias académicas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Planes de refuerzo para mejorar competencias evaluadas.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Seguimiento de evaluaciones académicas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.87,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Supervisé el cumplimiento de horas cátedra, evaluaciones y clases virtuales.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_DIGITAL_EDUCATION",
+      "name": "Educación Virtual e Innovación Educativa",
+      "confidence": 0.88,
+      "skills": [
+        {
+          "canonicalName": "Diseño de cursos virtuales",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.94,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Diseñé y apliqué cursos Saber Pro y Razonamiento Cuantitativo en aulas Moodle.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de aulas virtuales",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Diseñé y apliqué cursos [...] en aulas Moodle, administrando las inscripciones institucionales.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Desarrollo de recursos educativos digitales",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Lideré el desarrollo curricular de recursos digitales (OVAS, RED).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Diseño de OVAS",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Desarrollo curricular de recursos digitales (OVAS, RED).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Innovación educativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.87,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Experiencia como Líder de Transformación e Innovación Educativa y aplicación de estrategias de aprendizaje innovador.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de inscripciones en plataformas educativas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.86,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Administrando las inscripciones institucionales.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Radar scores ChatGPT (coverage/100): EM_ACADEMIC_PROJECTS=92, EM_CURRICULUM_PEDAGOGY=86, EM_FACULTY_QUALITY=89, EM_ACADEMIC_ANALYTICS=84, EM_DIGITAL_EDUCATION=81.",
+    "Herramientas OUTSIDE: Moodle, Sistema SINU, Aulas virtuales LMS, Google Workspace, Excel avanzado.",
+    "Metodologías en especialidad y sección FE: Aprendizaje activo, Coevaluación docente.",
+    "Complementarias TRANSVERSAL (no ejes): liderazgo de equipos, comunicación asertiva, trabajo en equipo, pensamiento crítico, gestión del tiempo, orientación a resultados, pensamiento estratégico, adaptabilidad."
+  ]
+}

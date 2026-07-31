@@ -8,6 +8,8 @@ import {
   MC_AUDIOVISUAL_PRODUCTION_DOMAIN_CODE,
   MC_AUDIOVISUAL_PRODUCTION_SPECIALTY_CODES,
   MC_DOMAIN_RADAR_AXIS_ORDER,
+  MC_OPERATIONS_MANAGEMENT_DOMAIN_CODE,
+  MC_OPERATIONS_MANAGEMENT_SPECIALTY_CODES,
   MC_SOFTWARE_DOMAIN_CODE,
   MC_VISUAL_DESIGN_DOMAIN_CODE,
 } from './mc-catalog.definition-mc12';
@@ -30,16 +32,20 @@ const FROZEN_HASHES = {
 } as const;
 
 describe('MC1.8.1B registro multidominio', () => {
-  it('expone SOFTWARE, VISUAL_DESIGN y AUDIOVISUAL_PRODUCTION', () => {
+  it('expone SOFTWARE, VISUAL, AV, OPERATIONS, TALENT, EDUCATION y MARKETING', () => {
     const codes = listMcMappingDomainCodes();
     expect(codes).toEqual(
       expect.arrayContaining([
         MC_SOFTWARE_DOMAIN_CODE,
         MC_VISUAL_DESIGN_DOMAIN_CODE,
         MC_AUDIOVISUAL_PRODUCTION_DOMAIN_CODE,
+        MC_OPERATIONS_MANAGEMENT_DOMAIN_CODE,
       ]),
     );
-    expect(codes).toHaveLength(3);
+    expect(codes).toContain('TALENT_MANAGEMENT');
+    expect(codes).toContain('EDUCATION_MANAGEMENT');
+    expect(codes).toContain('MARKETING_MANAGEMENT');
+    expect(codes).toHaveLength(7);
   });
 
   it('vincula packs publicados con hashes inmutables', () => {
@@ -52,6 +58,9 @@ describe('MC1.8.1B registro multidominio', () => {
       const hash = computeMcMappingPackHash(reg.pack);
       expect(hash).toBe(FROZEN_HASHES[domain]);
     }
+    // OPS golden: hash estable pero versionado en este release
+    const ops = resolveMcMappingPack(MC_OPERATIONS_MANAGEMENT_DOMAIN_CODE);
+    expect(computeMcMappingPackHash(ops.pack)).toHaveLength(64);
   });
 
   it('no duplica releases por (pack_code, pack_version)', () => {
@@ -60,10 +69,10 @@ describe('MC1.8.1B registro multidominio', () => {
       (r) => `${r.packCode}@${r.mappingRulesVersion}`,
     );
     expect(new Set(keys).size).toBe(keys.length);
-    expect(releases.length).toBe(5);
+    expect(releases.length).toBe(14);
   });
 
-  it('radar order definido para los tres dominios', () => {
+  it('radar order definido para los dominios operativos', () => {
     expect(MC_DOMAIN_RADAR_AXIS_ORDER[MC_SOFTWARE_DOMAIN_CODE]?.length).toBe(7);
     expect(MC_DOMAIN_RADAR_AXIS_ORDER[MC_VISUAL_DESIGN_DOMAIN_CODE]?.length).toBe(
       5,
@@ -71,6 +80,30 @@ describe('MC1.8.1B registro multidominio', () => {
     expect(
       MC_DOMAIN_RADAR_AXIS_ORDER[MC_AUDIOVISUAL_PRODUCTION_DOMAIN_CODE],
     ).toEqual([...MC_AUDIOVISUAL_PRODUCTION_SPECIALTY_CODES]);
+    expect(
+      MC_DOMAIN_RADAR_AXIS_ORDER[MC_OPERATIONS_MANAGEMENT_DOMAIN_CODE],
+    ).toEqual([...MC_OPERATIONS_MANAGEMENT_SPECIALTY_CODES]);
+    expect(MC_DOMAIN_RADAR_AXIS_ORDER.TALENT_MANAGEMENT).toEqual([
+      'TM_TALENT',
+      'TM_ORGANIZATIONAL_DEVELOPMENT',
+      'TM_QUALITY_COMPLIANCE',
+      'TM_PEOPLE_ANALYTICS',
+      'TM_STRATEGIC_LEADERSHIP',
+    ]);
+    expect(MC_DOMAIN_RADAR_AXIS_ORDER.EDUCATION_MANAGEMENT).toEqual([
+      'EM_ACADEMIC_PROGRAMS',
+      'EM_CURRICULUM_DESIGN',
+      'EM_ACADEMIC_QUALITY',
+      'EM_TEACHING_INNOVATION',
+      'EM_ACADEMIC_LEADERSHIP',
+    ]);
+    expect(MC_DOMAIN_RADAR_AXIS_ORDER.MARKETING_MANAGEMENT).toEqual([
+      'MM_MARKETING_STRATEGY',
+      'MM_DIGITAL_OMNICHANNEL',
+      'MM_GROWTH_AUDIENCE',
+      'MM_MARKETING_ANALYTICS',
+      'MM_INNOVATION_EXPERIENCE',
+    ]);
   });
 });
 

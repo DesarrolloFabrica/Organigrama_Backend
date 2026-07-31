@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "mc1-curated-profile-1.1.0",
+  "source": {
+    "type": "MANUAL_CURATED",
+    "method": "CHATGPT_HUMAN_REVIEW",
+    "reviewStatus": "REVIEWED",
+    "reviewedAt": "2026-07-29T00:00:00.000Z",
+    "notes": "Fixture piloto Fase 2 — sin cédula real. Usar --document= en CLI."
+  },
+  "person": {
+    "document": "PLACEHOLDER_DOCUMENT"
+  },
+  "profile": {
+    "primaryDomainCode": "SOFTWARE",
+    "summary": "Perfil piloto de curaduría manual para import controlado."
+  },
+  "domain": {
+    "code": "SOFTWARE",
+    "name": "Desarrollo de Software",
+    "confidence": 0.94
+  },
+  "specialties": [
+    {
+      "code": "SOFTWARE_BACKEND",
+      "name": "Desarrollo backend",
+      "confidence": 0.95,
+      "skills": [
+        {
+          "canonicalName": "Java",
+          "displayName": "Java",
+          "skillType": "TECHNOLOGY",
+          "confidence": 0.98,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Desarrollo de aplicaciones empresariales en Java con Spring.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "js",
+          "displayName": "JS",
+          "skillType": "TECHNOLOGY",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Implementación de servicios Node con JavaScript en APIs REST.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "PROJECT"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Mc1PilotHypotheticalFramework",
+          "displayName": "Mc1 Pilot Hypothetical Framework",
+          "skillType": "TECHNOLOGY",
+          "confidence": 0.7,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Uso documentado de Mc1PilotHypotheticalFramework en un prototipo interno.",
+              "evidenceType": "CONTEXTUAL",
+              "sourceSection": "PROJECT"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Mc1PilotOmitSkill",
+          "skillType": "TECHNOLOGY",
+          "confidence": 0.5,
+          "reviewDecision": "OMIT",
+          "evidence": [
+            {
+              "text": "Mención experimental de Mc1PilotOmitSkill sin suficiente evidencia.",
+              "evidenceType": "CONTEXTUAL",
+              "sourceSection": "OTHER"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "notes": [
+    "Sobrescribir document con --document= o archivo local en tmp/ (gitignore)."
+  ]
+}

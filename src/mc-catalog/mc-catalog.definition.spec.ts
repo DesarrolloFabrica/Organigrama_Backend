@@ -21,8 +21,8 @@ describe('definicion MC1 catalogo (contrato)', () => {
     expect(MC1_CATALOG_DEFINITION.catalogVersion).toBe(MC_CATALOG_VERSION);
   });
 
-  it('incluye SOFTWARE (7), VISUAL_DESIGN (5) y AUDIOVISUAL_PRODUCTION (3)', () => {
-    expect(MC1_CATALOG_DEFINITION.domains).toHaveLength(3);
+  it('incluye SOFTWARE, VISUAL, AV, OPERATIONS, TALENT, EDUCATION y MARKETING', () => {
+    expect(MC1_CATALOG_DEFINITION.domains).toHaveLength(7);
     const software = MC1_CATALOG_DEFINITION.domains[0];
     expect(software.code).toBe(MC_SOFTWARE_DOMAIN_CODE);
     expect(software.specialties.map((s) => s.code)).toEqual([
@@ -31,19 +31,48 @@ describe('definicion MC1 catalogo (contrato)', () => {
     const visual = MC1_CATALOG_DEFINITION.domains[1];
     expect(visual.code).toBe('VISUAL_DESIGN');
     expect(visual.specialties).toHaveLength(5);
-    expect(visual.specialties.map((s) => s.code)).toEqual([
-      'VISUAL_GRAPHIC',
-      'VISUAL_IDENTITY',
-      'VISUAL_EDITORIAL',
-      'VISUAL_DIGITAL_ASSETS',
-      'VISUAL_UI',
-    ]);
     const av = MC1_CATALOG_DEFINITION.domains[2];
     expect(av.code).toBe('AUDIOVISUAL_PRODUCTION');
     expect(av.specialties.map((s) => s.code)).toEqual([
       'AV_EDITING',
       'AV_MOTION',
       'AV_POST',
+    ]);
+    const ops = MC1_CATALOG_DEFINITION.domains[3];
+    expect(ops.code).toBe('OPERATIONS_MANAGEMENT');
+    expect(ops.specialties.map((s) => s.code)).toEqual([
+      'OPS_ACADEMIC',
+      'OPS_QUALITY',
+      'OPS_PROCESS',
+      'OPS_ANALYTICS',
+      'OPS_COORDINATION',
+    ]);
+    const talent = MC1_CATALOG_DEFINITION.domains[4];
+    expect(talent.code).toBe('TALENT_MANAGEMENT');
+    expect(talent.specialties.map((s) => s.code)).toEqual([
+      'TM_TALENT',
+      'TM_ORGANIZATIONAL_DEVELOPMENT',
+      'TM_QUALITY_COMPLIANCE',
+      'TM_PEOPLE_ANALYTICS',
+      'TM_STRATEGIC_LEADERSHIP',
+    ]);
+    const education = MC1_CATALOG_DEFINITION.domains[5];
+    expect(education.code).toBe('EDUCATION_MANAGEMENT');
+    expect(education.specialties.map((s) => s.code)).toEqual([
+      'EM_ACADEMIC_PROGRAMS',
+      'EM_CURRICULUM_DESIGN',
+      'EM_ACADEMIC_QUALITY',
+      'EM_TEACHING_INNOVATION',
+      'EM_ACADEMIC_LEADERSHIP',
+    ]);
+    const marketing = MC1_CATALOG_DEFINITION.domains[6];
+    expect(marketing.code).toBe('MARKETING_MANAGEMENT');
+    expect(marketing.specialties.map((s) => s.code)).toEqual([
+      'MM_MARKETING_STRATEGY',
+      'MM_DIGITAL_OMNICHANNEL',
+      'MM_GROWTH_AUDIENCE',
+      'MM_MARKETING_ANALYTICS',
+      'MM_INNOVATION_EXPERIENCE',
     ]);
   });
 

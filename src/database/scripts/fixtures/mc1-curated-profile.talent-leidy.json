@@ -1,0 +1,359 @@
+{
+  "schemaVersion": "mc1-curated-profile-1.1.0",
+  "source": {
+    "type": "MANUAL_CURATED",
+    "method": "CHATGPT_HUMAN_REVIEW",
+    "reviewStatus": "REVIEWED",
+    "reviewedAt": "2026-07-30T05:00:00.000Z",
+    "notes": "MC1.10 Leidy Viviana Bernal León — estructura semántica ChatGPT (TALENT_MANAGEMENT, 5 TM_*). Sin scaffolds. Herramientas (Dashboards analíticos, Sistemas HR Tech, IA aplicada a RRHH, Ofimática) fuera del radar vía pack OUTSIDE; no incluidas como skills de especialidad."
+  },
+  "person": {
+    "document": "1070007550"
+  },
+  "profile": {
+    "primaryDomainCode": "TALENT_MANAGEMENT",
+    "summary": "Perfil de gestión del talento: selección y ciclo de talento, desarrollo organizacional, calidad/cumplimiento, analítica de TH y dirección estratégica."
+  },
+  "domain": {
+    "code": "TALENT_MANAGEMENT",
+    "name": "Gestión del Talento",
+    "confidence": 0.98
+  },
+  "specialties": [
+    {
+      "code": "TM_TALENT",
+      "name": "Gestión del Talento",
+      "confidence": 0.96,
+      "skills": [
+        {
+          "canonicalName": "Selección estratégica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Definición de procesos de selección, contratación, onboarding y evaluación de desempeño bajo modelo de holocracia.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Contratación",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Definición de procesos de selección, contratación, onboarding y evaluación de desempeño.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Onboarding",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Definición de procesos de selección, contratación, onboarding y evaluación de desempeño.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Evaluación del desempeño",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Definición de procesos de selección, contratación, onboarding y evaluación de desempeño.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión por competencias",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Diseño del modelo de competencias y control de indicadores clave de rotación, ausentismo y desempeño.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "TM_ORGANIZATIONAL_DEVELOPMENT",
+      "name": "Desarrollo Organizacional",
+      "confidence": 0.94,
+      "skills": [
+        {
+          "canonicalName": "Desarrollo organizacional",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.88,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Directora de Gestión Humana y Desarrollo Organizacional y diseño del modelo de competencias.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Planeación estratégica del talento",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.98,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Formulación de la planeación estratégica del talento humano a nivel nacional alineada a objetivos corporativos.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Holocracia",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Definición de procesos de selección, contratación, onboarding y evaluación de desempeño bajo modelo de holocracia.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "TM_QUALITY_COMPLIANCE",
+      "name": "Calidad y Cumplimiento",
+      "confidence": 0.97,
+      "skills": [
+        {
+          "canonicalName": "Sistema de Gestión de Calidad",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Seguimiento estratégico al Sistema de Gestión de Calidad asegurando alineación con objetivos institucionales.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "ISO 9001",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.99,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Implementación del Sistema de Gestión de Calidad y migración a ISO 9001:2015 logrando certificación sin no conformidades.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "SG-SST",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Directora Nacional de Gestión Humana y SST y especialización en Gerencia en SG-SST.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            },
+            {
+              "text": "Especialización en Gerencia en SG-SST.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "EDUCATION"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Auditoría HSEQ",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Liderazgo de auditorías internas de gestión humana y SST garantizando certificación y cumplimiento normativo.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de riesgos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.99,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Implementación de modelo de gestión de riesgos.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            },
+            {
+              "text": "Reducción del 80 % en riesgos organizacionales.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Cumplimiento normativo",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.96,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Auditorías internas de gestión humana y SST garantizando certificación y cumplimiento normativo.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "TM_PEOPLE_ANALYTICS",
+      "name": "Analítica del Talento",
+      "confidence": 0.94,
+      "skills": [
+        {
+          "canonicalName": "Analítica de talento humano",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.94,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Implementación de herramientas de inteligencia artificial y dashboards analíticos para optimizar la gestión del talento.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Indicadores de gestión",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.98,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Implementación de modelo de gestión de riesgos y cuadro de indicadores de gestión del área.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Visualización de datos para talento humano",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Implementación de dashboards analíticos para optimizar la gestión del talento.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "TM_STRATEGIC_LEADERSHIP",
+      "name": "Dirección Estratégica",
+      "confidence": 0.95,
+      "skills": [
+        {
+          "canonicalName": "Liderazgo operativo",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.99,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Liderazgo operativo y administrativo impactando a más de 1.000 docentes y 80 colaboradores administrativos.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Dirección administrativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.98,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Diseño e integración de la estrategia administrativa unificando talento humano, infraestructura y recursos operativos.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Optimización organizacional",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.98,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Optimización de procesos y capacidades operativas para el incremento de eficiencia en áreas clave.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Acompañamiento a alta dirección",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.72,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "El resumen profesional declara experiencia en acompañamiento a la alta dirección.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "PROFILE_SUMMARY"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión estratégica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Formulación de la planeación estratégica del talento humano a nivel nacional alineada a objetivos corporativos.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Herramientas fuera del radar (pack OUTSIDE, sin eje): Dashboards analíticos; Sistemas HR Tech; Inteligencia Artificial aplicada a RRHH; Herramientas de ofimática.",
+    "No mapear: Reclutamiento; Gestión del cambio; Dashboards/HR Tech/IA como skills de especialidad."
+  ]
+}

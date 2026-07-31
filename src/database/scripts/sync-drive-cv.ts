@@ -7,6 +7,7 @@
  * - --dry-run: plan; no escribe. Con --deactivate-missing muestra DEACTIVATE propuestas.
  * - --apply: INSERT NEW / UPDATE MOVED|UPDATED.
  * - --apply --deactivate-missing: además desactiva MISSING / DUPLICATE (inventario raíz).
+ * - --document=<cedula>: limita el plan a ese PDF (sin DEACTIVATE global).
  *
  * NO elimina filas ni extracciones. NO toca CORE_DOCUMENT_DUPLICATED / DB_INCONSISTENCY.
  */
@@ -74,16 +75,45 @@ async function main(): Promise<void> {
   console.log(
     `${TAG} --deactivate-missing: ${args.deactivateMissing ? 'sí' : 'no'}`,
   );
+  if (args.document) {
+    console.log(`${TAG} --document=${args.document}`);
+  }
   console.log(`${TAG} Conectando a Google Drive (recursivo)...`);
   if (folderId) {
     console.log(`${TAG} Override --folderId=${folderId}`);
   }
 
   const inventory = await inventoryCvPdfFiles(folderId);
+  const filesForPlan = args.document
+    ? inventory.files.filter((f) => f.document === args.document)
+    : inventory.files;
   const { files: scopedFiles } = filterInventoryByArea(
-    inventory.files,
+    filesForPlan,
     args.filter,
   );
+
+  if (args.document) {
+    console.log(
+      `${TAG} PDFs con documento ${args.document}: ${filesForPlan.length}`,
+    );
+    for (const f of filesForPlan) {
+      console.log(`${TAG}   - ${f.relativePath} (${f.driveFileId})`);
+    }
+    if (filesForPlan.length === 0) {
+      console.error('');
+      console.error(
+        `${TAG} No se encontró ${args.document}.pdf bajo la carpeta raíz (inventario recursivo).`,
+      );
+      console.error(
+        `${TAG} Raíz: ${inventory.rootFolderName ?? '(sin nombre)'} / ${inventory.rootFolderId}`,
+      );
+      console.error(
+        `${TAG} PDFs totales en raíz: ${inventory.pdfCount}. Verifica GOOGLE_DRIVE_CV_FOLDER_ID.`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   console.log(`${TAG} Conectando a la base de datos...`);
   const app = await NestFactory.createApplicationContext(AppModule, {
@@ -94,13 +124,21 @@ async function main(): Promise<void> {
     const ds = app.get(DataSource);
     const plan = await buildDriveCvSyncPlan({
       dataSource: ds,
-      files: inventory.files,
+      files: filesForPlan,
       filter: args.filter,
+      // Sync por documento: no proponer desactivaciones globales.
+      includeMissingFromDrive: args.document ? false : undefined,
     });
 
     printInventoryAndPlanReport({
       tag: TAG,
-      inventory,
+      inventory: args.document
+        ? {
+            ...inventory,
+            pdfCount: filesForPlan.length,
+            files: filesForPlan,
+          }
+        : inventory,
       plan,
       scopedFilesCount: scopedFiles.length,
       deactivateMissingEnabled: args.deactivateMissing,

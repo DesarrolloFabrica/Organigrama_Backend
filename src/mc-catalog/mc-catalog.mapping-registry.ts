@@ -28,6 +28,51 @@ import {
   MC_AUDIOVISUAL_MAPPING_PACK_V100,
   MC_AUDIOVISUAL_MAPPING_RULES_VERSION_V100,
 } from './mc-catalog.mapping-audiovisual-v100';
+import {
+  MC_OPERATIONS_EXPECTED_DISTRIBUTION_V100,
+  MC_OPERATIONS_MAPPING_PACK_V100,
+  MC_OPERATIONS_MAPPING_RULES_VERSION_V100,
+} from './mc-catalog.mapping-operations-management-v100';
+import {
+  MC_OPERATIONS_EXPECTED_DISTRIBUTION_V110,
+  MC_OPERATIONS_MAPPING_PACK_V110,
+  MC_OPERATIONS_MAPPING_RULES_VERSION_V110,
+} from './mc-catalog.mapping-operations-management-v110';
+import {
+  MC_OPERATIONS_EXPECTED_DISTRIBUTION_V120,
+  MC_OPERATIONS_MAPPING_PACK_V120,
+  MC_OPERATIONS_MAPPING_RULES_VERSION_V120,
+} from './mc-catalog.mapping-operations-management-v120';
+import {
+  MC_TALENT_EXPECTED_DISTRIBUTION_V100,
+  MC_TALENT_MAPPING_PACK_V100,
+  MC_TALENT_MAPPING_RULES_VERSION_V100,
+} from './mc-catalog.mapping-talent-management-v100';
+import {
+  MC_EDUCATION_EXPECTED_DISTRIBUTION_V100,
+  MC_EDUCATION_MAPPING_PACK_V100,
+  MC_EDUCATION_MAPPING_RULES_VERSION_V100,
+} from './mc-catalog.mapping-education-management-v100';
+import {
+  MC_EDUCATION_EXPECTED_DISTRIBUTION_V110,
+  MC_EDUCATION_MAPPING_PACK_V110,
+  MC_EDUCATION_MAPPING_RULES_VERSION_V110,
+} from './mc-catalog.mapping-education-management-v110';
+import {
+  MC_EDUCATION_EXPECTED_DISTRIBUTION_V120,
+  MC_EDUCATION_MAPPING_PACK_V120,
+  MC_EDUCATION_MAPPING_RULES_VERSION_V120,
+} from './mc-catalog.mapping-education-management-v120';
+import {
+  MC_EDUCATION_EXPECTED_DISTRIBUTION_V130,
+  MC_EDUCATION_MAPPING_PACK_V130,
+  MC_EDUCATION_MAPPING_RULES_VERSION_V130,
+} from './mc-catalog.mapping-education-management-v130';
+import {
+  MC_MARKETING_EXPECTED_DISTRIBUTION_V100,
+  MC_MARKETING_MAPPING_PACK_V100,
+  MC_MARKETING_MAPPING_RULES_VERSION_V100,
+} from './mc-catalog.mapping-marketing-management-v100';
 import type { McDomainMappingPack } from './mc-catalog.types';
 import type { McSkillClassificationStatus } from './mc-catalog.types';
 
@@ -45,6 +90,14 @@ export const MC_SOFTWARE_MAPPING_PACK_CODE = 'software-mappings';
 export const MC_VISUAL_DESIGN_MAPPING_PACK_CODE = 'visual-design-mappings';
 export const MC_AUDIOVISUAL_PRODUCTION_MAPPING_PACK_CODE =
   'audiovisual-production-mappings';
+export const MC_OPERATIONS_MANAGEMENT_MAPPING_PACK_CODE =
+  'operations-management-mappings';
+export const MC_TALENT_MANAGEMENT_MAPPING_PACK_CODE =
+  'talent-management-mappings';
+export const MC_EDUCATION_MANAGEMENT_MAPPING_PACK_CODE =
+  'education-management-mappings';
+export const MC_MARKETING_MANAGEMENT_MAPPING_PACK_CODE =
+  'marketing-management-mappings';
 
 /** Default vigente por dominio (nuevas evaluaciones). */
 const REGISTRY: Record<string, McMappingPackRegistration> = {
@@ -65,6 +118,30 @@ const REGISTRY: Record<string, McMappingPackRegistration> = {
     pack: MC_AUDIOVISUAL_MAPPING_PACK_V100,
     mappingRulesVersion: MC_AUDIOVISUAL_MAPPING_RULES_VERSION_V100,
     expectedDistribution: MC_AUDIOVISUAL_EXPECTED_DISTRIBUTION_V100,
+  },
+  OPERATIONS_MANAGEMENT: {
+    packCode: MC_OPERATIONS_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_OPERATIONS_MAPPING_PACK_V120,
+    mappingRulesVersion: MC_OPERATIONS_MAPPING_RULES_VERSION_V120,
+    expectedDistribution: MC_OPERATIONS_EXPECTED_DISTRIBUTION_V120,
+  },
+  TALENT_MANAGEMENT: {
+    packCode: MC_TALENT_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_TALENT_MAPPING_PACK_V100,
+    mappingRulesVersion: MC_TALENT_MAPPING_RULES_VERSION_V100,
+    expectedDistribution: MC_TALENT_EXPECTED_DISTRIBUTION_V100,
+  },
+  EDUCATION_MANAGEMENT: {
+    packCode: MC_EDUCATION_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_EDUCATION_MAPPING_PACK_V130,
+    mappingRulesVersion: MC_EDUCATION_MAPPING_RULES_VERSION_V130,
+    expectedDistribution: MC_EDUCATION_EXPECTED_DISTRIBUTION_V130,
+  },
+  MARKETING_MANAGEMENT: {
+    packCode: MC_MARKETING_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_MARKETING_MAPPING_PACK_V100,
+    mappingRulesVersion: MC_MARKETING_MAPPING_RULES_VERSION_V100,
+    expectedDistribution: MC_MARKETING_EXPECTED_DISTRIBUTION_V100,
   },
 };
 
@@ -99,6 +176,60 @@ const RELEASES: McMappingPackRegistration[] = [
     pack: MC_AUDIOVISUAL_MAPPING_PACK_V100,
     mappingRulesVersion: MC_AUDIOVISUAL_MAPPING_RULES_VERSION_V100,
     expectedDistribution: MC_AUDIOVISUAL_EXPECTED_DISTRIBUTION_V100,
+  },
+  {
+    packCode: MC_OPERATIONS_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_OPERATIONS_MAPPING_PACK_V100,
+    mappingRulesVersion: MC_OPERATIONS_MAPPING_RULES_VERSION_V100,
+    expectedDistribution: MC_OPERATIONS_EXPECTED_DISTRIBUTION_V100,
+  },
+  {
+    packCode: MC_OPERATIONS_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_OPERATIONS_MAPPING_PACK_V110,
+    mappingRulesVersion: MC_OPERATIONS_MAPPING_RULES_VERSION_V110,
+    expectedDistribution: MC_OPERATIONS_EXPECTED_DISTRIBUTION_V110,
+  },
+  {
+    packCode: MC_OPERATIONS_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_OPERATIONS_MAPPING_PACK_V120,
+    mappingRulesVersion: MC_OPERATIONS_MAPPING_RULES_VERSION_V120,
+    expectedDistribution: MC_OPERATIONS_EXPECTED_DISTRIBUTION_V120,
+  },
+  {
+    packCode: MC_TALENT_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_TALENT_MAPPING_PACK_V100,
+    mappingRulesVersion: MC_TALENT_MAPPING_RULES_VERSION_V100,
+    expectedDistribution: MC_TALENT_EXPECTED_DISTRIBUTION_V100,
+  },
+  {
+    packCode: MC_EDUCATION_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_EDUCATION_MAPPING_PACK_V100,
+    mappingRulesVersion: MC_EDUCATION_MAPPING_RULES_VERSION_V100,
+    expectedDistribution: MC_EDUCATION_EXPECTED_DISTRIBUTION_V100,
+  },
+  {
+    packCode: MC_EDUCATION_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_EDUCATION_MAPPING_PACK_V110,
+    mappingRulesVersion: MC_EDUCATION_MAPPING_RULES_VERSION_V110,
+    expectedDistribution: MC_EDUCATION_EXPECTED_DISTRIBUTION_V110,
+  },
+  {
+    packCode: MC_EDUCATION_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_EDUCATION_MAPPING_PACK_V120,
+    mappingRulesVersion: MC_EDUCATION_MAPPING_RULES_VERSION_V120,
+    expectedDistribution: MC_EDUCATION_EXPECTED_DISTRIBUTION_V120,
+  },
+  {
+    packCode: MC_EDUCATION_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_EDUCATION_MAPPING_PACK_V130,
+    mappingRulesVersion: MC_EDUCATION_MAPPING_RULES_VERSION_V130,
+    expectedDistribution: MC_EDUCATION_EXPECTED_DISTRIBUTION_V130,
+  },
+  {
+    packCode: MC_MARKETING_MANAGEMENT_MAPPING_PACK_CODE,
+    pack: MC_MARKETING_MAPPING_PACK_V100,
+    mappingRulesVersion: MC_MARKETING_MAPPING_RULES_VERSION_V100,
+    expectedDistribution: MC_MARKETING_EXPECTED_DISTRIBUTION_V100,
   },
 ];
 

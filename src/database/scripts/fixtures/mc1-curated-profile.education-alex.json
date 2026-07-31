@@ -1,0 +1,332 @@
+{
+  "schemaVersion": "mc1-curated-profile-1.1.0",
+  "source": {
+    "type": "MANUAL_CURATED",
+    "method": "CHATGPT_HUMAN_REVIEW",
+    "reviewStatus": "REVIEWED",
+    "reviewedAt": "2026-07-30T07:45:00.000Z",
+    "notes": "MC1.17 Alex Roviro Navia Díaz — EDUCATION_MANAGEMENT, 5 EM_* reutilizados. Scores 90/87/89/94/84. Solo dominio+radar+skills; resto próximas actualizaciones."
+  },
+  "person": {
+    "document": "1030665518"
+  },
+  "profile": {
+    "primaryDomainCode": "EDUCATION_MANAGEMENT",
+    "summary": "Perfil de gestión educativa: programas Saber Pro, diseño curricular/evaluaciones, calidad académica, innovación analítica y liderazgo técnico."
+  },
+  "domain": {
+    "code": "EDUCATION_MANAGEMENT",
+    "name": "Gestión Educativa",
+    "confidence": 0.93
+  },
+  "specialties": [
+    {
+      "code": "EM_ACADEMIC_PROGRAMS",
+      "name": "Gestión de Programas Académicos",
+      "confidence": 0.9,
+      "skills": [
+        {
+          "canonicalName": "Gestión Saber Pro",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión Saber Pro (EM_ACADEMIC_PROGRAMS, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Razonamiento cuantitativo",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Razonamiento cuantitativo (EM_ACADEMIC_PROGRAMS, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Bancos de preguntas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Bancos de preguntas (EM_ACADEMIC_PROGRAMS, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Planeación de pruebas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Planeación de pruebas (EM_ACADEMIC_PROGRAMS, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_CURRICULUM_DESIGN",
+      "name": "Diseño Curricular",
+      "confidence": 0.87,
+      "skills": [
+        {
+          "canonicalName": "Diseño de evaluaciones",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.89,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Diseño de evaluaciones (EM_CURRICULUM_DESIGN, score 87).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Estrategias pedagógicas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.89,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Estrategias pedagógicas (EM_CURRICULUM_DESIGN, score 87).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Diseño de actividades de aprendizaje",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.88,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Diseño de actividades de aprendizaje (EM_CURRICULUM_DESIGN, score 87).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Planes de estudio",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.87,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Planes de estudio (EM_CURRICULUM_DESIGN, score 87).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_ACADEMIC_QUALITY",
+      "name": "Calidad Académica",
+      "confidence": 0.89,
+      "skills": [
+        {
+          "canonicalName": "Indicadores académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Indicadores académicos (EM_ACADEMIC_QUALITY, score 89).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Informes institucionales",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Informes institucionales (EM_ACADEMIC_QUALITY, score 89).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Valor agregado ICFES",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.89,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Valor agregado ICFES (EM_ACADEMIC_QUALITY, score 89).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Seguimiento académico",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.88,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Seguimiento académico (EM_ACADEMIC_QUALITY, score 89).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_TEACHING_INNOVATION",
+      "name": "Docencia e Innovación",
+      "confidence": 0.94,
+      "skills": [
+        {
+          "canonicalName": "Analítica educativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.94,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Analítica educativa (EM_TEACHING_INNOVATION, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Power BI",
+          "skillType": "TOOL",
+          "confidence": 0.94,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Power BI (EM_TEACHING_INNOVATION, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Python",
+          "skillType": "TECHNOLOGY",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Python (EM_TEACHING_INNOVATION, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "RStudio",
+          "skillType": "TOOL",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: R Studio / RStudio (EM_TEACHING_INNOVATION, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Automatización con IA",
+          "skillType": "TECHNOLOGY",
+          "confidence": 0.92,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Automatización con IA (EM_TEACHING_INNOVATION, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_ACADEMIC_LEADERSHIP",
+      "name": "Liderazgo Académico",
+      "confidence": 0.84,
+      "skills": [
+        {
+          "canonicalName": "Liderazgo técnico",
+          "skillType": "SOFT_SKILL",
+          "confidence": 0.86,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Liderazgo técnico (EM_ACADEMIC_LEADERSHIP, score 84).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Resolución de problemas",
+          "skillType": "SOFT_SKILL",
+          "confidence": 0.86,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Resolución de problemas (EM_ACADEMIC_LEADERSHIP, score 84).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Toma de decisiones basada en datos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.85,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Toma de decisiones basada en datos (EM_ACADEMIC_LEADERSHIP, score 84).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Visualización de información",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.84,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Visualización de información (EM_ACADEMIC_LEADERSHIP, score 84).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

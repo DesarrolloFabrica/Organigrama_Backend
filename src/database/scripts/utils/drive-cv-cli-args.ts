@@ -16,6 +16,11 @@ export type DriveCvCliArgs = {
   targetFolderId?: string;
   /** Propone/aplica desactivación de person_cv ausentes del inventario raíz. */
   deactivateMissing: boolean;
+  /**
+   * Limita inventario/plan a un único documento (cédula, solo dígitos).
+   * No desactiva otros person_cv; incompatible con --deactivate-missing.
+   */
+  document?: string;
 };
 
 function parseBoolFlag(raw: string): boolean {
@@ -24,8 +29,8 @@ function parseBoolFlag(raw: string): boolean {
 }
 
 /**
- * Parsea --area, --school/--subarea, --folderId, --dry-run, --apply,
- * --deactivate-missing.
+ * Parsea --area, --school/--subarea, --folderId, --document,
+ * --dry-run, --apply, --deactivate-missing.
  */
 export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
   let area: string | undefined;
@@ -38,6 +43,7 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
   let apply = false;
   let help = false;
   let deactivateMissing = false;
+  let document: string | undefined;
 
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') {
@@ -56,6 +62,10 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
       deactivateMissing = parseBoolFlag(
         arg.slice('--deactivate-missing='.length),
       );
+    } else if (arg.startsWith('--document=')) {
+      document = arg.slice('--document='.length).trim();
+    } else if (arg === '--document') {
+      throw new Error('Usa --document=<cedula> (solo dígitos).');
     } else if (arg.startsWith('--area=')) {
       area = arg.slice('--area='.length).trim();
     } else if (arg === '--area') {
@@ -76,6 +86,14 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
       targetFolderId = arg.slice('--targetFolderId='.length).trim();
     } else if (arg.startsWith('-')) {
       throw new Error(`Argumento desconocido: ${arg}`);
+    }
+  }
+
+  if (document !== undefined) {
+    if (!/^\d+$/.test(document)) {
+      throw new Error(
+        `--document inválido "${document}": se esperan solo dígitos (cédula).`,
+      );
     }
   }
 
@@ -110,6 +128,12 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
           'La desactivación por ausencia exige inventario completo de la raíz.',
       );
     }
+    if (document) {
+      throw new Error(
+        '--deactivate-missing no puede usarse con --document. ' +
+          'El sync por documento no evalúa ausencias globales.',
+      );
+    }
   }
 
   if (help) {
@@ -120,6 +144,7 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
       sourceFolderId,
       targetFolderId,
       deactivateMissing,
+      document,
     };
   }
 
@@ -131,6 +156,7 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
       sourceFolderId,
       targetFolderId,
       deactivateMissing,
+      document,
     };
   }
 
@@ -142,6 +168,7 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
       sourceFolderId,
       targetFolderId,
       deactivateMissing,
+      document,
     };
   }
 
@@ -152,6 +179,7 @@ export function parseDriveCvCliArgs(argv: string[]): DriveCvCliArgs {
     sourceFolderId,
     targetFolderId,
     deactivateMissing,
+    document,
   };
 }
 
@@ -174,8 +202,11 @@ Filtros opcionales (sin desactivación global):
   --school="<nombre>"       (alias de subárea; requiere --area)
   --subarea="<nombre>"
   --folderId=<id>           Override temporal de GOOGLE_DRIVE_CV_FOLDER_ID
+  --document=<cedula>       Solo ese PDF (dígitos); sin DEACTIVATE global
 
 Ejemplos (PowerShell):
+  npm run sync:drive-cv -- --dry-run --document=1000019945
+  npm run sync:drive-cv -- --apply --document=1000019945
   npm run sync:drive-cv -- --dry-run --folderId=<nueva>
   npm run sync:drive-cv -- --dry-run --deactivate-missing --folderId=<nueva>
   npm run sync:drive-cv -- --apply --folderId=<nueva>
@@ -192,11 +223,13 @@ Filtros opcionales:
   --school="<nombre>"
   --subarea="<nombre>"
   --folderId=<id>
+  --document=<cedula>       Solo ese PDF (dígitos)
 
-El diagnóstico siempre propone DEACTIVATE_* en inventario raíz completo
-(sin filtros). La escritura requiere sync:drive-cv --apply --deactivate-missing.
+Sin --document, el diagnóstico propone DEACTIVATE_* en inventario raíz completo.
+La escritura requiere sync:drive-cv --apply --deactivate-missing.
 
 Ejemplos (PowerShell):
+  npm run diag:drive-cv -- --document=1000019945
   npm run diag:drive-cv -- --folderId=1ZNdLeKoR-KiUqoKnG4NBJT2-sWj6Yy5D
   npm run diag:drive-cv -- --area="SERVICIO"
 `.trim());

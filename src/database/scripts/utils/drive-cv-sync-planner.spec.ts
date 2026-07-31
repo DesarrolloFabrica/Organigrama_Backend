@@ -506,6 +506,28 @@ describe('parseDriveCvCliArgs — deactivate-missing', () => {
     expect(a.mode).toBe('apply');
     expect(a.deactivateMissing).toBe(true);
   });
+
+  it('parsea --document', () => {
+    const a = parseDriveCvCliArgs(['--dry-run', '--document=1000019945']);
+    expect(a.mode).toBe('dry-run');
+    expect(a.document).toBe('1000019945');
+  });
+
+  it('--document inválido falla', () => {
+    expect(() =>
+      parseDriveCvCliArgs(['--dry-run', '--document=abc']),
+    ).toThrow(/solo dígitos/);
+  });
+
+  it('--document con --deactivate-missing falla', () => {
+    expect(() =>
+      parseDriveCvCliArgs([
+        '--dry-run',
+        '--document=1000019945',
+        '--deactivate-missing',
+      ]),
+    ).toThrow(/no puede usarse con --document/);
+  });
 });
 
 describe('drive-cv-sync-writer', () => {

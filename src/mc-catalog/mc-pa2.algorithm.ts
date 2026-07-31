@@ -18,6 +18,10 @@ import {
   MC_PA2_RULES_VERSION_VISUAL_V100,
   MC_PA2_RULES_VERSION_VISUAL_V110,
   MC_PA2_RULES_VERSION_AUDIOVISUAL_V100,
+  MC_PA2_RULES_VERSION_OPERATIONS_V100,
+  MC_PA2_RULES_VERSION_TALENT_V100,
+  MC_PA2_RULES_VERSION_EDUCATION_V100,
+  MC_PA2_RULES_VERSION_MARKETING_V100,
   type McPa2EngineConfig,
   type McPa2RankingStrategy,
 } from './mc-pa2.config';
@@ -154,6 +158,42 @@ export const MC_PA2_PUBLISHED_RULE_FINGERPRINTS: readonly McPa2RuleFingerprint[]
       algorithmVersion: MC_PA2_ALGO_LEXICO_V2,
       configHash:
         '4bf15ef3c5b97667b6c83aede977b4d007ae86de68b2462002cf4838429dc468',
+      algorithmFingerprint: computeMcPa2AlgorithmFingerprint(
+        MC_PA2_ALGO_LEXICO_V2,
+      ),
+    },
+    {
+      engineRulesVersion: MC_PA2_RULES_VERSION_OPERATIONS_V100,
+      algorithmVersion: MC_PA2_ALGO_LEXICO_V2,
+      configHash:
+        '0c95111413b0e193c3cd5cca16eb738ad839739c5513240f3f2adb5dcba951ea',
+      algorithmFingerprint: computeMcPa2AlgorithmFingerprint(
+        MC_PA2_ALGO_LEXICO_V2,
+      ),
+    },
+    {
+      engineRulesVersion: MC_PA2_RULES_VERSION_TALENT_V100,
+      algorithmVersion: MC_PA2_ALGO_LEXICO_V2,
+      configHash:
+        'd8a7bf0aa9cefb200fa6f0b0db76528bfc7be4b4907de78283a395d7cea09c3a',
+      algorithmFingerprint: computeMcPa2AlgorithmFingerprint(
+        MC_PA2_ALGO_LEXICO_V2,
+      ),
+    },
+    {
+      engineRulesVersion: MC_PA2_RULES_VERSION_EDUCATION_V100,
+      algorithmVersion: MC_PA2_ALGO_LEXICO_V2,
+      configHash:
+        '25a077b2131fbee3b01b9f04073e334ed2000d7ca038a3fa9a7494da4f51a9df',
+      algorithmFingerprint: computeMcPa2AlgorithmFingerprint(
+        MC_PA2_ALGO_LEXICO_V2,
+      ),
+    },
+    {
+      engineRulesVersion: MC_PA2_RULES_VERSION_MARKETING_V100,
+      algorithmVersion: MC_PA2_ALGO_LEXICO_V2,
+      configHash:
+        '019fa077a1fe8ba3cc3be1b2d37ef05caf8a886f4ac61b7451d9f1dbce0fe838',
       algorithmFingerprint: computeMcPa2AlgorithmFingerprint(
         MC_PA2_ALGO_LEXICO_V2,
       ),

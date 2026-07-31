@@ -1,0 +1,319 @@
+{
+  "schemaVersion": "mc1-curated-profile-1.1.0",
+  "source": {
+    "type": "MANUAL_CURATED",
+    "method": "CHATGPT_HUMAN_REVIEW",
+    "reviewStatus": "REVIEWED",
+    "reviewedAt": "2026-07-30T06:45:00.000Z",
+    "notes": "MC1.15 Maira Alejandra Doncel Largo — OPERATIONS_MANAGEMENT, 5 OPS_* reutilizados. Scores ChatGPT 92/94/90/88/91. Solo dominio+radar+skills; resto próximas actualizaciones."
+  },
+  "person": {
+    "document": "1023935373"
+  },
+  "profile": {
+    "primaryDomainCode": "OPERATIONS_MANAGEMENT",
+    "summary": "Perfil de gestión de operaciones: operaciones académicas, calidad académica, procesos e innovación, analítica operativa y liderazgo operativo."
+  },
+  "domain": {
+    "code": "OPERATIONS_MANAGEMENT",
+    "name": "Gestión de Operaciones",
+    "confidence": 0.93
+  },
+  "specialties": [
+    {
+      "code": "OPS_ACADEMIC",
+      "name": "Operaciones Académicas",
+      "confidence": 0.92,
+      "skills": [
+        {
+          "canonicalName": "Gestión académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión académica (Operaciones Académicas, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Planificación académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Planificación académica (Operaciones Académicas, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de procesos académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión de procesos académicos (Operaciones Académicas, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Registro y control académico",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Registro y control académico (Operaciones Académicas, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OPS_QUALITY",
+      "name": "Calidad Académica",
+      "confidence": 0.94,
+      "skills": [
+        {
+          "canonicalName": "Control de calidad académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.94,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Control de calidad académica (Calidad Académica, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Normativa educativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Normativa educativa (Calidad Académica, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Aseguramiento de la calidad",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Aseguramiento de la calidad (Calidad Académica, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Cumplimiento institucional",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Cumplimiento institucional (Calidad Académica, score 94).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OPS_PROCESS",
+      "name": "Procesos e Innovación",
+      "confidence": 0.9,
+      "skills": [
+        {
+          "canonicalName": "Transformación digital",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Transformación digital (Procesos e Innovación, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Automatización de procesos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Automatización de procesos (Procesos e Innovación, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de proyectos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión de proyectos (Procesos e Innovación, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Mejora continua",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Mejora continua (Procesos e Innovación, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OPS_ANALYTICS",
+      "name": "Analítica Operativa",
+      "confidence": 0.88,
+      "skills": [
+        {
+          "canonicalName": "Indicadores de gestión",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Indicadores de gestión (Analítica Operativa, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "KPIs",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: KPIs (Analítica Operativa, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Análisis de datos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.89,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Análisis de datos (Analítica Operativa, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Toma de decisiones basada en datos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.88,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Toma de decisiones basada en datos (Analítica Operativa, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "OPS_COORDINATION",
+      "name": "Liderazgo Operativo",
+      "confidence": 0.91,
+      "skills": [
+        {
+          "canonicalName": "Liderazgo de equipos",
+          "skillType": "SOFT_SKILL",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Liderazgo de equipos (Liderazgo Operativo, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Coordinación operativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Coordinación operativa (Liderazgo Operativo, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión estratégica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión estratégica (Liderazgo Operativo, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Permanencia estudiantil",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Permanencia estudiantil (Liderazgo Operativo, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

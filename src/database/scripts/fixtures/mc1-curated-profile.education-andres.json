@@ -1,0 +1,388 @@
+{
+  "schemaVersion": "mc1-curated-profile-1.1.0",
+  "source": {
+    "type": "MANUAL_CURATED",
+    "method": "CHATGPT_HUMAN_REVIEW",
+    "reviewStatus": "REVIEWED",
+    "reviewedAt": "2026-07-30T06:30:00.000Z",
+    "notes": "MC1.14 Andrés Felipe Prieto Lizarazo — EDUCATION_MANAGEMENT 5 ejes. Scores 92/90/88/85/91. Herramientas/metodologías/evidencias extendidas: Próximas actualizaciones."
+  },
+  "person": {
+    "document": "1020720408"
+  },
+  "profile": {
+    "primaryDomainCode": "EDUCATION_MANAGEMENT",
+    "summary": "Perfil de gestión educativa: programas académicos, diseño curricular, calidad académica, docencia/innovación y liderazgo académico."
+  },
+  "domain": {
+    "code": "EDUCATION_MANAGEMENT",
+    "name": "Gestión Educativa",
+    "confidence": 0.93
+  },
+  "specialties": [
+    {
+      "code": "EM_ACADEMIC_PROGRAMS",
+      "name": "Gestión de Programas Académicos",
+      "confidence": 0.92,
+      "skills": [
+        {
+          "canonicalName": "Dirección de programas académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Dirección de programas académicos (Gestión de Programas Académicos, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión académica (Gestión de Programas Académicos, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Coordinación académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Coordinación académica (Gestión de Programas Académicos, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Administración educativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Administración educativa (Gestión de Programas Académicos, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de escuelas",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión de escuelas (Gestión de Programas Académicos, score 92).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_CURRICULUM_DESIGN",
+      "name": "Diseño Curricular",
+      "confidence": 0.9,
+      "skills": [
+        {
+          "canonicalName": "Diseño curricular",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.93,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Diseño curricular (Diseño Curricular, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Actualización de syllabus",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Actualización de syllabus (Diseño Curricular, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Innovación curricular",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Innovación curricular (Diseño Curricular, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Diseño por competencias",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.89,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Diseño por competencias (Diseño Curricular, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Transformación educativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Transformación educativa (Diseño Curricular, score 90).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_ACADEMIC_QUALITY",
+      "name": "Calidad Académica",
+      "confidence": 0.88,
+      "skills": [
+        {
+          "canonicalName": "Registro calificado",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Registro calificado (Calidad Académica, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Aseguramiento de la calidad",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Aseguramiento de la calidad (Calidad Académica, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Cumplimiento normativo",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Cumplimiento normativo (Calidad Académica, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Procesos de pares académicos",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.87,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Procesos de pares académicos (Calidad Académica, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión documental académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.86,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión documental académica (Calidad Académica, score 88).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_TEACHING_INNOVATION",
+      "name": "Docencia e Innovación",
+      "confidence": 0.85,
+      "skills": [
+        {
+          "canonicalName": "Docencia virtual",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Docencia virtual (Docencia e Innovación, score 85).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Evaluación por competencias",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Evaluación por competencias (Docencia e Innovación, score 85).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Tecnología educativa",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.88,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Tecnología educativa (Docencia e Innovación, score 85).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Acompañamiento pedagógico",
+          "skillType": "SOFT_SKILL",
+          "confidence": 0.86,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Acompañamiento pedagógico (Docencia e Innovación, score 85).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Aprendizaje remoto",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.85,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Aprendizaje remoto (Docencia e Innovación, score 85).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_ACADEMIC_LEADERSHIP",
+      "name": "Liderazgo Académico",
+      "confidence": 0.91,
+      "skills": [
+        {
+          "canonicalName": "Liderazgo estratégico",
+          "skillType": "SOFT_SKILL",
+          "confidence": 0.9,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Liderazgo estratégico (Liderazgo Académico, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de equipos docentes",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.91,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Gestión de equipos docentes (Liderazgo Académico, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Seguimiento docente",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Seguimiento docente (Liderazgo Académico, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Atención integral al estudiante",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.89,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Atención integral al estudiante (Liderazgo Académico, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Planeación académica",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.92,
+          "reviewDecision": "REUSE_EXISTING",
+          "evidence": [
+            {
+              "text": "Curaduría ChatGPT: Planeación académica (Liderazgo Académico, score 91).",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Scores: EM_ACADEMIC_PROGRAMS=92, EM_CURRICULUM_DESIGN=90, EM_ACADEMIC_QUALITY=88, EM_TEACHING_INNOVATION=85, EM_ACADEMIC_LEADERSHIP=91.",
+    "Herramientas, metodologías extendidas y evidencias CV detalladas: Próximas actualizaciones."
+  ]
+}

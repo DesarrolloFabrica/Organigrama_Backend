@@ -21,6 +21,8 @@ export const MC_DOMAIN_STABLE_ORDER: readonly string[] = [
   'SOFTWARE',
   'VISUAL_DESIGN',
   'AUDIOVISUAL_PRODUCTION',
+  'OPERATIONS_MANAGEMENT',
+  'TALENT_MANAGEMENT',
 ] as const;
 
 export const MC_PUBLISHABLE_QUALIFICATIONS: readonly McDomainQualification[] = [

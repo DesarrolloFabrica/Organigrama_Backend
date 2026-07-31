@@ -634,11 +634,46 @@ export class McMappingService {
       map.set(seedSkillKey(row.normalized_key, row.skill_type), row.id);
     }
 
+    // Crear skills faltantes solo desde classifications (tienen skillName).
+    for (const c of pack.classifications) {
+      const key = seedSkillKey(c.skillKey, c.skillType);
+      if (map.has(key)) continue;
+      const inserted = (await this.dataSource.query(
+        `INSERT INTO organigrama.cv_skill
+           (normalized_name, normalized_key, skill_type, is_active)
+         VALUES ($1, $2, $3, TRUE)
+         ON CONFLICT (normalized_key, skill_type) DO NOTHING
+         RETURNING id::text AS id`,
+        [c.skillName, c.skillKey, c.skillType],
+      )) as Array<{ id: string }>;
+      if (inserted[0]?.id) {
+        map.set(key, inserted[0].id);
+        this.logger.warn(
+          `Skill creada en seed mappings: ${c.skillName} (${key})`,
+        );
+        continue;
+      }
+      const again = (await this.dataSource.query(
+        `SELECT id::text AS id
+           FROM organigrama.cv_skill
+          WHERE normalized_key = $1 AND skill_type = $2
+          LIMIT 1`,
+        [c.skillKey, c.skillType],
+      )) as Array<{ id: string }>;
+      if (again[0]?.id) {
+        map.set(key, again[0].id);
+        continue;
+      }
+      throw new McMappingError(
+        `Skill inexistente en cv_skill: ${c.skillName} (${key})`,
+      );
+    }
+
     for (const ref of refs) {
       const key = seedSkillKey(ref.skillKey, ref.skillType);
       if (!map.has(key)) {
         throw new McMappingError(
-          `Skill inexistente en cv_skill: ${ref.skillName} (${key})`,
+          `Skill inexistente en cv_skill: ${ref.skillKey}/${ref.skillType} (${key})`,
         );
       }
     }
