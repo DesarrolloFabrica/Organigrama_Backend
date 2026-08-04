@@ -16,6 +16,14 @@ import { OrgChartCvService } from './org-chart-cv.service';
 
 import { OrgChartCompetenciesService } from './org-chart-competencies.service';
 
+import { OrgChartVideoService } from './video/org-chart-video.service';
+
+import { OrgChartVideoTicketService } from './video/org-chart-video-ticket.service';
+
+import { OrgChartVideoStreamService } from './video/org-chart-video-stream.service';
+
+import { OrgChartVideoDriveStreamClient } from './video/org-chart-video-drive-stream.client';
+
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
 
 import { OrgChartVisibilityService } from './org-chart-visibility.service';
@@ -105,6 +113,14 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartCvService,
 
     OrgChartCompetenciesService,
+
+    OrgChartVideoService,
+
+    OrgChartVideoTicketService,
+
+    OrgChartVideoStreamService,
+
+    OrgChartVideoDriveStreamClient,
 
     OrgChartTreeEngine,
 

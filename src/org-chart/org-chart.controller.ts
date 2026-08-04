@@ -6,8 +6,10 @@ import {
   Param,
   Query,
   Req,
+  Res,
+  HttpException,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import {
   isOrgChartLegacyEnabled,
   LEGACY_ORG_CHART_DISABLED_MESSAGE,
@@ -17,6 +19,9 @@ import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartCvService } from './org-chart-cv.service';
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
 import { OrgChartCompetenciesService } from './org-chart-competencies.service';
+import { OrgChartVideoService } from './video/org-chart-video.service';
+import { OrgChartVideoStreamService } from './video/org-chart-video-stream.service';
+import { PersonVideoStreamHttpError } from './video/org-chart-video-stream.types';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
 import type { PersonCvResponseDto } from './dto/person-cv.response.dto';
@@ -27,6 +32,8 @@ import type {
   CompetencyProfessionalProfileDto,
   CompetencySpecialtyDetailDto,
 } from './dto/competencies.response.dto';
+import type { PersonVideoResponseDto } from './video/org-chart-video.types';
+import { Public } from '../auth/public.decorator';
 
 @Controller('org-chart')
 export class OrgChartController {
@@ -38,6 +45,8 @@ export class OrgChartController {
     private readonly cvService: OrgChartCvService,
     private readonly vacancyService: OrgChartVacancyService,
     private readonly competenciesService: OrgChartCompetenciesService,
+    private readonly videoService: OrgChartVideoService,
+    private readonly videoStreamService: OrgChartVideoStreamService,
   ) {}
 
   private async resolveVersion(
@@ -168,6 +177,98 @@ export class OrgChartController {
       versionCode,
     );
     return this.cvService.getPersonCv(viewer, personId, resolvedVersionId);
+  }
+
+  /**
+   * Disponibilidad, metadatos, ticket y streamUrl (Fases 3A–3C).
+   * Misma política de visibilidad que la ficha / CV.
+   * Anti-enumeración: sin permiso → { hasVideo: false }.
+   */
+  @Get('person/:personId/video')
+  async getPersonVideo(
+    @Param('personId') personId: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ): Promise<PersonVideoResponseDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.videoService.getPersonVideo(
+      viewer,
+      personId,
+      resolvedVersionId,
+    );
+  }
+
+  /**
+   * Streaming Range del video de presentación (Fase 3C).
+   * Credencial: únicamente `ticket` (no Bearer / no JWT de sesión en query).
+   */
+  @Public()
+  @Get('person/:personId/video/stream')
+  async streamPersonVideo(
+    @Param('personId') personId: string,
+    @Query('ticket') ticket: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      const rangeHeader =
+        typeof req.headers.range === 'string' ? req.headers.range : undefined;
+      await this.videoStreamService.streamToResponse({
+        personId,
+        ticket,
+        rangeHeader,
+        req,
+        res,
+        requestId: (req.headers['x-request-id'] as string) || undefined,
+      });
+    } catch (err) {
+      if (err instanceof PersonVideoStreamHttpError) {
+        if (!res.headersSent) {
+          if (err.headers) {
+            for (const [k, v] of Object.entries(err.headers)) {
+              res.setHeader(k, v);
+            }
+          }
+          res.status(err.httpStatus).json({
+            statusCode: err.httpStatus,
+            message: err.message,
+            code: err.code,
+          });
+        }
+        return;
+      }
+      if (err instanceof HttpException) {
+        if (!res.headersSent) {
+          const status = err.getStatus();
+          const body = err.getResponse();
+          res
+            .status(status)
+            .json(
+              typeof body === 'string'
+                ? { statusCode: status, message: body }
+                : body,
+            );
+        }
+        return;
+      }
+      this.log.error(
+        `streamPersonVideo unexpected error personId=${personId}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+      if (!res.headersSent) {
+        res.status(500).json({
+          statusCode: 500,
+          message: 'Error al transmitir el video',
+          code: 'STREAM_PIPE_ERROR',
+        });
+      }
+    }
   }
 
   /**

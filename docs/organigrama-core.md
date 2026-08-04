@@ -89,6 +89,12 @@ Endpoints recomendados (carga progresiva)
 - Ficha de persona: `GET /api/org-chart/person/:id`
 - Resumen jerárquico: `GET /api/org-chart/summary/:personId`
 - Búsqueda: `GET /api/org-chart/search?q=`
+- Video de presentación (metadatos + ticket + stream, Fases 3A–3C):
+  - `GET /api/org-chart/person/:personId/video`
+  - `GET /api/org-chart/person/:personId/video/stream?ticket=…` (ticket-only, Range 200/206)
+  - Variables: `PERSON_VIDEO_STREAM_TICKET_SECRET`, `PERSON_VIDEO_STREAM_TICKET_TTL_SECONDS`, `PERSON_VIDEO_STREAM_UPSTREAM_TIMEOUT_MS`
+  - Docs: [`person-profile-video-streaming.md`](./person-profile-video-streaming.md), [`person-profile-video-stream-ticket.md`](./person-profile-video-stream-ticket.md)
+  - Credencial Drive: OAuth readonly compartida con CV (`GOOGLE_DRIVE_CV_TOKEN_PATH`); carpeta video separada.
 
 Endpoints legacy (deprecados)
 
@@ -175,6 +181,23 @@ El **mapa** (`/root`, `/node/:id`, `/children/:id`) sigue mostrando nodos para n
 **Resúmenes** (`/summary/:personId`, `/summary/general-areas`): nombres y métricas de conteo; `roleName` solo si el viewer tiene permiso de ficha completa sobre esa persona.
 
 Archivos: `src/org-chart/org-chart-visibility.service.ts`, `org-chart-visibility.mapper.ts`, integración en `org-chart.service.ts`.
+
+## Módulos del perfil y Presentación (video)
+
+Arquitectura funcional y técnica del sistema extensible de módulos del panel lateral (`PersonDetailPanel`: Ficha, Competencias, Presentación) y del flujo Drive → `person_video` → streaming interno:
+
+- [`person-profile-modules-and-presentation-architecture.md`](./person-profile-modules-and-presentation-architecture.md)
+- Frontend Presentación (4B): [`../../Organigrama_Frontend/docs/person-profile-presentation.md`](../../Organigrama_Frontend/docs/person-profile-presentation.md)
+- Frontend módulos: [`../../Organigrama_Frontend/docs/person-profile-modules.md`](../../Organigrama_Frontend/docs/person-profile-modules.md)
+- Persistencia `organigrama.person_video` (**APLICADA_Y_VALIDADA** en Cloud): [`person-profile-video-persistence.md`](./person-profile-video-persistence.md)
+- Inventario Drive videos (Fase 2B): [`person-profile-video-drive-inventory.md`](./person-profile-video-drive-inventory.md)
+- Planner dry-run videos (Fase 2C): [`person-profile-video-drive-plan.md`](./person-profile-video-drive-plan.md)
+- Writer videos (Fase 2D, **APLICADA_Y_VALIDADA**): [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md)
+- API metadatos video (Fase 3A, **IMPLEMENTADA_Y_VALIDADA**): [`person-profile-video-api.md`](./person-profile-video-api.md)
+- Ticket temporal de stream (Fase 3B, **IMPLEMENTADA_Y_VALIDADA**): [`person-profile-video-stream-ticket.md`](./person-profile-video-stream-ticket.md)
+- Arquitectura streaming HTTP Range (Fase 3C.0, **ARQUITECTURA_COMPLETA**): [`person-profile-video-streaming-architecture.md`](./person-profile-video-streaming-architecture.md)
+- Streaming video (Fase 3C, **IMPLEMENTADA_Y_VALIDADA**): [`person-profile-video-streaming.md`](./person-profile-video-streaming.md)
+- Auditoría entorno PG local (Fase 2A.1): [`person-video-local-environment-audit.md`](./person-video-local-environment-audit.md)
 
 Estado actual probado
 
