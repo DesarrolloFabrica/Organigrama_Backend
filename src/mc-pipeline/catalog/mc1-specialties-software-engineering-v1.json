@@ -1,0 +1,156 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.SOFTWARE_ENGINEERING",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["SOFTWARE_ENGINEERING"],
+  "note": "FASE 9C — Specialty foundation for SOFTWARE_ENGINEERING. Specialties = recognizable software practice identities. Radar dimensions (Frontend, Backend, Databases, APIs, Cloud, Engineering quality, Applied AI) remain dimensions — not specialties. Tools (React, NestJS, Docker, GCP, etc.) are never specialties. Full Stack is co-observation of FRONTEND+BACKEND, not a V1 specialty. Architecture, QA-as-identity, Data Engineering, and AI Engineering deferred.",
+  "fieldBoundaryNote": "SOFTWARE_ENGINEERING requires construction/evolution of software. IT_SYSTEMS = operate/support infra without product software construction. DATA_ANALYTICS = obtain/transform/analyze data for decision — not application software engineering. Platform/DevOps under SE when delivery/platform engineering serves software being built.",
+  "specialties": [
+    {
+      "code": "FRONTEND_ENGINEERING",
+      "name": "Ingeniería Frontend",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "definition": "Identidad de ingeniería de interfaces y experiencia de producto digital: construir, evolucionar y validar la capa de presentación orientada a usuario.",
+      "positiveSignals": [
+        "construcción o evolución de UI/interfaces de producto digital",
+        "implementación de experiencias web o de cliente como práctica dominante",
+        "responsabilidad de capas de presentación (componentes, flujos, accesibilidad de UI) en software"
+      ],
+      "exclusions": [
+        "solo diseño visual/UX sin implementación de software (ver VISUAL_DESIGN)",
+        "solo listar frameworks frontend sin práctica de construcción",
+        "servicios de servidor o APIs como práctica dominante (ver BACKEND_ENGINEERING)",
+        "apps móviles nativas/cross-platform como identidad dominante (ver MOBILE_ENGINEERING)"
+      ]
+    },
+    {
+      "code": "BACKEND_ENGINEERING",
+      "name": "Ingeniería Backend",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "definition": "Identidad de ingeniería de servicios y lógica de servidor: diseñar, construir y mantener aplicaciones, servicios y lógica de negocio del lado servidor.",
+      "positiveSignals": [
+        "construcción o evolución de servicios/aplicaciones de servidor",
+        "implementación de lógica de negocio, dominio o procesamiento en backend",
+        "responsabilidad de persistencia/APIs como parte de servicios que se construyen (no solo operar DB)"
+      ],
+      "exclusions": [
+        "solo administrar servidores/infra sin construir software (ver IT_SYSTEMS)",
+        "solo consultar SQL o dashboards sin construcción de software (ver DATA_ANALYTICS)",
+        "solo UI como práctica dominante (ver FRONTEND_ENGINEERING)",
+        "solo listar lenguajes/frameworks sin evidencia de construcción"
+      ]
+    },
+    {
+      "code": "MOBILE_ENGINEERING",
+      "name": "Ingeniería de aplicaciones móviles",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "definition": "Identidad de ingeniería de software móvil: construir y evolucionar aplicaciones nativas o multiplataforma orientadas a dispositivos móviles.",
+      "positiveSignals": [
+        "construcción o evolución de apps iOS/Android/multiplataforma",
+        "práctica dominante de producto móvil (ciclo de release, stores, cliente móvil)",
+        "responsabilidad de capas cliente móvil como identidad profesional"
+      ],
+      "exclusions": [
+        "solo web responsive sin identidad móvil (ver FRONTEND_ENGINEERING)",
+        "solo listar SDKs móviles sin construcción",
+        "solo backend de APIs consumidas por móviles sin práctica móvil (ver BACKEND_ENGINEERING)"
+      ]
+    },
+    {
+      "code": "PLATFORM_DEVOPS_ENGINEERING",
+      "name": "Platform / DevOps Engineering",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "definition": "Identidad de ingeniería de plataforma y entrega de software: habilitar CI/CD, empaquetado, entornos y automatización que sostienen la construcción y despliegue del software de producto.",
+      "positiveSignals": [
+        "diseño/operación de pipelines CI/CD para software de producto",
+        "empaquetado/contenedores/orquestación al servicio de apps que se construyen",
+        "infra-as-code o plataformas internas orientadas a delivery de software",
+        "responsabilidad de confiabilidad de entrega del software (no solo helpdesk)"
+      ],
+      "exclusions": [
+        "administrar servidores/redes/soporte TI sin vínculo a construcción de software (ver IT_SYSTEMS)",
+        "solo listar cloud vendors (GCP/AWS/Azure) sin práctica de delivery",
+        "solo usar Docker una vez sin identidad de plataforma/entrega",
+        "QA/testing de producto como identidad dominante (capability/skill → dimensión Ingeniería y calidad)"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "SOFTWARE_FRONTEND": "FRONTEND_ENGINEERING",
+    "SOFTWARE_BACKEND": "BACKEND_ENGINEERING"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "API_DESIGN_INTEGRATION",
+      "parentSpecialty": "BACKEND_ENGINEERING",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "note": "Capability/dimension axis (APIs e integración); not a specialty identity."
+    },
+    {
+      "code": "DATA_MODELING_PERSISTENCE",
+      "parentSpecialty": "BACKEND_ENGINEERING",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "note": "Capability/dimension (Bases de datos) within software construction; not specialty."
+    },
+    {
+      "code": "TEST_AUTOMATION",
+      "parentSpecialty": "BACKEND_ENGINEERING",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "note": "QA/test automation capability; feeds Engineering quality dimension. Not V1 specialty."
+    },
+    {
+      "code": "SOFTWARE_ARCHITECTURE_PRACTICE",
+      "parentSpecialty": "BACKEND_ENGINEERING",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "note": "Advanced capability within Backend/Platform/etc.; deferred as specialty."
+    },
+    {
+      "code": "APPLIED_AI_IN_SOFTWARE",
+      "parentSpecialty": "BACKEND_ENGINEERING",
+      "parentField": "SOFTWARE_ENGINEERING",
+      "note": "Applied AI as dimension/skill within SE; not stable specialty identity yet."
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "FULL_STACK_ENGINEERING",
+      "reason": "Not a distinct V1 specialty identity. Represent as co-observation of FRONTEND_ENGINEERING + BACKEND_ENGINEERING. Job-title 'Full Stack' is not taxonomy."
+    },
+    {
+      "code": "SOFTWARE_ARCHITECTURE",
+      "reason": "Advanced capability that can exist inside Backend/Platform/Frontend practice; insufficient as standalone specialty identity for V1."
+    },
+    {
+      "code": "DATA_ENGINEERING",
+      "reason": "Belongs primarily under DATA_ANALYTICS / future Data field when practice is pipelines/analytics platforms; not SE specialty unless future evidence shows product-software identity."
+    },
+    {
+      "code": "QA_TEST_AUTOMATION",
+      "reason": "Prefer skill/capability feeding SE_ENG_QUALITY dimension in V1; dedicated QA specialty deferred until identity-level evidence warrants it."
+    },
+    {
+      "code": "AI_SOFTWARE_ENGINEERING",
+      "reason": "Applied AI remains dimension SE_APPLIED_AI + future skills; professional identity not stable enough for V1 specialty."
+    },
+    {
+      "code": "SOFTWARE_DATA",
+      "reason": "Legacy MC1.2 axis was a radar dimension (Bases de datos), not a specialty identity."
+    },
+    {
+      "code": "SOFTWARE_API_INTEGRATION",
+      "reason": "Legacy MC1.2 axis was a radar dimension (APIs e integración), not a specialty."
+    },
+    {
+      "code": "SOFTWARE_CLOUD_DEPLOY",
+      "reason": "Legacy MC1.2 axis split: specialty identity → PLATFORM_DEVOPS_ENGINEERING when delivery practice; otherwise dimension SE_CLOUD_INFRA."
+    },
+    {
+      "code": "SOFTWARE_ENGINEERING_QUALITY",
+      "reason": "Legacy MC1.2 axis is radar dimension SE_ENG_QUALITY, not specialty."
+    },
+    {
+      "code": "SOFTWARE_AI_APPLIED",
+      "reason": "Legacy MC1.2 axis is radar dimension SE_APPLIED_AI, not specialty."
+    }
+  ]
+}

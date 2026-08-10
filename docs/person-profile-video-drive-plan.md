@@ -24,9 +24,11 @@ para producir un **plan dry-run** de acciones futuras **sin escribir** en Postgr
 |------|---------|-----|
 | Inventario Drive | `diag:drive-video` | Solo Drive readonly → JSON en `tmp/` |
 | Planner | `plan:drive-video` | Lee JSON + **SELECT** Cloud → plan en `tmp/` |
-| Writer (futuro 2D) | TBD con `--i-confirm-apply` | Transacciones controladas |
+| Writer (2D) | `sync:drive-video` | Valida plan + snapshot live; escribe solo NEW con flags dobles |
 
 No se reconsulta Drive de forma obligatoria en el planner.
+
+**Planes parciales:** `--document=<doc>` limita el inventario cargado (p. ej. un único video nuevo). El summary refleja ese subconjunto (`inventoryTotal`, `NEW`, `personVideoRowsBefore` = filas live al planificar).
 
 ---
 
@@ -82,9 +84,13 @@ Consola: documentos enmascarados. Sin nombres, correos, teléfonos, URLs Drive, 
 npm run plan:drive-video -- --help
 npm run plan:drive-video -- --json --show-new --show-errors
 npm run plan:drive-video -- --inventory=tmp/person-video-drive-inventory/inventory.private.json
+# Plan puntual (incremental)
+npm run plan:drive-video -- --document=1000810767
 ```
 
 Rechaza `--apply` / `--execute` / flags de escritura.
+
+Tras un apply, regenerar el plan es **obligatorio** antes de otro sync: el snapshot (`personVideoRowsBefore`) y las acciones (`NEW` → `NO_CHANGE`) deben reflejar la BD actual.
 
 ---
 
@@ -119,21 +125,23 @@ El archivo inválido (nombre solo dígitos sin extensión) tiene hint operativo 
 
 ---
 
-## 10. Writer (Fase 2D) y bloqueos residuales
+## 10. Writer (Fase 2D) — inicial e incremental
 
 Writer documentado en [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md).
 
-Plan real aceptado para la primera aplicación:
+El apply **ya no** acopla métricas fijas del dry-run inicial (14/13/1/0). Valida coherencia del plan + snapshot live de `person_video`.
 
-- **13 NEW**
-- **1 INVALID_NAME** omitido (no bloquea NEW; renombre Drive pendiente)
+Plan histórico de la primera aplicación (válido solo en el estado en que se generó):
 
-Flags de escritura: `--execute --confirm-cloud-video-sync` (ambos).
+- **13 NEW** + **1 INVALID_NAME** con `personVideoRowsBefore=0`
 
-Políticas ya congeladas en 2D:
+Flags de escritura: `--execute --confirm-cloud-video-sync` (ambos). Sin bypass de validación.
 
-- `METADATA_CHANGED` → UPDATE in-place del mismo `drive_file_id`
-- `REPLACE` → deactivate + insert (fuera del alcance de la 1ª ejecución)
+Políticas 2D:
+
+- Solo **NEW** escribe en esta versión del CLI
+- `METADATA_CHANGED` / `REPLACE` → bloqueados en validación (código writer preparado, no autorizado aún)
 - `INVALID_NAME` → omitir
+- `NEW=0` tras re-plan → `NO_WRITABLE_NEW` (idle)
 
-Pendiente humano: ~~autorización explícita para ejecutar el apply~~ **hecho** — ver [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md) (**APLICADA_Y_VALIDADA**, 13 filas activas).
+Estado tabla tras carga inicial: **13** activos. Syncs posteriores son incrementales (regenerar plan).

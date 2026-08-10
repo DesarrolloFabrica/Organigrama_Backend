@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DevMockPhotoProvider } from './providers/dev-mock-photo.provider';
 import { GoogleWorkspaceDirectoryPhotoProvider } from './providers/google-workspace-directory-photo.provider';
+import { LocalDiskProfilePhotoProvider } from './providers/local-disk-profile-photo.provider';
 import { PersistedGoogleProfilePhotoProvider } from './providers/persisted-google-profile-photo.provider';
 import { PersistedUploadProfilePhotoProvider } from './providers/persisted-upload-profile-photo.provider';
 import { SessionGoogleLoginPhotoProvider } from './providers/session-google-login-photo.provider';
@@ -18,6 +19,7 @@ export class PhotoResolverService {
   constructor(
     persistedGoogleProfilePhotoProvider: PersistedGoogleProfilePhotoProvider,
     persistedUploadProfilePhotoProvider: PersistedUploadProfilePhotoProvider,
+    localDiskProfilePhotoProvider: LocalDiskProfilePhotoProvider,
     devMockPhotoProvider: DevMockPhotoProvider,
     googleWorkspaceDirectoryPhotoProvider: GoogleWorkspaceDirectoryPhotoProvider,
     sessionGoogleLoginPhotoProvider: SessionGoogleLoginPhotoProvider,
@@ -25,6 +27,7 @@ export class PhotoResolverService {
     this.providers = [
       persistedGoogleProfilePhotoProvider,
       persistedUploadProfilePhotoProvider,
+      localDiskProfilePhotoProvider,
       devMockPhotoProvider,
       googleWorkspaceDirectoryPhotoProvider,
       sessionGoogleLoginPhotoProvider,

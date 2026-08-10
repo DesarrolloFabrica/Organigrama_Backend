@@ -1,5 +1,6 @@
 /**
  * Tipos de aplicación controlada Drive video → person_video (Fase 2D).
+ * Validaciones de apply se derivan del plan; no hay métricas fijas del primer despliegue.
  */
 
 import type { DriveVideoPlanAction } from './drive-video-plan-types';
@@ -18,35 +19,53 @@ export type DriveVideoApplyPlanItem = {
   md5Checksum: string | null;
   modifiedTime: string | null;
   renameHint?: string | null;
+  /** Presente en plan.private.json del planner. */
+  personMatch?: string;
+  eligibility?: string;
+  activeVideoId?: string | null;
+  compared?: unknown;
+};
+
+export type DriveVideoApplyPlanWritableWouldBe = {
+  new: number;
+  replace: number;
+  metadataChanged: number;
+};
+
+export type DriveVideoApplyPlanSummary = {
+  generatedAt: string;
+  inventorySource: string;
+  database: string;
+  inventoryTotal: number;
+  validNames: number;
+  invalidNames: number;
+  personsFound: number;
+  personsNotFound?: number;
+  personsAmbiguous?: number;
+  personsInactive?: number;
+  vacanciesExcluded?: number;
+  byAction: Record<string, number>;
+  writableWouldBe: DriveVideoApplyPlanWritableWouldBe;
+  blockedOrReportOnly: number;
+  personVideoRowsBefore: number;
+  personVideoRowsAfter: number;
 };
 
 export type DriveVideoApplyPlanFile = {
-  summary: {
-    generatedAt: string;
-    inventorySource: string;
-    database: string;
-    inventoryTotal: number;
-    byAction: Record<string, number>;
-    personVideoRowsBefore: number;
-    personVideoRowsAfter: number;
-  };
+  summary: DriveVideoApplyPlanSummary;
   items: DriveVideoApplyPlanItem[];
 };
 
-/** Expectativas congeladas del dry-run aprobado (Fase 2C). */
-export const DRIVE_VIDEO_APPROVED_PLAN_EXPECTATIONS = {
+/**
+ * Única expectativa estable de destino (no métricas del dry-run inicial).
+ */
+export const DRIVE_VIDEO_APPLY_DESTINATION = {
   database: 'core',
-  inventoryTotal: 14,
-  newCount: 13,
-  invalidNameCount: 1,
-  replaceCount: 0,
-  metadataChangedCount: 0,
-  duplicateDocumentCount: 0,
-  personNotFoundCount: 0,
-  personMatchMultipleCount: 0,
-  personInactiveCount: 0,
-  vacancyCount: 0,
-  personVideoRowsBefore: 0,
+} as const;
+
+/** @deprecated Usar DRIVE_VIDEO_APPLY_DESTINATION. Sin métricas 14/13/1/0. */
+export const DRIVE_VIDEO_APPROVED_PLAN_EXPECTATIONS = {
+  database: DRIVE_VIDEO_APPLY_DESTINATION.database,
 } as const;
 
 export type DriveVideoApplyValidationIssue = {
@@ -74,6 +93,7 @@ export type DriveVideoApplyPrecheckSummary = {
   schemas: string[];
   personVideoExists: true;
   personVideoRowCount: number;
+  planPersonVideoRowsBefore: number;
   constraintsOk: boolean;
   indexesOk: boolean;
   newCandidates: number;

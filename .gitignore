@@ -13,3 +13,8 @@ google-drive-oauth-client.json
 tmp/
 tools/
 cloud-sql-proxy.exe
+
+# MC1 MDE baselines — NUNCA versionar dumps ni paquetes con PII
+baselines/
+*.dump
+mc1-mde/

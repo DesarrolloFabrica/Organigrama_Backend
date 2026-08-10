@@ -1,8 +1,9 @@
 /**
- * Disponibilidad / metadatos de video de presentación (+ ticket Fase 3B).
+ * Disponibilidad / metadatos de video de presentación (+ ticket).
  *
- * Misma política de visibilidad que la ficha / CV (`canViewFullProfile`).
- * Anti-enumeración: sin permiso → { hasVideo: false }.
+ * Política: cualquier usuario autenticado puede consultar Presentación de
+ * cualquier persona real activa no vacante. No usa `canViewFullProfile`.
+ * Ficha / CV / competencias siguen la política jerárquica aparte.
  * Emite ticket firmado; no consulta Drive; no transmite bytes.
  */
 import {
@@ -14,7 +15,6 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { isVacancyPerson } from '../org-chart-vacancy';
-import { OrgChartVisibilityService } from '../org-chart-visibility.service';
 import type { OrgViewerContext } from '../org-viewer-context';
 import {
   PERSON_VIDEO_FILE_NAME_MAX_LEN,
@@ -36,29 +36,21 @@ export class OrgChartVideoService {
   constructor(
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly visibilityService: OrgChartVisibilityService,
     private readonly ticketService: OrgChartVideoTicketService,
   ) {}
 
+  /**
+   * @param viewer Viewer autenticado (JWT). Se usa para `sub` del ticket.
+   * @param targetPersonId Persona objetivo.
+   * @param _versionId Reservado (compatibilidad controller); no usa jerarquía.
+   */
   async getPersonVideo(
     viewer: OrgViewerContext,
     targetPersonId: string,
-    versionId: string,
+    _versionId: string,
   ): Promise<PersonVideoResponseDto> {
-    const canView = await this.visibilityService.canViewFullProfile(
-      viewer,
-      targetPersonId,
-      versionId,
-    );
-    if (!canView) {
-      this.logger.warn(
-        `${PERSON_VIDEO_LOG_TAG} denied video access viewerPersonId=${viewer.personId} targetPersonId=${targetPersonId}`,
-      );
-      return { hasVideo: false };
-    }
-
-    const person = await this.loadPersonForVacancyCheck(targetPersonId);
-    if (!person) {
+    const person = await this.loadPersonForEligibilityCheck(targetPersonId);
+    if (!person || !person.is_active) {
       throw new NotFoundException(
         `No existe una persona con id ${targetPersonId}.`,
       );
@@ -138,7 +130,8 @@ export class OrgChartVideoService {
     };
   }
 
-  private async loadPersonForVacancyCheck(personId: string): Promise<{
+  private async loadPersonForEligibilityCheck(personId: string): Promise<{
+    is_active: boolean;
     document: string;
     full_name: string;
     role_id: string | null;
@@ -146,13 +139,15 @@ export class OrgChartVideoService {
   } | null> {
     const rows = await this.dataSource.query<
       Array<{
+        is_active: boolean;
         document: string;
         full_name: string;
         role_id: string | null;
         role_name: string | null;
       }>
     >(
-      `SELECT p.document,
+      `SELECT p.is_active,
+              p.document,
               p.full_name,
               p.role_id::text AS role_id,
               ro.name AS role_name

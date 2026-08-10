@@ -1,0 +1,149 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.COMMUNICATIONS",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["COMMUNICATIONS"],
+  "note": "FASE 11B — Specialty foundation for COMMUNICATIONS. Specialties = recognizable communication practice identities. ON_CAMERA_PRESENTATION / HOST / CONTENT_PRESENTER are NOT specialties (skill/capability under oral presentation). CONTENT_COMMUNICATION rejected as too generic. INTERNAL_COMMUNICATIONS merged into CORPORATE_COMMUNICATIONS. COPYWRITING is skill. Tools (teleprompter, OBS, CapCut, Canva, Meta Business Suite, social platforms) are never specialties.",
+  "fieldBoundaryNote": "COMMUNICATIONS = informar, narrar, representar, relacionar (mensaje/relación). DIGITAL_MARKETING = crecimiento, conversión, campañas, performance, adquisición. AUDIOVISUAL_PRODUCTION = producir/capturar/editar obras audiovisuales. VISUAL_DESIGN = diseñar sistemas/piezas visuales. MULTI_FIELD is legitimate.",
+  "specialties": [
+    {
+      "code": "CORPORATE_COMMUNICATIONS",
+      "name": "Comunicación corporativa / institucional",
+      "parentField": "COMMUNICATIONS",
+      "definition": "Identidad de comunicación organizacional: informar y representar a la institución (externa e interna) con mensajes coherentes, vocería y gestión de narrativa corporativa.",
+      "positiveSignals": [
+        "comunicación institucional o corporativa como práctica dominante",
+        "vocería / representación de la organización",
+        "comunicación interna de unidad o empresa como práctica recurrente",
+        "planeación de mensajes institucionales y alineación de stakeholders"
+      ],
+      "exclusions": [
+        "solo marketing de crecimiento/conversión (ver DIGITAL_MARKETING)",
+        "solo periodismo informativo independiente (ver JOURNALISM)",
+        "solo relaciones públicas de reputación/medios sin práctica corporativa más amplia (ver PUBLIC_RELATIONS)",
+        "solo editar/producir video (ver AUDIOVISUAL_PRODUCTION)",
+        "solo listar Canva/redes sin práctica de comunicación"
+      ]
+    },
+    {
+      "code": "DIGITAL_COMMUNICATIONS",
+      "name": "Comunicación digital",
+      "parentField": "COMMUNICATIONS",
+      "definition": "Identidad de comunicar a través de canales digitales: narrar, informar y relacionarse con audiencias en entornos online con intención comunicacional (no de performance de marketing).",
+      "positiveSignals": [
+        "práctica recurrente de comunicación en canales digitales (narrativa, información, comunidad)",
+        "adaptación de mensajes a formatos digitales con intención comunicacional",
+        "gestión de presencia comunicacional digital (no solo pauta/ads)"
+      ],
+      "exclusions": [
+        "estrategia de campañas, adquisición, conversión o performance como práctica dominante (ver DIGITAL_MARKETING)",
+        "solo publicar posts sin práctica comunicacional coherente",
+        "solo community growth/metrics como identidad (border Marketing)",
+        "solo producción audiovisual de piezas (ver AUDIOVISUAL_PRODUCTION)",
+        "solo diseño visual de piezas (ver VISUAL_DESIGN)"
+      ]
+    },
+    {
+      "code": "PUBLIC_RELATIONS",
+      "name": "Relaciones públicas",
+      "parentField": "COMMUNICATIONS",
+      "definition": "Identidad de relaciones públicas: gestionar reputación, relacionamiento con medios/públicos y construcción de vínculos institucionales más allá del mensaje puntual.",
+      "positiveSignals": [
+        "relación con medios / prensa como práctica recurrente",
+        "gestión de reputación o crisis comunicacional",
+        "relacionamiento con públicos/stakeholders externos como responsabilidad central"
+      ],
+      "exclusions": [
+        "solo comunicación interna de boletines (ver CORPORATE_COMMUNICATIONS)",
+        "solo pauta publicitaria o performance (ver DIGITAL_MARKETING)",
+        "una mención aislada de 'RRPP' sin práctica demostrada"
+      ]
+    },
+    {
+      "code": "JOURNALISM",
+      "name": "Periodismo",
+      "parentField": "COMMUNICATIONS",
+      "definition": "Identidad periodística: investigar, reportar y editar información de interés público con criterio editorial/periodístico.",
+      "positiveSignals": [
+        "reportaje, cobertura informativa o redacción periodística recurrente",
+        "investigación / contextualización informativa como práctica central",
+        "trabajo editorial noticioso o de medios informativos"
+      ],
+      "exclusions": [
+        "solo copywriting comercial (skill; no Specialty V1)",
+        "solo content marketing (border DIGITAL_MARKETING)",
+        "solo conducción/presentación sin práctica periodística (skill de oralidad)",
+        "solo producción técnica de video (ver AUDIOVISUAL_PRODUCTION)"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {},
+  "reservedFutureSkills": [
+    {
+      "code": "ON_CAMERA_PRESENTATION",
+      "parentSpecialty": "DIGITAL_COMMUNICATIONS",
+      "parentField": "COMMUNICATIONS",
+      "note": "Capability/skill under oral presentation; may support CORPORATE/DIGITAL/JOURNALISM. Not Specialty V1."
+    },
+    {
+      "code": "COPYWRITING",
+      "parentSpecialty": "DIGITAL_COMMUNICATIONS",
+      "parentField": "COMMUNICATIONS",
+      "note": "Writing craft skill; not Specialty."
+    },
+    {
+      "code": "INTERVIEWING",
+      "parentSpecialty": "JOURNALISM",
+      "parentField": "COMMUNICATIONS",
+      "note": "Interviewing skill; also usable under oral presentation."
+    },
+    {
+      "code": "SCRIPT_WRITING_COMM",
+      "parentSpecialty": "DIGITAL_COMMUNICATIONS",
+      "parentField": "COMMUNICATIONS",
+      "note": "Script/guion as communication craft (≠ AV technical script alone)."
+    },
+    {
+      "code": "SPOKESPERSONSHIP",
+      "parentSpecialty": "CORPORATE_COMMUNICATIONS",
+      "parentField": "COMMUNICATIONS",
+      "note": "Vocería skill under corporate/PR."
+    },
+    {
+      "code": "COMMUNITY_ENGAGEMENT",
+      "parentSpecialty": "DIGITAL_COMMUNICATIONS",
+      "parentField": "COMMUNICATIONS",
+      "note": "Audience relation skill; not Marketing by default."
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "CONTENT_COMMUNICATION",
+      "reason": "Too generic; recreates DIGITAL_CONTENT contamination across Fields."
+    },
+    {
+      "code": "CONTENT_PRESENTER",
+      "reason": "Org role label, not a Specialty. Not inferred from cargo."
+    },
+    {
+      "code": "HOST",
+      "reason": "Not a stable Specialty code; on-camera hosting = skill/capability."
+    },
+    {
+      "code": "ON_CAMERA_PRESENTATION",
+      "reason": "Capability transversal (oral presentation), not V1 Specialty identity."
+    },
+    {
+      "code": "INTERNAL_COMMUNICATIONS",
+      "reason": "Merged into CORPORATE_COMMUNICATIONS to avoid unnecessary granularity."
+    },
+    {
+      "code": "COPYWRITING",
+      "reason": "Skill under writing craft, not Specialty."
+    },
+    {
+      "code": "COMMUNITY_COMMUNICATION",
+      "reason": "Deferred/absorbed as skills under DIGITAL_COMMUNICATIONS (engagement)."
+    }
+  ]
+}

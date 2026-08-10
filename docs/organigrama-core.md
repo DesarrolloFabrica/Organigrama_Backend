@@ -95,6 +95,7 @@ Endpoints recomendados (carga progresiva)
   - Variables: `PERSON_VIDEO_STREAM_TICKET_SECRET`, `PERSON_VIDEO_STREAM_TICKET_TTL_SECONDS`, `PERSON_VIDEO_STREAM_UPSTREAM_TIMEOUT_MS`
   - Docs: [`person-profile-video-streaming.md`](./person-profile-video-streaming.md), [`person-profile-video-stream-ticket.md`](./person-profile-video-stream-ticket.md)
   - Credencial Drive: OAuth readonly compartida con CV (`GOOGLE_DRIVE_CV_TOKEN_PATH`); carpeta video separada.
+  - **Cloud Run:** Secret Manager `organigrama-google-drive-oauth-token` → archivo `/secrets/google-drive-token.json` → `GOOGLE_DRIVE_CV_TOKEN_PATH` (detalle en `DEPLOY_PRODUCCION.md`). El stream no necesita Folder ID: usa `person_video.drive_file_id`.
 
 Endpoints legacy (deprecados)
 
@@ -184,7 +185,11 @@ Archivos: `src/org-chart/org-chart-visibility.service.ts`, `org-chart-visibility
 
 ## Módulos del perfil y Presentación (video)
 
-Arquitectura funcional y técnica del sistema extensible de módulos del panel lateral (`PersonDetailPanel`: Ficha, Competencias, Presentación) y del flujo Drive → `person_video` → streaming interno:
+Arquitectura funcional y técnica del sistema extensible de módulos del panel lateral (`PersonDetailPanel`: Ficha, Competencias, Presentación) y del flujo Drive → `person_video` → streaming interno.
+
+**Auditoría de visibilidad Presentación vs ficha/CV:** [`../../docs/person-profile-video-visibility-audit.md`](../../docs/person-profile-video-visibility-audit.md) — **política global autenticada implementada** (Presentación ≠ ficha completa; ticket/stream sin cambio de formato).
+
+Documentación relacionada:
 
 - [`person-profile-modules-and-presentation-architecture.md`](./person-profile-modules-and-presentation-architecture.md)
 - Frontend Presentación (4B): [`../../Organigrama_Frontend/docs/person-profile-presentation.md`](../../Organigrama_Frontend/docs/person-profile-presentation.md)
@@ -192,7 +197,7 @@ Arquitectura funcional y técnica del sistema extensible de módulos del panel l
 - Persistencia `organigrama.person_video` (**APLICADA_Y_VALIDADA** en Cloud): [`person-profile-video-persistence.md`](./person-profile-video-persistence.md)
 - Inventario Drive videos (Fase 2B): [`person-profile-video-drive-inventory.md`](./person-profile-video-drive-inventory.md)
 - Planner dry-run videos (Fase 2C): [`person-profile-video-drive-plan.md`](./person-profile-video-drive-plan.md)
-- Writer videos (Fase 2D, **APLICADA_Y_VALIDADA**): [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md)
+- Writer videos (Fase 2D, carga inicial aplicada + sync incremental seguro): [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md)
 - API metadatos video (Fase 3A, **IMPLEMENTADA_Y_VALIDADA**): [`person-profile-video-api.md`](./person-profile-video-api.md)
 - Ticket temporal de stream (Fase 3B, **IMPLEMENTADA_Y_VALIDADA**): [`person-profile-video-stream-ticket.md`](./person-profile-video-stream-ticket.md)
 - Arquitectura streaming HTTP Range (Fase 3C.0, **ARQUITECTURA_COMPLETA**): [`person-profile-video-streaming-architecture.md`](./person-profile-video-streaming-architecture.md)

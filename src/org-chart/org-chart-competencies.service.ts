@@ -35,6 +35,7 @@ import {
   type McPublishableDomainCandidate,
 } from './mc-multidomain-profile-publish';
 import { buildMvpProfessionalCapabilities } from './mc-mvp-capability-projection';
+import { readMc1PersonProfile } from '../mc-pipeline/person-profile';
 
 const LOG_TAG = '[CompetencyExplorer]';
 const MAX_EVIDENCE_TEXT = 400;
@@ -184,6 +185,26 @@ export class OrgChartCompetenciesService {
   ): Promise<CompetencyProfessionalProfileDto> {
     await this.assertCanView(viewer, personId, versionId);
     const person = await this.loadPerson(personId);
+
+    // FASE 9F — prefer local MC1 Profile Assembly when available (no Cloud).
+    const mc1 = await readMc1PersonProfile({
+      personId,
+      dataSource: this.dataSource,
+    });
+    if (mc1.status === 'AVAILABLE') {
+      return {
+        availabilityStatus: 'AVAILABLE',
+        person,
+        extractionId: null,
+        defaultDomainCode: null,
+        crossDomainClassification: null,
+        evaluatedDomains: [],
+        mvpCapabilities: null,
+        mc1Profile: mc1.presentation,
+        warnings: ['MC1_ARTIFACT_ONLY_LOCAL'],
+      };
+    }
+
     const activeExtractionId = await this.loadActiveExtractionId(personId);
     const candidates = await this.loadDomainEvaluationCandidates(personId);
     const publishable = sortPublishableDomains(
@@ -214,6 +235,7 @@ export class OrgChartCompetenciesService {
         crossDomainClassification: null,
         evaluatedDomains: [],
         mvpCapabilities,
+        mc1Profile: null,
         warnings: hasMvp
           ? ['COMPETENCY_CLASSIFICATION_PENDING']
           : primary.warnings.length
@@ -263,6 +285,7 @@ export class OrgChartCompetenciesService {
       crossDomainClassification: null,
       evaluatedDomains,
       mvpCapabilities,
+      mc1Profile: null,
       warnings: [],
     };
   }

@@ -1,0 +1,135 @@
+{
+  "catalogCode": "MC1.PROFESSIONAL_FIELD_CATALOG",
+  "catalogVersion": "2.0.0",
+  "status": "FROZEN",
+  "fields": [
+    {
+      "code": "VISUAL_DESIGN",
+      "name": "Diseño visual",
+      "definition": "Campo de práctica de comunicación y experiencia visual (gráfica, sistemas visuales, diseño de interfaz/experiencia visual de producto)."
+    },
+    {
+      "code": "EDUCATION",
+      "name": "Educación",
+      "definition": "Campo de práctica educativa: diseño de aprendizaje, docencia y facilitación formativa."
+    },
+    {
+      "code": "AUDIOVISUAL_PRODUCTION",
+      "name": "Producción audiovisual",
+      "definition": "Concepción, captura, edición y entrega de productos audiovisuales."
+    },
+    {
+      "code": "SOFTWARE_ENGINEERING",
+      "name": "Ingeniería de software",
+      "definition": "Diseño, construcción, prueba y mantenimiento de software."
+    },
+    {
+      "code": "DATA_ANALYTICS",
+      "name": "Datos y analítica",
+      "definition": "Obtención, transformación y análisis de evidencia cuantitativa para decisión."
+    },
+    {
+      "code": "IT_SYSTEMS",
+      "name": "Sistemas y operaciones de TI",
+      "definition": "Operación, infraestructura, soporte y confiabilidad de sistemas de información."
+    },
+    {
+      "code": "DIGITAL_MARKETING",
+      "name": "Marketing digital",
+      "definition": "Atracción, conversión y crecimiento mediante canales digitales."
+    },
+    {
+      "code": "COMMUNICATIONS",
+      "name": "Comunicación institucional y periodística",
+      "definition": "Mensaje institucional, prensa, relaciones públicas y periodismo profesional."
+    },
+    {
+      "code": "ACADEMIC_RESEARCH",
+      "name": "Investigación académica",
+      "definition": "Producción sistemática de conocimiento (investigación, publicación, método)."
+    },
+    {
+      "code": "PROJECT_PROGRAM_MGMT",
+      "name": "Gestión de proyectos y programas",
+      "definition": "Planificar, coordinar y entregar iniciativas multi-actividad."
+    },
+    {
+      "code": "PEOPLE_HR",
+      "name": "Personas y talento",
+      "definition": "Prácticas profesionales del ciclo de talento y sistemas de HR."
+    },
+    {
+      "code": "FINANCE_ADMIN",
+      "name": "Administración y finanzas operativas",
+      "definition": "Administración económica-operativa: presupuesto, control y procesos admin-financieros."
+    },
+    {
+      "code": "CUSTOMER_SUCCESS",
+      "name": "Relación con usuario/cliente",
+      "definition": "Acompañamiento, adopción y éxito del usuario/cliente."
+    }
+  ],
+  "reservedSpecialtyConcepts": [
+    {
+      "code": "GRAPHIC_DESIGN",
+      "parentField": "VISUAL_DESIGN",
+      "note": "Especialidad futura — no es campo profesional"
+    },
+    {
+      "code": "UX_PRODUCT_DESIGN",
+      "parentField": "VISUAL_DESIGN",
+      "note": "Especialidad futura — no es campo profesional"
+    },
+    {
+      "code": "INSTRUCTIONAL_DESIGN",
+      "parentField": "EDUCATION",
+      "note": "Especialidad futura — no es campo profesional"
+    },
+    {
+      "code": "EDUCATION_DELIVERY",
+      "parentField": "EDUCATION",
+      "note": "Especialidad futura — no es campo profesional"
+    },
+    {
+      "code": "DIGITAL_CONTENT",
+      "parentField": null,
+      "note": "No es campo; evidencia contextual puede apoyar VISUAL_DESIGN, COMMUNICATIONS, DIGITAL_MARKETING, AUDIOVISUAL_PRODUCTION o EDUCATION"
+    },
+    {
+      "code": "CREATIVE_DIRECTION",
+      "parentField": "VISUAL_DESIGN",
+      "note": "Concepto de especialidad/rol reservado — no campo"
+    },
+    {
+      "code": "QUALITY_PROCESS",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "note": "Especialidad futura — no campo"
+    }
+  ],
+  "legacyAliasesToField": {
+    "GRAPHIC_DESIGN": "VISUAL_DESIGN",
+    "UX_PRODUCT_DESIGN": "VISUAL_DESIGN",
+    "INSTRUCTIONAL_DESIGN": "EDUCATION",
+    "EDUCATION_DELIVERY": "EDUCATION",
+    "DIGITAL_CONTENT": null,
+    "field.graphic_design": "VISUAL_DESIGN",
+    "field.ux_product_design": "VISUAL_DESIGN",
+    "field.instructional_design": "EDUCATION",
+    "field.education_delivery": "EDUCATION",
+    "field.visual_design": "VISUAL_DESIGN",
+    "field.education": "EDUCATION",
+    "field.audiovisual_production": "AUDIOVISUAL_PRODUCTION",
+    "field.digital_marketing": "DIGITAL_MARKETING",
+    "field.digital_marketing_and_content": "DIGITAL_MARKETING",
+    "field.software_engineering": "SOFTWARE_ENGINEERING",
+    "field.data_analytics": "DATA_ANALYTICS",
+    "field.it_systems": "IT_SYSTEMS",
+    "field.communications": "COMMUNICATIONS",
+    "field.academic_research": "ACADEMIC_RESEARCH",
+    "field.project_program_mgmt": "PROJECT_PROGRAM_MGMT",
+    "field.people_hr": "PEOPLE_HR",
+    "field.finance_admin": "FINANCE_ADMIN",
+    "field.customer_success": "CUSTOMER_SUCCESS",
+    "field.digital_content": null
+  }
+}

@@ -3,6 +3,8 @@
  * Orientados a producto; no exponen entidades TypeORM.
  */
 
+import type { Mc1PersonCompetenciesPresentationDto } from '../../mc-pipeline/person-profile';
+
 export type CompetencyAvailabilityStatus =
   | 'AVAILABLE'
   | 'NOT_EVALUATED'
@@ -201,5 +203,10 @@ export interface CompetencyProfessionalProfileDto {
     methodologies: CompetencyMvpToolDto[];
     qualityAlerts: string[];
   } | null;
+  /**
+   * FASE 9F — MC1 Profile Assembly local (ARTIFACT_ONLY).
+   * Cuando status=AVAILABLE, la UI debe mostrar este modelo y NO el legacy MVP/dominios.
+   */
+  mc1Profile?: Mc1PersonCompetenciesPresentationDto | null;
   warnings: string[];
 }

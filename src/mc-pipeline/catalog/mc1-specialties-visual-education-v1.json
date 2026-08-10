@@ -1,0 +1,199 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.VISUAL_EDUCATION",
+  "catalogVersion": "1.1.0",
+  "status": "FROZEN",
+  "scope": ["VISUAL_DESIGN", "EDUCATION"],
+  "note": "FROZEN 8B.2. UI_DESIGN merged into UX_PRODUCT_DESIGN. LEARNING_ASSESSMENT reserved for future Skills under INSTRUCTIONAL_DESIGN. GRAPHIC/BRAND/EDITORIAL boundaries deferred to corpus validation.",
+  "specialties": [
+    {
+      "code": "GRAPHIC_DESIGN",
+      "name": "Diseño gráfico",
+      "parentField": "VISUAL_DESIGN",
+      "definition": "Composición visual de piezas gráficas para comunicación (print/digital estático) con tipografía, layout e imagen.",
+      "positiveSignals": [
+        "diseño de piezas gráficas, afiches, piezas publicitarias estáticas",
+        "composición tipográfica y layout de comunicación visual",
+        "arte final / producción gráfica"
+      ],
+      "exclusions": [
+        "solo uso de una herramienta (Illustrator/Photoshop) sin práctica de diseño",
+        "experiencia de producto/UX sin craft gráfico",
+        "ilustración como disciplina principal (ver ILLUSTRATION)",
+        "motion/animación como práctica dominante (ver MOTION_DESIGN)"
+      ]
+    },
+    {
+      "code": "UX_PRODUCT_DESIGN",
+      "name": "Diseño UX / producto",
+      "parentField": "VISUAL_DESIGN",
+      "definition": "Diseño de experiencia y producto digital: investigación, flujos, arquitectura de información, craft de interfaz (UI) y validación con usuarios. UI es craft interno, no especialidad hermana.",
+      "positiveSignals": [
+        "research de usuarios, journeys, wireframes de flujo",
+        "definición de experiencia de producto digital",
+        "diseño de pantallas/componentes/sistemas de interfaz como parte del producto",
+        "pruebas de usabilidad / iteración de experiencia"
+      ],
+      "exclusions": [
+        "solo identidad de marca",
+        "solo docencia de UX sin práctica de diseño de producto",
+        "piezas gráficas de marketing sin producto/experiencia"
+      ]
+    },
+    {
+      "code": "BRAND_IDENTITY_DESIGN",
+      "name": "Diseño de identidad de marca",
+      "parentField": "VISUAL_DESIGN",
+      "definition": "Construcción de sistemas de identidad visual: marca, manuales, aplicaciones coherentes de identidad.",
+      "positiveSignals": [
+        "diseño de marca / identidad visual",
+        "manuales de marca y aplicaciones de identidad",
+        "sistemas visuales de marca"
+      ],
+      "exclusions": [
+        "una sola pieza gráfica sin sistema de identidad",
+        "solo UI de producto",
+        "marketing operativo sin diseño de identidad"
+      ]
+    },
+    {
+      "code": "EDITORIAL_DESIGN",
+      "name": "Diseño editorial",
+      "parentField": "VISUAL_DESIGN",
+      "definition": "Diseño de publicaciones y piezas editoriales: libros, revistas, reportes, diagramación multipágina.",
+      "positiveSignals": [
+        "diagramación editorial multipágina",
+        "diseño de libros, revistas o reportes",
+        "sistemas tipográficos editoriales"
+      ],
+      "exclusions": [
+        "flyer/poster suelto sin lógica editorial",
+        "solo web/UI de producto",
+        "solo ilustración de portada sin diseño editorial"
+      ]
+    },
+    {
+      "code": "ILLUSTRATION",
+      "name": "Ilustración",
+      "parentField": "VISUAL_DESIGN",
+      "definition": "Creación de imágenes ilustradas como práctica central (conceptual, editorial, personajes), no solo apoyo ornamental.",
+      "positiveSignals": [
+        "ilustración como entregable principal",
+        "series ilustradas / personajes / narrativa visual ilustrada"
+      ],
+      "exclusions": [
+        "iconografía menor dentro de UI/producto",
+        "retoque fotográfico",
+        "solo layout tipográfico"
+      ]
+    },
+    {
+      "code": "MOTION_DESIGN",
+      "name": "Motion design",
+      "parentField": "VISUAL_DESIGN",
+      "definition": "Diseño en movimiento: animación gráfica, motion para marca/UI/explicativos, timing y narrativa visual temporal.",
+      "positiveSignals": [
+        "animación gráfica / motion graphics",
+        "animación de marca o UI",
+        "piezas explicativas animadas"
+      ],
+      "exclusions": [
+        "producción audiovisual cinematográfica completa (campo AUDIOVISUAL)",
+        "solo edición de video sin diseño en movimiento",
+        "solo GIF decorativo aislado sin práctica coherente"
+      ]
+    },
+    {
+      "code": "TEACHING_FACILITATION",
+      "name": "Docencia y facilitación",
+      "parentField": "EDUCATION",
+      "definition": "Práctica de enseñar o facilitar aprendizaje con grupos: clases, talleres, acompañamiento formativo presencial o sincrónico.",
+      "positiveSignals": [
+        "impartir clases, talleres o facilitación de aprendizaje",
+        "acompañamiento formativo a estudiantes/participantes",
+        "gestión de aula / sesión formativa"
+      ],
+      "exclusions": [
+        "solo diseño de cursos sin facilitación (ver INSTRUCTIONAL_DESIGN)",
+        "solo gestión académica administrativa",
+        "una mención aislada de 'capacitación' sin práctica docente"
+      ]
+    },
+    {
+      "code": "INSTRUCTIONAL_DESIGN",
+      "name": "Diseño instruccional",
+      "parentField": "EDUCATION",
+      "definition": "Diseño de experiencias y materiales de aprendizaje: objetivos, secuencia didáctica, recursos y evaluación formativa del aprendizaje (assessment como skill, no especialidad hermana).",
+      "positiveSignals": [
+        "diseño de cursos / rutas de aprendizaje",
+        "objetivos de aprendizaje y secuencia didáctica",
+        "diseño de materiales formativos",
+        "rúbricas/instrumentos como parte del diseño de la experiencia"
+      ],
+      "exclusions": [
+        "solo dictar clases sin diseño (ver TEACHING_FACILITATION)",
+        "solo currículo macro de programa (ver CURRICULUM_DESIGN)",
+        "solo herramienta e-learning sin diseño didáctico"
+      ]
+    },
+    {
+      "code": "CURRICULUM_DESIGN",
+      "name": "Diseño curricular",
+      "parentField": "EDUCATION",
+      "definition": "Diseño o rediseño de planes de estudio / programas formativos a nivel curricular (estructura de programa, competencias de egreso).",
+      "positiveSignals": [
+        "diseño o actualización de planes de estudio",
+        "definición de mallas / competencias de programa",
+        "alineación curricular de programas"
+      ],
+      "exclusions": [
+        "diseño de un curso suelto (ver INSTRUCTIONAL_DESIGN)",
+        "solo dictar materias del plan",
+        "solo evaluación sumativa sin rediseño curricular"
+      ]
+    },
+    {
+      "code": "ACADEMIC_MANAGEMENT",
+      "name": "Gestión académica",
+      "parentField": "EDUCATION",
+      "definition": "Coordinación y gestión de programas o unidades académicas: operación académica, calidad de programa, coordinación docente.",
+      "positiveSignals": [
+        "coordinación de programa o área académica",
+        "gestión de calidad / operación académica",
+        "liderazgo de equipos docentes en contexto académico"
+      ],
+      "exclusions": [
+        "solo docencia de aula",
+        "gestión empresarial genérica no académica",
+        "solo diseño instruccional de un curso"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "UI_DESIGN": "UX_PRODUCT_DESIGN"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "LEARNING_ASSESSMENT",
+      "parentSpecialty": "INSTRUCTIONAL_DESIGN",
+      "parentField": "EDUCATION",
+      "note": "Moved from specialty catalog in 8B.2. Capacity-specific; not a professional identity. Skill ontology TBD in 8C."
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "DIGITAL_LEARNING",
+      "reason": "Solapamiento claro con INSTRUCTIONAL_DESIGN y TEACHING_FACILITATION cuando lo digital es solo modalidad/canal."
+    },
+    {
+      "code": "UI_DESIGN",
+      "reason": "Merged into UX_PRODUCT_DESIGN (8B.2). UI is craft within UX/Product identity."
+    }
+  ],
+  "deferredBoundaryHypotheses": [
+    {
+      "codes": ["GRAPHIC_DESIGN", "BRAND_IDENTITY_DESIGN", "EDITORIAL_DESIGN"],
+      "status": "FROZEN_PENDING_CORPUS_VALIDATION",
+      "note": "Boundaries will not be reopened during pipeline construction. Revisit only if real CV corpus shows systematic fragmentation or confusion."
+    }
+  ]
+}

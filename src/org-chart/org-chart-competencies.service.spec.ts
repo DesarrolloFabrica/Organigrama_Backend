@@ -5,6 +5,15 @@ import { DataSource } from 'typeorm';
 import { OrgChartCompetenciesService } from './org-chart-competencies.service';
 import { OrgChartVisibilityService } from './org-chart-visibility.service';
 import type { OrgViewerContext } from './org-viewer-context';
+import { readMc1PersonProfile } from '../mc-pipeline/person-profile';
+
+jest.mock('../mc-pipeline/person-profile', () => ({
+  readMc1PersonProfile: jest.fn(async () => ({ status: 'NOT_AVAILABLE' })),
+}));
+
+const readMc1PersonProfileMock = readMc1PersonProfile as jest.MockedFunction<
+  typeof readMc1PersonProfile
+>;
 
 /** Snapshot validado MC1.3.3 (Camilo / extracción 206) — solo lectura. */
 const CAMILO_ARTIFACT = {
@@ -199,6 +208,7 @@ describe('OrgChartCompetenciesService', () => {
     }).compile();
 
     service = moduleRef.get(OrgChartCompetenciesService);
+    readMc1PersonProfileMock.mockResolvedValue({ status: 'NOT_AVAILABLE' });
   });
 
   function mockPerson() {
@@ -713,6 +723,54 @@ describe('OrgChartCompetenciesService', () => {
     await expect(
       service.getProfessionalProfile(selfViewer, '100', 'v1'),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('professional-profile: MC1 local AVAILABLE reemplaza legacy MVP/dominios', async () => {
+    visibility.canViewFullProfile.mockResolvedValue(true);
+    dataSource.query.mockResolvedValueOnce(mockPerson());
+    readMc1PersonProfileMock.mockResolvedValueOnce({
+      status: 'AVAILABLE',
+      presentation: {
+        status: 'AVAILABLE',
+        source: 'ARTIFACT_ONLY_LOCAL',
+        fields: [
+          {
+            code: 'SOFTWARE_ENGINEERING',
+            label: 'Ingeniería de Software',
+            role: 'PRIMARY',
+            specialties: [
+              {
+                code: 'FRONTEND_ENGINEERING',
+                label: 'Ingeniería Frontend',
+                skills: [{ code: 'fe_1', name: 'UI web' }],
+              },
+            ],
+            tools: ['React'],
+            competencyMap: {
+              dimensions: [
+                { code: 'SE_FRONTEND', label: 'Frontend', relativeCoverage: 100 },
+              ],
+            },
+            evidenceVolume: 'MEDIUM',
+          },
+        ],
+      },
+    });
+
+    const profile = await service.getProfessionalProfile(
+      selfViewer,
+      '100',
+      'v1',
+    );
+    expect(profile.mc1Profile?.status).toBe('AVAILABLE');
+    expect(profile.mvpCapabilities).toBeNull();
+    expect(profile.evaluatedDomains).toEqual([]);
+    expect(profile.warnings).toContain('MC1_ARTIFACT_ONLY_LOCAL');
+    expect(visibility.canViewFullProfile).toHaveBeenCalledWith(
+      selfViewer,
+      '100',
+      'v1',
+    );
   });
 
   it('detalle specialty sin evaluación → 404 COMPETENCY_EVALUATION_NOT_FOUND', async () => {

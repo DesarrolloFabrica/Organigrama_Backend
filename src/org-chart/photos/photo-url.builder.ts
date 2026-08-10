@@ -8,14 +8,16 @@ import {
   isRootMockEligible,
   ORG_CHART_ROOT_PERSON_ID,
 } from './photo.config';
+import { LocalProfilePhotosIndex } from './local-profile-photos.index';
 
 @Injectable()
 export class PhotoUrlBuilder {
+  constructor(private readonly localPhotos: LocalProfilePhotosIndex) {}
+
   /**
    * Reglas de photoUrl en JSON (síncrono, sin I/O):
    * - ORG_CHART_PHOTOS_ENABLED=false → mock directo legacy solo en root.
-   * - ORG_CHART_PHOTOS_ENABLED=true + mock root → URL proxy.
-   * - ORG_CHART_PHOTOS_ENABLED=true + Google activo + edu_email → URL proxy.
+   * - ORG_CHART_PHOTOS_ENABLED=true + mock root / Google / foto local → URL proxy.
    * - Resto → null.
    */
   buildPhotoUrl(person: Person): string | null {
@@ -47,6 +49,10 @@ export class PhotoUrlBuilder {
     }
 
     if (isRootMockEligible(String(person.id))) {
+      return true;
+    }
+
+    if (this.localPhotos.has(String(person.id))) {
       return true;
     }
 

@@ -99,6 +99,8 @@ export function parseBytesRangeHeader(
         headerValue: `bytes=${start}-${clippedEnd}`,
       };
     }
+    // bytes=start- abierto: NO cerrar a EOF. Videos ~200MB+ con cierre forzado
+    // hacen que Cloud Run / el navegador aborten el proxy (CORS + 500 aparente).
   }
 
   const headerValue =

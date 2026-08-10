@@ -59,6 +59,8 @@ Sin ETag de Drive.
 Cliente: `OrgChartVideoDriveStreamClient`
 
 - OAuth readonly compartido (`createDriveCvClient` / `GOOGLE_DRIVE_CV_TOKEN_PATH`)
+  - **Cloud Run:** secreto `organigrama-google-drive-oauth-token` montado en `/secrets/google-drive-token.json`; env `GOOGLE_DRIVE_CV_TOKEN_PATH=/secrets/google-drive-token.json`
+  - Runtime de stream **no** usa Folder ID de videos: lee `drive_file_id` de `person_video`
 - `files.get` + `alt=media` + `responseType: 'stream'`
 - Header `Range` opcional
 - AbortSignal + timeout de apertura (`PERSON_VIDEO_STREAM_UPSTREAM_TIMEOUT_MS`, default 20000)
@@ -149,3 +151,15 @@ Sin `streamReady` / `ticketReady`. Negativo: `{ "hasVideo": false }`.
 ## 13. Estado
 
 **IMPLEMENTADA_Y_VALIDADA**
+
+### Cloud Run — token OAuth (2026-08-04)
+
+| Campo | Valor |
+|-------|--------|
+| Secreto | `organigrama-google-drive-oauth-token` |
+| Mount | `/secrets/google-drive-token.json` |
+| Env | `GOOGLE_DRIVE_CV_TOKEN_PATH=/secrets/google-drive-token.json` |
+| Revisión | `organigrama-backend-00087-kfb` (fix CORS/stream Presentación) |
+| Smoke API | metadatos 200 + Range 206 en 00086; redeploy 00087 pendiente smoke UI |
+| `person_video` | 13 activos, sin mutación |
+| UI browser | redeploy FE `organigrama-frontend-00040-dzt` con `crossOrigin="anonymous"` |

@@ -1,0 +1,152 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.AUDIOVISUAL_PRODUCTION",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["AUDIOVISUAL_PRODUCTION"],
+  "note": "FASE 10B — Specialty foundation for AUDIOVISUAL_PRODUCTION. Specialties = recognizable audiovisual practice identities. Motion graphics / design-in-motion remains under VISUAL_DESIGN → MOTION_DESIGN (not duplicated here). Tools (Premiere, AE, Resolve, CapCut, etc.) are never specialties. Content Production rejected as too generic. Direction deferred as advanced capability. Animation deferred (border with Visual Design).",
+  "fieldBoundaryNote": "AUDIOVISUAL_PRODUCTION = produce temporal audiovisual works (video/photo/sound for AV pieces). VISUAL_DESIGN = design visual/motion communication. DIGITAL_MARKETING = growth/campaign/distribution strategy. COMMUNICATIONS = institutional/editorial/journalistic messaging. MULTI_FIELD is legitimate.",
+  "specialties": [
+    {
+      "code": "VIDEO_PRODUCTION",
+      "name": "Producción de video",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "definition": "Identidad de producción/realización de video: planificar, capturar y producir piezas audiovisuales de video como práctica profesional dominante (no solo operar una herramienta).",
+      "positiveSignals": [
+        "producción o realización de piezas de video de punta a punta o como responsabilidad central",
+        "captura/rodaje orientado a entregar un producto audiovisual",
+        "coordinación de producción audiovisual de video (set, toma, continuidad) como práctica recurrente"
+      ],
+      "exclusions": [
+        "solo edición/montaje/post como identidad dominante (ver VIDEO_POST_PRODUCTION)",
+        "solo fotografía fija profesional (ver PHOTOGRAPHY)",
+        "solo motion graphics / animación de diseño sin producción AV (ver VISUAL_DESIGN / MOTION_DESIGN)",
+        "solo listar Premiere/cámaras sin práctica de producción",
+        "estrategia de campañas o distribución como práctica dominante (ver DIGITAL_MARKETING)"
+      ]
+    },
+    {
+      "code": "VIDEO_POST_PRODUCTION",
+      "name": "Postproducción de video",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "definition": "Identidad de postproducción de video: editar, montar y acabar piezas audiovisuales (timeline, ritmo, color/acabado) como práctica profesional dominante.",
+      "positiveSignals": [
+        "edición/montaje recurrente de piezas de video",
+        "acabado post (color, composición liviana, finishing) al servicio de productos audiovisuales",
+        "responsabilidad de entregar masters/exportes de video como práctica central"
+      ],
+      "exclusions": [
+        "solo producción/rodaje sin post como identidad dominante (ver VIDEO_PRODUCTION)",
+        "motion design / animación gráfica de marca-UI como práctica dominante (ver VISUAL_DESIGN / MOTION_DESIGN)",
+        "solo nombrar Premiere/Resolve/CapCut sin práctica de edición",
+        "VFX cinematográfico complejo como única señal aislada (skill futura, no specialty propia V1)"
+      ]
+    },
+    {
+      "code": "PHOTOGRAPHY",
+      "name": "Fotografía",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "definition": "Identidad de fotografía profesional: producir imagen fija con intención fotográfica (sesión, reportaje, producto, retrato) como práctica dominante.",
+      "positiveSignals": [
+        "práctica recurrente de fotografía profesional (sesión, reportaje, producto)",
+        "responsabilidad de entregables fotográficos (sets, selección, revelado/edición fotográfica)",
+        "identidad de fotógrafo/a evidenciada por corpus de trabajo fotográfico"
+      ],
+      "exclusions": [
+        "uso ocasional de cámara dentro de un rodaje de video (skill bajo VIDEO_PRODUCTION)",
+        "solo retoque/composición gráfica sin práctica fotográfica (ver VISUAL_DESIGN)",
+        "solo listar cámaras/Photoshop sin práctica fotográfica"
+      ]
+    },
+    {
+      "code": "AUDIO_PRODUCTION",
+      "name": "Producción de audio audiovisual",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "definition": "Identidad de audio al servicio de productos audiovisuales: capturar, editar y diseñar sonido (diálogos, ambientes, mezcla) para piezas de video/AV.",
+      "positiveSignals": [
+        "edición/mezcla de audio para productos audiovisuales",
+        "diseño sonoro o captación de sonido para video/AV como práctica recurrente",
+        "responsabilidad de entrega de stems/mezcla de pieza audiovisual"
+      ],
+      "exclusions": [
+        "ingeniería de audio musical / mastering musical como práctica dominante (futuro Field posible; no inventarlo ahora)",
+        "solo poner música de stock una vez sin práctica de audio",
+        "solo listar Audition sin práctica demostrada"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "AV_PRODUCTION": "VIDEO_PRODUCTION",
+    "AV_EDITING": "VIDEO_POST_PRODUCTION",
+    "AV_POST": "VIDEO_POST_PRODUCTION",
+    "AV_PHOTOGRAPHY": "PHOTOGRAPHY",
+    "AV_SOUND": "AUDIO_PRODUCTION"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "CAMERA_OPERATION",
+      "parentSpecialty": "VIDEO_PRODUCTION",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "note": "Skill/capability under production; not specialty."
+    },
+    {
+      "code": "LIGHTING_FOR_VIDEO",
+      "parentSpecialty": "VIDEO_PRODUCTION",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "note": "Skill under capture/production."
+    },
+    {
+      "code": "NON_LINEAR_EDITING",
+      "parentSpecialty": "VIDEO_POST_PRODUCTION",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "note": "Core editing skill."
+    },
+    {
+      "code": "COLOR_GRADING",
+      "parentSpecialty": "VIDEO_POST_PRODUCTION",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "note": "Finishing skill; not specialty."
+    },
+    {
+      "code": "SOUND_DESIGN",
+      "parentSpecialty": "AUDIO_PRODUCTION",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "note": "Audio craft skill."
+    },
+    {
+      "code": "STORYBOARDING",
+      "parentSpecialty": "VIDEO_PRODUCTION",
+      "parentField": "AUDIOVISUAL_PRODUCTION",
+      "note": "Preproduction skill."
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "MOTION_GRAPHICS",
+      "reason": "Avoid duplicating VISUAL_DESIGN / MOTION_DESIGN. Motion-as-design stays in Visual Design."
+    },
+    {
+      "code": "ANIMATION",
+      "reason": "Borderline with Visual Design; deferred as AV specialty. Tool use (AE/Blender) alone insufficient."
+    },
+    {
+      "code": "LIVE_PRODUCTION",
+      "reason": "Deferred; may be skill cluster under VIDEO_PRODUCTION (streaming/multicam) until identity mass exists."
+    },
+    {
+      "code": "CONTENT_PRODUCTION",
+      "reason": "Too generic; contaminates DIGITAL_MARKETING, COMMUNICATIONS, VISUAL_DESIGN, AUDIOVISUAL_PRODUCTION."
+    },
+    {
+      "code": "AUDIOVISUAL_DIRECTION",
+      "reason": "Advanced capability / senior layer within production; not V1 specialty. Do not infer from org leadership."
+    },
+    {
+      "code": "CINEMATOGRAPHY",
+      "reason": "Merge into VIDEO_PRODUCTION as craft/skill cluster (camera/lighting language), not separate V1 specialty."
+    },
+    {
+      "code": "AV_MOTION",
+      "reason": "Legacy PA2 specialty maps to VISUAL_DESIGN MOTION_DESIGN boundary; not reintroduced under AV."
+    }
+  ]
+}

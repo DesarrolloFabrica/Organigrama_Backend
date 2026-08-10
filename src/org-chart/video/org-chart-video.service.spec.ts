@@ -2,7 +2,6 @@ import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { OrgChartVisibilityService } from '../org-chart-visibility.service';
 import type { OrgViewerContext } from '../org-viewer-context';
 import {
   OrgChartVideoService,
@@ -22,14 +21,25 @@ describe('sanitizePersonVideoFileName', () => {
 
 describe('OrgChartVideoService', () => {
   let service: OrgChartVideoService;
-  let visibility: { canViewFullProfile: jest.Mock };
   let dataSource: { query: jest.Mock };
   let ticketService: { issueStreamTicket: jest.Mock };
 
-  const viewer: OrgViewerContext = {
+  const viewerReadAll: OrgViewerContext = {
     personId: '1',
     eduEmail: 'boss@cun.edu.co',
     permissions: ['ORG_READ_ALL'],
+  };
+
+  const viewerOtherBranch: OrgViewerContext = {
+    personId: '99',
+    eduEmail: 'peer@cun.edu.co',
+    permissions: [],
+  };
+
+  const viewerSelf: OrgViewerContext = {
+    personId: '10',
+    eduEmail: 'self@cun.edu.co',
+    permissions: [],
   };
 
   const issuedTicket = {
@@ -39,7 +49,6 @@ describe('OrgChartVideoService', () => {
   };
 
   beforeEach(async () => {
-    visibility = { canViewFullProfile: jest.fn().mockResolvedValue(true) };
     dataSource = { query: jest.fn() };
     ticketService = {
       issueStreamTicket: jest.fn().mockReturnValue(issuedTicket),
@@ -48,7 +57,6 @@ describe('OrgChartVideoService', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         OrgChartVideoService,
-        { provide: OrgChartVisibilityService, useValue: visibility },
         { provide: OrgChartVideoTicketService, useValue: ticketService },
         { provide: getDataSourceToken(), useValue: dataSource },
         { provide: DataSource, useValue: dataSource },
@@ -58,13 +66,18 @@ describe('OrgChartVideoService', () => {
     service = moduleRef.get(OrgChartVideoService);
   });
 
-  function mockPerson(opts?: { vacancy?: boolean; missing?: boolean }) {
+  function mockPerson(opts?: {
+    vacancy?: boolean;
+    missing?: boolean;
+    inactive?: boolean;
+  }) {
     if (opts?.missing) {
       dataSource.query.mockResolvedValueOnce([]);
       return;
     }
     dataSource.query.mockResolvedValueOnce([
       {
+        is_active: opts?.inactive ? false : true,
         document: opts?.vacancy ? 'VAC-1' : '123',
         full_name: opts?.vacancy ? 'VACANTE - X' : 'Persona',
         role_id: '1',
@@ -73,8 +86,7 @@ describe('OrgChartVideoService', () => {
     ]);
   }
 
-  it('contrato 3C: streamUrl sin streamReady/ticketReady', async () => {
-    mockPerson();
+  function mockActiveVideo() {
     dataSource.query.mockResolvedValueOnce([
       {
         id: '9',
@@ -84,8 +96,13 @@ describe('OrgChartVideoService', () => {
         synced_at: new Date('2026-08-03T00:00:00.000Z'),
       },
     ]);
+  }
 
-    const r = await service.getPersonVideo(viewer, '10', 'v1');
+  it('contrato: streamUrl + ticket; sin drive_file_id', async () => {
+    mockPerson();
+    mockActiveVideo();
+
+    const r = await service.getPersonVideo(viewerReadAll, '10', 'v1');
     expect(r).toEqual({
       hasVideo: true,
       fileName: 'presentacion-equipo.mp4',
@@ -98,21 +115,69 @@ describe('OrgChartVideoService', () => {
         '/api/org-chart/person/10/video/stream?ticket=eyJ.ticket.sig',
     });
     expect(r).not.toHaveProperty('streamReady');
-    expect(r).not.toHaveProperty('ticketReady');
     expect(JSON.stringify(r)).not.toMatch(/drive_file_id|videoId/i);
   });
 
-  it('no emite ticket sin permiso', async () => {
-    visibility.canViewFullProfile.mockResolvedValue(false);
-    const r = await service.getPersonVideo(viewer, '10', 'v1');
+  it('viewer otra rama (sin ficha completa) + video → hasVideo y ticket', async () => {
+    mockPerson();
+    mockActiveVideo();
+
+    const r = await service.getPersonVideo(viewerOtherBranch, '10', 'v1');
+    expect(r.hasVideo).toBe(true);
+    if (r.hasVideo) {
+      expect(r.streamTicket).toBe(issuedTicket.ticket);
+    }
+    expect(ticketService.issueStreamTicket).toHaveBeenCalledWith({
+      viewerPersonId: '99',
+      targetPersonId: '10',
+      personVideoId: '9',
+    });
+  });
+
+  it('self + video → hasVideo true', async () => {
+    mockPerson();
+    mockActiveVideo();
+    const r = await service.getPersonVideo(viewerSelf, '10', 'v1');
+    expect(r.hasVideo).toBe(true);
+  });
+
+  it('ORG_READ_ALL + video sigue funcionando', async () => {
+    mockPerson();
+    mockActiveVideo();
+    const r = await service.getPersonVideo(viewerReadAll, '10', 'v1');
+    expect(r.hasVideo).toBe(true);
+  });
+
+  it('sin video → false sin ticket', async () => {
+    mockPerson();
+    dataSource.query.mockResolvedValueOnce([]);
+    const r = await service.getPersonVideo(viewerOtherBranch, '10', 'v1');
     expect(r).toEqual({ hasVideo: false });
     expect(ticketService.issueStreamTicket).not.toHaveBeenCalled();
   });
 
-  it('vacante sin ticket', async () => {
+  it('vacante → false sin ticket (aunque hubiera video)', async () => {
     mockPerson({ vacancy: true });
-    const r = await service.getPersonVideo(viewer, '10', 'v1');
+    const r = await service.getPersonVideo(viewerOtherBranch, '10', 'v1');
     expect(r).toEqual({ hasVideo: false });
+    expect(ticketService.issueStreamTicket).not.toHaveBeenCalled();
+    // No consulta person_video tras vacante.
+    expect(dataSource.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('persona inexistente → 404', async () => {
+    mockPerson({ missing: true });
+    await expect(
+      service.getPersonVideo(viewerOtherBranch, '404', 'v1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(ticketService.issueStreamTicket).not.toHaveBeenCalled();
+  });
+
+  it('persona inactiva → 404', async () => {
+    mockPerson({ inactive: true });
+    await expect(
+      service.getPersonVideo(viewerOtherBranch, '10', 'v1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(ticketService.issueStreamTicket).not.toHaveBeenCalled();
   });
 
@@ -130,15 +195,13 @@ describe('OrgChartVideoService', () => {
     ticketService.issueStreamTicket.mockImplementation(() => {
       throw new PersonVideoStreamTicketError('CONFIG_ERROR', 'missing');
     });
-    await expect(service.getPersonVideo(viewer, '10', 'v1')).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      service.getPersonVideo(viewerOtherBranch, '10', 'v1'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('persona inexistente → 404', async () => {
-    mockPerson({ missing: true });
-    await expect(
-      service.getPersonVideo(viewer, '404', 'v1'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+  it('no depende de OrgChartVisibilityService (sin provider de visibilidad)', () => {
+    // Si el constructor inyectara VisibilityService, beforeEach fallaría al compilar.
+    expect(service).toBeDefined();
   });
 });

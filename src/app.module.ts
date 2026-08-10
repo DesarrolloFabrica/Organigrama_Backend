@@ -61,6 +61,9 @@ import {
   McSkillSpecialtyMapping,
   McSpecialty,
 } from './mc-catalog/entities';
+import { McCvSnapshot } from './mc-pipeline/entities/mc-cv-snapshot.entity';
+import { McPipelineModule } from './mc-pipeline/mc-pipeline.module';
+import { Mc1ProfilePreviewModule } from './mc-pipeline/preview/mc1-profile-preview.module';
 import {
   CvSkillEnrichment,
   CvSkillEnrichmentBlock,
@@ -168,6 +171,7 @@ import {
             McMappingPackRelease,
             McEvaluationSet,
             McEvaluationSetDomain,
+            McCvSnapshot,
           ],
           /**
            * Solo para desarrollo: genera/actualiza tablas desde las entidades.
@@ -197,6 +201,8 @@ import {
     CvEvidenceModule,
     CvAttributesModule,
     McCatalogModule,
+    McPipelineModule,
+    Mc1ProfilePreviewModule,
   ],
   controllers: [AppController],
   providers: [OrganigramaDemoSeedBootstrap],

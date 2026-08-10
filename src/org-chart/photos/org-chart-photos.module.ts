@@ -8,8 +8,10 @@ import { OrgChartPhotoService } from './org-chart-photo.service';
 import { PhotoCacheService } from './photo-cache.service';
 import { PhotoResolverService } from './photo-resolver.service';
 import { PhotoUrlBuilder } from './photo-url.builder';
+import { LocalProfilePhotosIndex } from './local-profile-photos.index';
 import { DevMockPhotoProvider } from './providers/dev-mock-photo.provider';
 import { GoogleWorkspaceDirectoryPhotoProvider } from './providers/google-workspace-directory-photo.provider';
+import { LocalDiskProfilePhotoProvider } from './providers/local-disk-profile-photo.provider';
 import { PersistedGoogleProfilePhotoProvider } from './providers/persisted-google-profile-photo.provider';
 import { PersistedUploadProfilePhotoProvider } from './providers/persisted-upload-profile-photo.provider';
 import { SessionGoogleLoginPhotoProvider } from './providers/session-google-login-photo.provider';
@@ -27,12 +29,19 @@ import { ProfilePhotoLookupService } from './profile-photo-lookup.service';
     PhotoResolverService,
     PhotoUrlBuilder,
     ProfilePhotoLookupService,
+    LocalProfilePhotosIndex,
+    LocalDiskProfilePhotoProvider,
     PersistedGoogleProfilePhotoProvider,
     PersistedUploadProfilePhotoProvider,
     DevMockPhotoProvider,
     GoogleWorkspaceDirectoryPhotoProvider,
     SessionGoogleLoginPhotoProvider,
   ],
-  exports: [PhotoUrlBuilder, PhotoCacheService, ProfilePhotoLookupService],
+  exports: [
+    PhotoUrlBuilder,
+    PhotoCacheService,
+    ProfilePhotoLookupService,
+    LocalProfilePhotosIndex,
+  ],
 })
 export class OrgChartPhotosModule {}

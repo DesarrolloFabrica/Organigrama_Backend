@@ -5,7 +5,7 @@
 **Arquitectura:** [`person-profile-modules-and-presentation-architecture.md`](./person-profile-modules-and-presentation-architecture.md)  
 **Persistencia:** [`person-profile-video-persistence.md`](./person-profile-video-persistence.md) (`person_video` existe; **0 escrituras** en esta fase)  
 **Planner dry-run (Fase 2C):** [`person-profile-video-drive-plan.md`](./person-profile-video-drive-plan.md) — el inventario de esta fase fue la fuente del cruce real.  
-**Writer (Fase 2D):** [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md) — **APLICADA_Y_VALIDADA**: 13 NEW insertados; 1 INVALID_NAME omitido.
+**Writer (Fase 2D):** [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md) — carga inicial **APLICADA_Y_VALIDADA** (13 NEW); apply incremental seguro (validación derivada del plan + snapshot live; sin métricas fijas 14/13/1/0).
 
 ---
 

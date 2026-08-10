@@ -1,0 +1,42 @@
+# MC1 MDE — PostgreSQL 18 local aislado (FASE 3D)
+# NO reutilizar docker-compose.mc1-local.yml (legacy).
+#
+# Uso:
+#   # Cargar secretos locales (no commitear):
+#   #   Organigrama_Backend/secrets/mc1-mde.local.env
+#   docker compose -f docker-compose.mc1-mde.yml --env-file secrets/mc1-mde.local.env up -d
+#   docker compose -f docker-compose.mc1-mde.yml --env-file secrets/mc1-mde.local.env down
+#   # Destruir datos: ... down -v  (solo si se quiere recrear desde cero)
+#
+# Binding: 127.0.0.1:5434 → contenedor :5432
+# Sin redes Cloud. Sin montar el repositorio.
+
+services:
+  mc1-mde-postgres:
+    image: postgres:18
+    container_name: mc1-mde-postgres-18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${MDE_DB_USERNAME:-mc1_mde_owner}
+      POSTGRES_PASSWORD: ${MDE_DB_PASSWORD:?MDE_DB_PASSWORD required}
+      POSTGRES_DB: ${MDE_DB_NAME:-organigrama_mde}
+    ports:
+      - '127.0.0.1:5434:5432'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB',
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    volumes:
+      # PG 18+ image: montar en /var/lib/postgresql (no .../data).
+      - mc1-mde-pgdata:/var/lib/postgresql
+    # Sin network_mode host; sin cloudsql; sin montaje del repo.
+
+volumes:
+  mc1-mde-pgdata:
+    name: mc1-mde-pgdata

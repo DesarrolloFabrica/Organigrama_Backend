@@ -17,7 +17,10 @@ import type {
   DriveVideoApplyPlanFile,
   DriveVideoApplyPrecheckSummary,
 } from './utils/drive-video-apply-types';
-import { validateApprovedDriveVideoPlan } from './utils/drive-video-apply-validator';
+import {
+  validateApprovedDriveVideoPlan,
+  validatePersonVideoRowSnapshot,
+} from './utils/drive-video-apply-validator';
 import {
   parseSyncDriveVideoArgs,
   printSyncDriveVideoHelp,
@@ -141,11 +144,12 @@ async function runCloudPrecheck(
     (await client.query(`SELECT count(*)::bigint AS c FROM organigrama.person_video`))
       .rows[0].c,
   );
-  if (rowCount !== 0) {
-    validation.issues.push({
-      code: 'TABLE_NOT_EMPTY',
-      message: `person_video rows=${rowCount} esperado=0`,
-    });
+  const snapshotIssue = validatePersonVideoRowSnapshot(
+    rowCount,
+    plan.summary.personVideoRowsBefore,
+  );
+  if (snapshotIssue) {
+    validation.issues.push(snapshotIssue);
   }
 
   const constraints = (
@@ -282,6 +286,7 @@ async function runCloudPrecheck(
     schemas,
     personVideoExists: true,
     personVideoRowCount: rowCount,
+    planPersonVideoRowsBefore: plan.summary.personVideoRowsBefore,
     constraintsOk,
     indexesOk,
     newCandidates: validation.newItems.length,
@@ -311,6 +316,18 @@ async function main(): Promise<void> {
   const { plan, raw } = loadPlan(planPath);
   const validation = validateApprovedDriveVideoPlan(plan, raw);
   if (!validation.ok) {
+    const onlyNoWritable =
+      validation.issues.length === 1 &&
+      validation.issues[0].code === 'NO_WRITABLE_NEW';
+    if (onlyNoWritable) {
+      console.log(`${TAG} NO_WRITABLE_NEW — plan sin NEW; nada que aplicar`);
+      console.log(`${TAG} planHash=${validation.planHash}`);
+      console.log(
+        `${TAG} Regenerar inventario/plan si se esperaban inserts. No es un fallo destructivo.`,
+      );
+      process.exitCode = 0;
+      return;
+    }
     console.error(`${TAG} Plan rechazado:`);
     for (const i of validation.issues) {
       console.error(`${TAG}  - ${i.code}: ${i.message}`);

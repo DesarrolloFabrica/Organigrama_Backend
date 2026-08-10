@@ -79,8 +79,19 @@
     "mc:audit-ginna": "npm run build && node dist/database/scripts/mc1104-ginna-audit.js",
     "mc:audit-visual-domain": "npm run build && node dist/database/scripts/mc1110-audit-visual-domain.js",
     "mc:audit-visual-design": "npm run build && node dist/database/scripts/mc16-visual-design-four-profile-audit.js",
+    "mc:observatory-pilot": "npx ts-node --transpile-only scripts/mc1-observatory-pilot.ts",
+    "mc:p1-persistence-6g-it": "npx ts-node --transpile-only scripts/mc1-p1-persistence-6g-it.ts",
+    "mc:p1-persistence-pilot-6h": "npx ts-node --transpile-only scripts/mc1-p1-persistence-pilot-6h.ts",
+    "mc:p1-regenerate-cohort-decisions": "npx ts-node --transpile-only scripts/mc1-p1-6i-regen.ts",
+    "mc:p1-cohort-persistence-6i": "npx ts-node --transpile-only scripts/mc1-p1-cohort-persistence-6i.ts",
     "diag:google-photo": "npm run build && node dist/google-workspace/run-photo-diagnostic.js",
-    "diag:org-photo": "npm run build && node dist/org-chart/run-org-node-photo-diagnostic.js"
+    "diag:org-photo": "npm run build && node dist/org-chart/run-org-node-photo-diagnostic.js",
+    "mc:p2-functional-pilot-7d": "npx ts-node --transpile-only scripts/mc1-p2-functional-pilot-7d.ts",
+    "mc:r1-field-resolution-8a": "npx ts-node --transpile-only scripts/mc1-r1-field-resolution-8a.ts",
+    "mc:p3-specialty-discovery-8b": "npx ts-node --transpile-only scripts/mc1-p3-specialty-discovery-8b.ts",
+    "mc:p4-skill-discovery-8d": "npx ts-node --transpile-only scripts/mc1-p4-skill-discovery-8d.ts",
+    "mc:profile-pilot-8e": "npx ts-node --transpile-only scripts/mc1-profile-pilot-8e.ts",
+    "mc:profile-validation-8f": "npx ts-node --transpile-only scripts/mc1-profile-validation-8f.ts"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",
@@ -95,7 +106,8 @@
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.28"
+    "typeorm": "^0.3.28",
+    "unpdf": "^1.8.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

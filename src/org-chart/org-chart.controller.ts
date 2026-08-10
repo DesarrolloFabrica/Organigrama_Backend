@@ -20,7 +20,10 @@ import { OrgChartCvService } from './org-chart-cv.service';
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
 import { OrgChartCompetenciesService } from './org-chart-competencies.service';
 import { OrgChartVideoService } from './video/org-chart-video.service';
-import { OrgChartVideoStreamService } from './video/org-chart-video-stream.service';
+import {
+  OrgChartVideoStreamService,
+  applyPersonVideoStreamCors,
+} from './video/org-chart-video-stream.service';
 import { PersonVideoStreamHttpError } from './video/org-chart-video-stream.types';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
@@ -180,9 +183,10 @@ export class OrgChartController {
   }
 
   /**
-   * Disponibilidad, metadatos, ticket y streamUrl (Fases 3A–3C).
-   * Misma política de visibilidad que la ficha / CV.
-   * Anti-enumeración: sin permiso → { hasVideo: false }.
+   * Disponibilidad, metadatos, ticket y streamUrl.
+   * Presentación: cualquier usuario autenticado (no usa canViewFullProfile).
+   * Vacante / sin video → { hasVideo: false }. Persona inexistente/inactiva → 404.
+   * Ficha y CV siguen la política jerárquica aparte.
    */
   @Get('person/:personId/video')
   async getPersonVideo(
@@ -216,6 +220,8 @@ export class OrgChartController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    // CORS también en errores JSON: <video crossOrigin> exige ACAO incluso en 4xx/5xx.
+    applyPersonVideoStreamCors(req, res);
     try {
       const rangeHeader =
         typeof req.headers.range === 'string' ? req.headers.range : undefined;
@@ -230,6 +236,7 @@ export class OrgChartController {
     } catch (err) {
       if (err instanceof PersonVideoStreamHttpError) {
         if (!res.headersSent) {
+          applyPersonVideoStreamCors(req, res);
           if (err.headers) {
             for (const [k, v] of Object.entries(err.headers)) {
               res.setHeader(k, v);
@@ -245,6 +252,7 @@ export class OrgChartController {
       }
       if (err instanceof HttpException) {
         if (!res.headersSent) {
+          applyPersonVideoStreamCors(req, res);
           const status = err.getStatus();
           const body = err.getResponse();
           res
@@ -262,6 +270,7 @@ export class OrgChartController {
         err instanceof Error ? err.stack : undefined,
       );
       if (!res.headersSent) {
+        applyPersonVideoStreamCors(req, res);
         res.status(500).json({
           statusCode: 500,
           message: 'Error al transmitir el video',

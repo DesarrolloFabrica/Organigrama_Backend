@@ -1,0 +1,645 @@
+/**
+ * FASE 9E — SOFTWARE ENGINEERING cohort validation (ARTIFACT_ONLY).
+ *
+ *   npx ts-node --transpile-only scripts/mc1-software-cohort-9e.ts --confirm
+ *   npx ts-node --transpile-only scripts/mc1-software-cohort-9e.ts --confirm --only=person-zuany
+ *
+ * Role/hierarchy used only to select candidates externally — never as pipeline evidence.
+ * Reports use caseId only (no documents/PII).
+ */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { DataSource } from 'typeorm';
+import { assertMdeTarget } from '../src/mc-pipeline/p0/mde-guard';
+import {
+  createMdeDataSource,
+  createP0Service,
+} from '../src/mc-observatory/p0-bootstrap';
+import { runP1ForMember } from '../src/mc-observatory/p1-member-runner';
+import {
+  packHasDecisions,
+  resolveCohortArtifactDir,
+} from '../src/mc-pipeline/p1-persistence/p1-artifact-pack-loader';
+import { runP2ArtifactOnly } from '../src/mc-pipeline/p2/p2-runner';
+import { runR1ArtifactOnly } from '../src/mc-pipeline/r1/r1-runner';
+import { runP3ArtifactOnly } from '../src/mc-pipeline/p3/p3-runner';
+import { runP4ArtifactOnly } from '../src/mc-pipeline/p4/p4-runner';
+import { runProfilePilot } from '../src/mc-pipeline/profile/profile-runner';
+import { SPECIALTY_CATALOG_SCOPE } from '../src/mc-pipeline/catalog/specialties-visual-education';
+import {
+  P1_PROMPT_VERSION,
+  P1_SEGMENTER_VERSION,
+} from '../src/mc-pipeline/p1/p1.types';
+import { findBestValidProfilePack } from '../src/mc-pipeline/preview/mc1-profile-preview.service';
+import type { ProfilePilotEnvelope } from '../src/mc-pipeline/profile/profile.types';
+
+const ROOT = resolve(__dirname, '..');
+const BINDINGS_PATH = resolve(
+  ROOT,
+  'tmp',
+  'mc1-profile-preview',
+  'real-person-bindings.json',
+);
+const REPORT_PATH = resolve(
+  ROOT,
+  'tmp',
+  'mc1-software-cohort-9e',
+  'cohort-report.json',
+);
+
+/** Document lookup is server-side only; never print in reports. */
+const COHORT: Array<{
+  caseId: string;
+  document: string;
+  /** Skip pipeline; reuse existing profile pack for snapshot. */
+  reuseProfileOnly?: boolean;
+}> = [
+  {
+    caseId: 'person-camilo',
+    document: '1000518830',
+    reuseProfileOnly: true,
+  },
+  { caseId: 'person-zuany', document: '1000372715' },
+  { caseId: 'person-jose', document: '1010247929' },
+  { caseId: 'person-alejandro', document: '1193510625' },
+  { caseId: 'person-johan', document: '1020841798' },
+];
+
+function loadEnvFile(path: string, allow: Set<string> | null = null) {
+  const out: Record<string, string> = {};
+  if (!existsSync(path)) return out;
+  for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+    if (!line || line.startsWith('#')) continue;
+    const i = line.indexOf('=');
+    if (i <= 0) continue;
+    const k = line.slice(0, i).trim();
+    const v = line.slice(i + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (allow && !allow.has(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+function writeBinding(caseId: string, snapshotId: string) {
+  mkdirSync(resolve(ROOT, 'tmp', 'mc1-profile-preview'), { recursive: true });
+  let current: Record<string, { snapshotId: string; boundAt: string }> = {};
+  if (existsSync(BINDINGS_PATH)) {
+    try {
+      current = JSON.parse(readFileSync(BINDINGS_PATH, 'utf8'));
+    } catch {
+      current = {};
+    }
+  }
+  current[caseId] = {
+    snapshotId: String(snapshotId),
+    boundAt: new Date().toISOString(),
+  };
+  writeFileSync(BINDINGS_PATH, JSON.stringify(current, null, 2), 'utf8');
+}
+
+function summarizeProfile(envelope: ProfilePilotEnvelope) {
+  const f = envelope.payload.fields[0];
+  if (!f) {
+    return {
+      fieldCodes: [] as string[],
+      specialties: [] as string[],
+      skillCount: 0,
+      tools: [] as string[],
+      evidenceVolume: null as string | null,
+      derivedPresentationLabel: null as string | null,
+      radar: {} as Record<string, number>,
+      dominantRadar: null as string | null,
+    };
+  }
+  const radar: Record<string, number> = {};
+  for (const a of f.radar?.axes ?? []) {
+    radar[a.dimensionCode] = a.relativeCoverage;
+  }
+  const dominant =
+    [...(f.radar?.axes ?? [])].sort(
+      (a, b) => b.relativeCoverage - a.relativeCoverage,
+    )[0] ?? null;
+  return {
+    fieldCodes: envelope.payload.fields.map((x) => x.fieldCode),
+    specialties: f.specialties.map((s) => s.specialtyCode),
+    skillCount: f.skills.length,
+    skillNames: f.skills.map((s) => s.name),
+    skillsBySpecialty: f.specialties.map((sp) => ({
+      specialtyCode: sp.specialtyCode,
+      skills: f.skills
+        .filter((sk) => sk.parentSpecialtyCode === sp.specialtyCode)
+        .map((sk) => sk.skillCode),
+    })),
+    tools: f.toolsTechnologies,
+    evidenceVolume: f.evidenceVolume,
+    derivedPresentationLabel: f.derivedPresentationLabel ?? null,
+    radar,
+    dominantRadar: dominant
+      ? { code: dominant.dimensionCode, coverage: dominant.relativeCoverage }
+      : null,
+  };
+}
+
+function seResolved(r1Payload: {
+  fieldResolutionStatus: string;
+  primaryField?: { fieldCode: string | null } | null;
+  secondaryFields?: Array<{ fieldCode: string | null }> | null;
+}): boolean {
+  if (r1Payload.fieldResolutionStatus === 'UNRESOLVED') return false;
+  const codes = [
+    r1Payload.primaryField?.fieldCode,
+    ...(r1Payload.secondaryFields ?? []).map((f) => f.fieldCode),
+  ].filter((c): c is string => !!c);
+  return codes.includes('SOFTWARE_ENGINEERING');
+}
+
+async function ensureDecisionsJson(p1Dir: string) {
+  if (packHasDecisions(p1Dir)) return;
+  const batchesFile = JSON.parse(
+    readFileSync(join(p1Dir, 'batches.json'), 'utf8'),
+  ) as { batches: Array<{ batchId: string; candidateIds: string[] }> };
+  const validated = JSON.parse(
+    readFileSync(join(p1Dir, 'validated-evidence.json'), 'utf8'),
+  ) as { units?: Array<{ candidateId?: string }> };
+  const candidates = JSON.parse(
+    readFileSync(join(p1Dir, 'candidates.json'), 'utf8'),
+  ) as { candidates?: Array<{ candidateId: string }> };
+  const candToBatch = new Map<string, string>();
+  for (const b of batchesFile.batches) {
+    for (const id of b.candidateIds) candToBatch.set(id, b.batchId);
+  }
+  const withUnits = new Set(
+    (validated.units ?? [])
+      .map((u) => u.candidateId)
+      .filter((x): x is string => !!x),
+  );
+  const allIds =
+    candidates.candidates?.map((c) => c.candidateId) ??
+    [...candToBatch.keys()];
+  const decisions = allIds.map((candidateId) => ({
+    candidateId,
+    decision: withUnits.has(candidateId) ? 'ACCEPTED' : 'REJECTED_NO_UNIT',
+    reasonCode: withUnits.has(candidateId) ? 'OK' : 'REJECTED',
+    batchId: candToBatch.get(candidateId) ?? 'unknown',
+  }));
+  writeFileSync(
+    join(p1Dir, 'decisions.json'),
+    JSON.stringify({ decisions }, null, 2),
+    'utf8',
+  );
+}
+
+async function processCase(args: {
+  caseId: string;
+  document: string;
+  reuseProfileOnly?: boolean;
+  gem: Record<string, string>;
+  mde: {
+    host: string;
+    port: number;
+    database: string;
+    username: string;
+    password: string;
+  };
+}): Promise<Record<string, unknown>> {
+  const { caseId, document, reuseProfileOnly, gem, mde } = args;
+
+  if (reuseProfileOnly) {
+    const best = findBestValidProfilePack(ROOT, '8');
+    if (!best) {
+      return {
+        caseId,
+        status: 'PROCESSING_ERROR',
+        error: 'CAMILO_PROFILE_MISSING',
+      };
+    }
+    writeBinding(caseId, '8');
+    const summary = summarizeProfile(best.envelope);
+    return {
+      caseId,
+      status: 'REUSED_PROFILE',
+      personCvId: 187,
+      snapshotId: '8',
+      p0: 'REUSED',
+      p1: 'REUSED',
+      p2: 'REUSED',
+      r1: {
+        status: best.envelope.payload.r1FieldResolutionStatus,
+        primary: 'SOFTWARE_ENGINEERING',
+      },
+      p3: 'REUSED',
+      p4: 'REUSED',
+      profile: summary,
+      packDir: best.packDir,
+    };
+  }
+
+  const dsP0 = await createMdeDataSource(mde);
+  const p0 = createP0Service(dsP0, mde);
+  const rows = await dsP0.query(
+    `
+    SELECT
+      p.id AS person_id,
+      pc.id AS person_cv_id,
+      (
+        SELECT s.id::text
+        FROM organigrama.mc_cv_snapshot s
+        WHERE s.person_cv_id = pc.id AND s.parse_status = 'PARSED'
+          AND s.normalized_text IS NOT NULL AND length(s.normalized_text) > 0
+        ORDER BY s.created_at DESC NULLS LAST, s.id DESC
+        LIMIT 1
+      ) AS ready_snapshot_id
+    FROM core.person p
+    LEFT JOIN organigrama.person_cv pc
+      ON pc.person_id = p.id AND pc.is_active = true
+    WHERE p.document = $1
+    LIMIT 1
+    `,
+    [document],
+  );
+  const row = rows?.[0];
+  if (!row?.person_cv_id) {
+    await dsP0.destroy();
+    return { caseId, status: 'PROCESSING_ERROR', error: 'PERSON_CV_NOT_FOUND' };
+  }
+  const personCvId = Number(row.person_cv_id);
+  let snapshotId = row.ready_snapshot_id ? String(row.ready_snapshot_id) : null;
+  let p0Origin: string = 'REUSED_EXISTING_PARSED';
+  if (!snapshotId) {
+    const result = await p0.createOrReuseFromPersonCv(personCvId);
+    snapshotId = String(result.snapshotId);
+    p0Origin = result.outcome === 'CREATED' ? 'CREATED' : 'REUSED_P0';
+  }
+  await dsP0.destroy();
+
+  const ds = new DataSource({
+    type: 'postgres',
+    host: mde.host,
+    port: mde.port,
+    username: mde.username,
+    password: mde.password,
+    database: mde.database,
+    synchronize: false,
+    logging: false,
+  });
+  await ds.initialize();
+
+  try {
+    let p1Dir = resolveCohortArtifactDir(ROOT, snapshotId!);
+    let p1Origin = 'REUSED';
+    if (!p1Dir || !packHasDecisions(p1Dir)) {
+      if (p1Dir && !packHasDecisions(p1Dir)) {
+        await ensureDecisionsJson(p1Dir);
+        p1Origin = 'REUSED_DECISIONS_FIXED';
+      } else {
+        const snap = (
+          await ds.query(
+            `SELECT id::text AS id, normalized_text, pages, sectioned_content, parse_status
+               FROM organigrama.mc_cv_snapshot WHERE id = $1`,
+            [snapshotId],
+          )
+        )[0];
+        if (!snap?.normalized_text || snap.parse_status !== 'PARSED') {
+          throw new Error(`SNAPSHOT_NOT_READY:${snapshotId}`);
+        }
+        const stamp = new Date()
+          .toISOString()
+          .replace(/[-:TZ.]/g, '')
+          .slice(0, 14);
+        const prototypeId = `P1P-V11-6I-S${snapshotId}-${stamp}-${randomUUID().slice(0, 8)}`;
+        const outDir = resolve(ROOT, 'tmp', 'mc1-p1-prototype', prototypeId);
+        mkdirSync(outDir, { recursive: true });
+        writeFileSync(
+          join(outDir, 'prototype-manifest.json'),
+          JSON.stringify(
+            {
+              classification: 'CONFIDENTIAL',
+              operationType: 'P1_9E_SOFTWARE_COHORT',
+              prototypeId,
+              snapshotId: String(snapshotId),
+              contractVersion: '2.0.0',
+              segmenterVersion: P1_SEGMENTER_VERSION,
+              promptVersion: P1_PROMPT_VERSION,
+              modelProvider: 'google-genai',
+              modelVersion: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+              startedAt: new Date().toISOString(),
+              persistence: 'NONE',
+            },
+            null,
+            2,
+          ),
+          'utf8',
+        );
+        const pages =
+          typeof snap.pages === 'string' ? JSON.parse(snap.pages) : snap.pages;
+        const sectioned =
+          typeof snap.sectioned_content === 'string'
+            ? JSON.parse(snap.sectioned_content)
+            : snap.sectioned_content;
+        const p1Result = await runP1ForMember({
+          prototypeId,
+          snapshotId: String(snapshotId),
+          normalizedText: snap.normalized_text,
+          pages,
+          sectionedContent: sectioned,
+          apiKey: gem.GEMINI_API_KEY,
+          model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+          outDir,
+        });
+        if (!p1Result.ok) {
+          throw new Error(`P1_FAILED:${p1Result.errorCode ?? p1Result.status}`);
+        }
+        const batchesFile = JSON.parse(
+          readFileSync(join(outDir, 'batches.json'), 'utf8'),
+        ) as { batches: Array<{ batchId: string; candidateIds: string[] }> };
+        const candToBatch = new Map<string, string>();
+        for (const b of batchesFile.batches) {
+          for (const id of b.candidateIds) candToBatch.set(id, b.batchId);
+        }
+        const decisions = [...p1Result.decisions.entries()].map(
+          ([candidateId, decision]) => ({
+            candidateId,
+            decision,
+            reasonCode:
+              decision === 'REVIEW_REQUIRED'
+                ? 'NEEDS_REVIEW'
+                : String(decision).startsWith('REJECTED')
+                  ? 'REJECTED'
+                  : 'OK',
+            batchId: candToBatch.get(candidateId) ?? 'unknown',
+          }),
+        );
+        writeFileSync(
+          join(outDir, 'decisions.json'),
+          JSON.stringify({ decisions }, null, 2),
+          'utf8',
+        );
+        p1Dir = outDir;
+        p1Origin = 'CREATED';
+      }
+    }
+
+    const p2 = await runP2ArtifactOnly({
+      backendRoot: ROOT,
+      snapshotId: String(snapshotId),
+      dataSource: ds,
+      apiKey: gem.GEMINI_API_KEY,
+      model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+      outRoot: resolve(ROOT, 'tmp', 'mc1-p2-functional'),
+    });
+
+    const r1 = runR1ArtifactOnly({
+      backendRoot: ROOT,
+      snapshotId: String(snapshotId),
+      p2PackDir: p2.outDir,
+    });
+    const r1p = r1.envelope.payload;
+    const primary = r1p.primaryField?.fieldCode ?? null;
+    const hasSe = seResolved(r1p);
+
+    let p3Origin: string = 'SKIPPED_NO_SOFTWARE_FIELD';
+    let p3Pack: string | null = null;
+    let p3Observed: string[] = [];
+    let p3Weak: string[] = [];
+    let p4Origin = 'SKIPPED';
+    let p4Pack: string | null = null;
+    let profilePack: string | null = null;
+    let profileSummary: ReturnType<typeof summarizeProfile> | null = null;
+
+    // P3 runs when R1 has any in-scope field (SE or other frozen catalogs).
+    // Software catalog applies only when SE is among resolved fields.
+    const inScope =
+      (primary && SPECIALTY_CATALOG_SCOPE.has(primary)) ||
+      (r1p.secondaryFields ?? []).some(
+        (f) => !!f.fieldCode && SPECIALTY_CATALOG_SCOPE.has(f.fieldCode),
+      );
+
+    if (inScope) {
+      const p3 = await runP3ArtifactOnly({
+        backendRoot: ROOT,
+        snapshotId: String(snapshotId),
+        dataSource: ds,
+        apiKey: gem.GEMINI_API_KEY,
+        model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+        outRoot: resolve(ROOT, 'tmp', 'mc1-p3-functional'),
+        r1PackDir: r1.outDir,
+      });
+      p3Origin = 'CREATED';
+      p3Pack = p3.outDir;
+      for (const fr of p3.envelope.payload.fieldResults ?? []) {
+        for (const s of fr.observedSpecialties ?? []) {
+          if (s.status === 'OBSERVED') p3Observed.push(s.specialtyCode);
+          if (s.status === 'WEAK') p3Weak.push(s.specialtyCode);
+        }
+      }
+
+      const p4 = await runP4ArtifactOnly({
+        backendRoot: ROOT,
+        snapshotId: String(snapshotId),
+        dataSource: ds,
+        apiKey: gem.GEMINI_API_KEY,
+        model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+        outRoot: resolve(ROOT, 'tmp', 'mc1-p4-functional'),
+        r1PackDir: r1.outDir,
+        p3PackDir: p3.outDir,
+      });
+      p4Origin = p3Observed.length
+        ? 'CREATED'
+        : 'ABSTAINED_NO_OBSERVED_SPECIALTY';
+      p4Pack = p4.outDir;
+
+      const profile = await runProfilePilot({
+        backendRoot: ROOT,
+        snapshotId: String(snapshotId),
+        outRoot: resolve(ROOT, 'tmp', 'mc1-profile-pilot'),
+        dataSource: ds,
+        r1PackDir: r1.outDir,
+        p3PackDir: p3.outDir,
+        p4PackDir: p4.outDir,
+      });
+      profilePack = profile.outDir;
+      profileSummary = summarizeProfile(profile.envelope);
+    } else {
+      // Still assemble profile with field-only if R1 resolved something
+      const p3 = await runP3ArtifactOnly({
+        backendRoot: ROOT,
+        snapshotId: String(snapshotId),
+        dataSource: ds,
+        apiKey: gem.GEMINI_API_KEY,
+        model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+        outRoot: resolve(ROOT, 'tmp', 'mc1-p3-functional'),
+        r1PackDir: r1.outDir,
+      });
+      p3Origin = 'CREATED_ABSTAIN_OR_OUT_OF_SCOPE';
+      p3Pack = p3.outDir;
+      const p4 = await runP4ArtifactOnly({
+        backendRoot: ROOT,
+        snapshotId: String(snapshotId),
+        dataSource: ds,
+        apiKey: gem.GEMINI_API_KEY,
+        model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+        outRoot: resolve(ROOT, 'tmp', 'mc1-p4-functional'),
+        r1PackDir: r1.outDir,
+        p3PackDir: p3.outDir,
+      });
+      p4Origin = 'ABSTAINED';
+      p4Pack = p4.outDir;
+      const profile = await runProfilePilot({
+        backendRoot: ROOT,
+        snapshotId: String(snapshotId),
+        outRoot: resolve(ROOT, 'tmp', 'mc1-profile-pilot'),
+        dataSource: ds,
+        r1PackDir: r1.outDir,
+        p3PackDir: p3.outDir,
+        p4PackDir: p4.outDir,
+      });
+      profilePack = profile.outDir;
+      profileSummary = summarizeProfile(profile.envelope);
+    }
+
+    writeBinding(caseId, String(snapshotId));
+
+    return {
+      caseId,
+      status: 'DONE',
+      personCvId,
+      snapshotId,
+      softwareFieldResolved: hasSe,
+      p0: p0Origin,
+      p1: { origin: p1Origin, packDir: p1Dir },
+      p2: {
+        origin: 'CREATED',
+        packDir: p2.outDir,
+        candidates: p2.envelope.payload.domainCandidates.map((c) => ({
+          domainCode: c.domainCode,
+          status: c.candidateStatus,
+          confidence: c.confidence,
+        })),
+      },
+      r1: {
+        origin: 'CREATED',
+        packDir: r1.outDir,
+        status: r1p.fieldResolutionStatus,
+        primary,
+        secondaries: (r1p.secondaryFields ?? []).map((f) => ({
+          code: f.fieldCode,
+          confidence: f.confidence,
+        })),
+        decisionCodes: r1p.decisionCodes,
+      },
+      p3: {
+        origin: p3Origin,
+        packDir: p3Pack,
+        observed: p3Observed,
+        weak: p3Weak,
+      },
+      p4: { origin: p4Origin, packDir: p4Pack },
+      profile: profileSummary,
+      packDir: profilePack,
+    };
+  } finally {
+    await ds.destroy();
+  }
+}
+
+async function main() {
+  if (!process.argv.includes('--confirm')) {
+    console.log(
+      JSON.stringify({
+        status: 'BLOCKED',
+        reason: 'REQUIRES_CONFIRM',
+      }),
+    );
+    process.exit(2);
+  }
+  const only = process.argv
+    .find((a) => a.startsWith('--only='))
+    ?.split('=')[1]
+    ?.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  for (const k of Object.keys(process.env)) {
+    if (k.startsWith('DB_') || k.startsWith('DATABASE_')) delete process.env[k];
+  }
+  const driveAllow = new Set([
+    'GOOGLE_DRIVE_CV_FOLDER_ID',
+    'GOOGLE_DRIVE_CV_TOKEN_PATH',
+    'GOOGLE_DRIVE_CV_AUTH_MODE',
+    'GOOGLE_DRIVE_CV_OAUTH_CLIENT_PATH',
+  ]);
+  const driveEnv = loadEnvFile(resolve(ROOT, '.env'), driveAllow);
+  for (const [k, v] of Object.entries(driveEnv)) {
+    if (!process.env[k]?.trim()) process.env[k] = v;
+  }
+
+  const mdeEnv = loadEnvFile(resolve(ROOT, 'secrets/mc1-mde.local.env'));
+  const gem = loadEnvFile(
+    resolve(ROOT, 'secrets/mc1-p1-prototype.local.env'),
+    new Set(['GEMINI_API_KEY', 'GEMINI_MODEL']),
+  );
+  const mde = {
+    host: mdeEnv.MDE_DB_HOST,
+    port: Number(mdeEnv.MDE_DB_PORT),
+    database: mdeEnv.MDE_DB_NAME,
+    username: mdeEnv.MDE_DB_USERNAME,
+    password: mdeEnv.MDE_DB_PASSWORD,
+  };
+  assertMdeTarget(mde);
+  if (!gem.GEMINI_API_KEY) {
+    console.log(JSON.stringify({ status: 'BLOCKED', reason: 'NO_GEMINI_KEY' }));
+    process.exit(2);
+  }
+
+  const cases = COHORT.filter((c) => !only || only.includes(c.caseId));
+  const results: unknown[] = [];
+  for (const c of cases) {
+    try {
+      const r = await processCase({
+        caseId: c.caseId,
+        document: c.document,
+        reuseProfileOnly: c.reuseProfileOnly,
+        gem,
+        mde,
+      });
+      results.push(r);
+      // eslint-disable-next-line no-console
+      console.error(
+        JSON.stringify({
+          progress: c.caseId,
+          status: (r as { status?: string }).status,
+        }),
+      );
+    } catch (e) {
+      results.push({
+        caseId: c.caseId,
+        status: 'PROCESSING_ERROR',
+        error: String(e instanceof Error ? e.message : e).slice(0, 400),
+      });
+    }
+  }
+
+  mkdirSync(resolve(ROOT, 'tmp', 'mc1-software-cohort-9e'), {
+    recursive: true,
+  });
+  const report = {
+    phase: '9E',
+    mode: 'ARTIFACT_ONLY',
+    status: 'DONE',
+    specialtyCatalogVersion: '1.4.0',
+    results,
+  };
+  writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2), 'utf8');
+  console.log(JSON.stringify(report, null, 2));
+}
+
+main().catch((e) => {
+  console.log(
+    JSON.stringify({
+      status: 'FAILED',
+      error: String(e instanceof Error ? e.message : e).slice(0, 500),
+    }),
+  );
+  process.exit(1);
+});

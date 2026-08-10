@@ -3,16 +3,18 @@
 **Estado:** **IMPLEMENTADA_Y_VALIDADA** (2026-08-03)  
 **API metadatos:** [`person-profile-video-api.md`](./person-profile-video-api.md)  
 **Arquitectura general:** [`person-profile-modules-and-presentation-architecture.md`](./person-profile-modules-and-presentation-architecture.md)  
-**Streaming (3C):** [`person-profile-video-streaming.md`](./person-profile-video-streaming.md) — endpoint `…/video/stream` usa este ticket en cada Range.
+**Streaming (3C):** [`person-profile-video-streaming.md`](./person-profile-video-streaming.md) — endpoint `…/video/stream` usa este ticket en cada Range.  
+**Auditoría visibilidad emisión (2026-08-05):** [`../../docs/person-profile-video-visibility-audit.md`](../../docs/person-profile-video-visibility-audit.md)
 
 ---
 
 ## 1. Propósito
 
-Autorizar de forma temporal y específica la futura reproducción de **un** video activo de **una** persona objetivo, para un viewer ya autorizado en metadatos.
+Autorizar de forma temporal y específica la reproducción de **un** video activo de **una** persona objetivo, para un viewer **autenticado** que obtuvo metadatos en `GET …/video`.
 
-El ticket se emite en `GET /api/org-chart/person/:personId/video` cuando `hasVideo=true`.  
-Todavía **no** existe endpoint de streaming: el ticket no es utilizable en producción hasta la Fase 3C.
+El ticket se emite cuando `hasVideo=true`. La emisión ya **no** exige `canViewFullProfile` (política global autenticada, 2026-08-05); sí exige JWT de sesión en el endpoint de metadatos. El formato del ticket (`sub`, `targetPersonId`, `personVideoId`, `purpose`, TTL, HS256) **no cambió**.
+
+Ver: [`../../docs/person-profile-video-visibility-audit.md`](../../docs/person-profile-video-visibility-audit.md).
 
 ---
 

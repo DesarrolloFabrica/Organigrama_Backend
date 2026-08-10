@@ -72,6 +72,11 @@ function applyCorsMiddleware(
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
+    // Necesario para <video crossorigin> + Range en frontend/API separados (Cloud Run).
+    res.setHeader(
+      'Access-Control-Expose-Headers',
+      'Accept-Ranges, Content-Range, Content-Length, Content-Type',
+    );
   }
 
   // Métodos HTTP permitidos
@@ -80,10 +85,10 @@ function applyCorsMiddleware(
     'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   );
 
-  // Headers permitidos
+  // Headers permitidos (Range: preflight del reproductor HTML5 cross-origin)
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type, Accept, Authorization',
+    'Content-Type, Accept, Authorization, Range',
   );
 
   // Responde preflight OPTIONS sin llegar a Nest
@@ -185,6 +190,18 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOrigins,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Range',
+    ],
+    exposedHeaders: [
+      'Accept-Ranges',
+      'Content-Range',
+      'Content-Length',
+      'Content-Type',
+    ],
   });
 
   // Inicializa Nest sobre la misma instancia de Express

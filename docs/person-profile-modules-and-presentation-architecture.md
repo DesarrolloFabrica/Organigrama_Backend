@@ -39,8 +39,10 @@ Se incorporará un tercer módulo:
 
 ## 2. Decisiones aprobadas
 
+> **Actualización (2026-08-05):** la decisión 2 quedó **superada por implementación**. Presentación es visible para cualquier usuario autenticado (no requiere ficha completa). Ficha/CV siguen jerárquicos. Detalle: [`../../docs/person-profile-video-visibility-audit.md`](../../docs/person-profile-video-visibility-audit.md).
+
 1. La asociación video ↔ persona se hace **solo** por el número de documento al inicio del nombre de archivo. Carpeta, área, escuela, rol, cargo o jerarquía **no** determinan la pertenencia.
-2. La pestaña Presentación **solo aparece** si existe video disponible **y** el viewer tiene acceso a ficha completa (`canViewFullProfile` o `ORG_READ_ALL`).
+2. ~~La pestaña Presentación solo aparece si existe video y ficha completa.~~ **Vigente:** Presentación aparece si hay video activo y el viewer está autenticado; no exige `canViewFullProfile`.
 3. Las vacantes **nunca** tienen Presentación.
 4. El video se reproduce **dentro** del panel; sin autoplay; sin nueva pestaña; sin iframe Drive; sin redirección.
 5. Al cambiar de persona, cerrar/minimizar el panel o cambiar de pestaña: **pausar y desmontar** el reproductor (sin audio en segundo plano).
@@ -614,11 +616,11 @@ Presentación **no modifica ni se acopla a:**
 
 ## 12. Seguridad (resumen)
 
-1. Misma visibilidad que ficha completa + `ORG_READ_ALL`.
-2. Anti-enumeración: sin permiso → `hasVideo: false`.
+1. Presentación: cualquier usuario autenticado (no requiere ficha completa). Ficha/CV: `canViewFullProfile` / `ORG_READ_ALL`.
+2. Metadatos: no autenticado → 401; vacante/sin video → `hasVideo: false`; inexistente/inactiva → 404.
 3. Sin URLs Drive al cliente.
-4. Ticket de propósito único, TTL corto, secreto separado.
-5. Stream valida ticket ↔ personId ↔ video activo.
+4. Ticket de propósito único, TTL corto, secreto separado; `sub` = viewer autenticado.
+5. Stream valida ticket ↔ personId ↔ video activo (sin revalidar jerarquía).
 6. Logs sin secretos ni documento.
 7. Carpeta Drive de videos con ACL mínima (cuenta de sync).
 
@@ -674,18 +676,18 @@ Detalle: [`person-profile-video-drive-plan.md`](./person-profile-video-drive-pla
 
 ### Fase 2D — Escritura controlada
 
-**Estado:** **APLICADA_Y_VALIDADA** (2026-08-03).
+**Estado:** **APLICADA_Y_VALIDADA** (carga inicial 2026-08-03) + **IMPLEMENTADA_PENDIENTE_APPLY** (soporte incremental 2026-08-05).
 
 Detalle: [`person-profile-video-drive-apply.md`](./person-profile-video-drive-apply.md)
 
 | | |
 |--|--|
-| **Objetivo** | Apply controlado de 13 NEW (transacción única) |
+| **Objetivo** | Apply controlado de NEW (transacción única); inicial e incremental |
 | **Archivos** | `drive-video-apply-*`, `drive-video-sync-writer.ts`, `sync-drive-video.ts` |
-| **Done** | 13 INSERT COMMIT; 0→13 filas; idempotencia bloquea re-apply |
-| **Pruebas** | 39 tests drive-video + validación post Cloud |
-| **Riesgos** | INVALID_NAME sigue fuera hasta renombre Drive |
-| **Rollback** | Solo procedimiento manual autorizado (hoy hay 13 activos productivos de metadatos) |
+| **Done** | 13 INSERT COMMIT inicial (0→13); validador sin métricas fijas 14/13/1/0; snapshot live `personVideoRowsBefore`; planes parciales `--document=` |
+| **Pruebas** | Suite `drive-video` (parciales, snapshot stale, rollback mock, idempotencia) |
+| **Riesgos** | Plan stale si no se regenera tras otro apply; INVALID_NAME fuera hasta renombre Drive |
+| **Rollback** | Solo procedimiento manual autorizado (metadatos productivos en `person_video`) |
 
 ### Fase 3A — Metadatos API y seguridad
 

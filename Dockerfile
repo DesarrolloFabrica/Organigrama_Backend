@@ -28,6 +28,7 @@ USER node
 COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/dist ./dist
+COPY --chown=node:node public ./public
 
 # Cloud Run inyecta PORT (suele ser 8080). main.ts escucha en 0.0.0.0:PORT
 EXPOSE 8080

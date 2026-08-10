@@ -18,8 +18,8 @@ describe('parseBytesRangeHeader', () => {
     });
   });
 
-  it('bytes=0- abierto', () => {
-    expect(parseBytesRangeHeader('bytes=0-', 5000)).toEqual({
+  it('bytes=0- abierto se conserva hacia Drive (el cliente aborta al tener metadatos)', () => {
+    expect(parseBytesRangeHeader('bytes=0-', 253_223_792)).toEqual({
       kind: 'range',
       start: 0,
       end: null,
@@ -27,12 +27,21 @@ describe('parseBytesRangeHeader', () => {
     });
   });
 
-  it('bytes=1024- abierto', () => {
+  it('bytes=1024- abierto se conserva hacia Drive', () => {
     expect(parseBytesRangeHeader('bytes=1024-', 5000)).toEqual({
       kind: 'range',
       start: 1024,
       end: null,
       headerValue: 'bytes=1024-',
+    });
+  });
+
+  it('bytes=0- sin tamaño conocido permanece abierto', () => {
+    expect(parseBytesRangeHeader('bytes=0-', null)).toEqual({
+      kind: 'range',
+      start: 0,
+      end: null,
+      headerValue: 'bytes=0-',
     });
   });
 

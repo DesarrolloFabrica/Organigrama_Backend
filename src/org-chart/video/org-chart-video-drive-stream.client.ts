@@ -60,7 +60,18 @@ export class OrgChartVideoDriveStreamClient {
   ): Promise<DriveMediaStreamResult> {
     const timeoutMs =
       input.timeoutMs ?? resolvePersonVideoStreamUpstreamTimeoutMs();
-    const drive = input.drive ?? createDriveCvClient();
+
+    let drive: drive_v3.Drive;
+    try {
+      drive = input.drive ?? createDriveCvClient();
+    } catch (err) {
+      this.logger.error(
+        `[OrgChartVideoDrive] OAuth client unavailable: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return { ok: false, code: 'DRIVE_FORBIDDEN' };
+    }
 
     const timeoutController = new AbortController();
     const timer = setTimeout(() => timeoutController.abort(), timeoutMs);

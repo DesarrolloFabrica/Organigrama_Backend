@@ -1,0 +1,135 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.FINANCE_ADMIN",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["FINANCE_ADMIN"],
+  "note": "FASE 9B — minimal specialty catalog for FINANCE_ADMIN (administración y finanzas operativas). Budget elaboration/tracking, reconciliation, billing, purchasing, reporting, and document handling are reserved as future skills/capabilities — not specialties. Procurement is not a specialty unless identity-level. Do not invent QUALITY_PROCESS or split the Professional Field.",
+  "fieldBoundaryNote": "FINANCE_ADMIN is broad (admin + finance ops). Future risk: may warrant Field split; for 9B keep one Field with coherent specialty identities.",
+  "specialties": [
+    {
+      "code": "FINANCIAL_MANAGEMENT",
+      "name": "Gestión financiera operativa",
+      "parentField": "FINANCE_ADMIN",
+      "definition": "Identidad de gestión financiera operativa: orientar decisiones y prácticas de finanzas del día a día (liquidez, prioridades económicas, soporte financiero a la operación).",
+      "positiveSignals": [
+        "responsabilidad de gestión financiera operativa (no solo un informe)",
+        "priorización o decisión sobre recursos económicos de la unidad/organización",
+        "práctica recurrente de administración financiera más allá de una tarea puntual"
+      ],
+      "exclusions": [
+        "solo elaborar o seguir un presupuesto como tarea aislada (skill)",
+        "solo control/aseguramiento presupuestal como identidad dominante (ver BUDGET_FINANCIAL_CONTROL)",
+        "solo contabilidad/conciliación (ver ACCOUNTING_OPERATIONS)",
+        "solo administración de oficina/trámites sin orientación financiera (ver ADMINISTRATIVE_MANAGEMENT)",
+        "gestión de presupuesto de un proyecto de entrega como identidad PM (ver PROJECT_PROGRAM_MGMT / PROJECT_MANAGEMENT)"
+      ]
+    },
+    {
+      "code": "BUDGET_FINANCIAL_CONTROL",
+      "name": "Control presupuestal y financiero",
+      "parentField": "FINANCE_ADMIN",
+      "definition": "Identidad de control financiero/presupuestal: vigilar ejecución, desviaciones, cumplimiento y control de recursos económicos (orientación controller/control, no solo armar el presupuesto).",
+      "positiveSignals": [
+        "seguimiento sistemático de ejecución presupuestal y desviaciones",
+        "controles financieros, auditorías internas livianas o aseguramiento de gasto",
+        "responsabilidad de control/cierre presupuestal de una unidad"
+      ],
+      "exclusions": [
+        "solo elaborar el presupuesto una vez (skill de planeación)",
+        "gestión financiera decisoria sin énfasis en control (ver FINANCIAL_MANAGEMENT)",
+        "solo reportes administrativos genéricos sin control económico",
+        "control de avance de proyecto (cronograma/scope) → PROJECT_PROGRAM_MGMT"
+      ]
+    },
+    {
+      "code": "ACCOUNTING_OPERATIONS",
+      "name": "Operaciones contables",
+      "parentField": "FINANCE_ADMIN",
+      "definition": "Identidad de operaciones contables: registrar, conciliar y sostener el ciclo contable operativo (no necesariamente rol de contador público certificado).",
+      "positiveSignals": [
+        "práctica recurrente de registro contable, conciliaciones o cierre operativo",
+        "responsabilidad del ciclo de cuentas por pagar/cobrar u operaciones de libro",
+        "soporte contable operativo como orientación profesional dominante"
+      ],
+      "exclusions": [
+        "solo facturación o un pago aislado (skill)",
+        "solo control presupuestal sin práctica contable (ver BUDGET_FINANCIAL_CONTROL)",
+        "herramientas contables mencionadas sin práctica demostrada",
+        "auditoría de calidad de producto/software"
+      ]
+    },
+    {
+      "code": "ADMINISTRATIVE_MANAGEMENT",
+      "name": "Gestión administrativa operativa",
+      "parentField": "FINANCE_ADMIN",
+      "definition": "Identidad de administración operativa: trámites, coordinación administrativa, soporte documental y operación de procesos admin de la unidad (sin exigir orientación financiera dominante).",
+      "positiveSignals": [
+        "coordinación de procesos administrativos de la unidad/organización",
+        "gestión documental/trámites/soportes como práctica central",
+        "soporte admin a operación (agenda institucional admin, flujos, ventanilla)"
+      ],
+      "exclusions": [
+        "solo una tarea (archivo, un informe, una compra) sin identidad admin",
+        "administración académica / coordinación de programas educativos (ver EDUCATION / ACADEMIC_MANAGEMENT)",
+        "PMO o gobernanza de proyectos (ver PROJECT_PROGRAM_MGMT / PMO_GOVERNANCE)",
+        "compras como única señal → capability/skill bajo esta specialty, no specialty propia"
+      ]
+    }
+  ],
+  "reservedFutureSkills": [
+    {
+      "code": "BUDGET_ELABORATION",
+      "parentSpecialty": "FINANCIAL_MANAGEMENT",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Capability: building budgets. Not a specialty."
+    },
+    {
+      "code": "BUDGET_TRACKING",
+      "parentSpecialty": "BUDGET_FINANCIAL_CONTROL",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Capability: monitoring budget execution. Not a specialty."
+    },
+    {
+      "code": "RECONCILIATION",
+      "parentSpecialty": "ACCOUNTING_OPERATIONS",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Capability within accounting ops."
+    },
+    {
+      "code": "BILLING_INVOICING",
+      "parentSpecialty": "ACCOUNTING_OPERATIONS",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Task/capability, not specialty."
+    },
+    {
+      "code": "PROCUREMENT_PURCHASING",
+      "parentSpecialty": "ADMINISTRATIVE_MANAGEMENT",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Purchasing/vendor buying capability. Not specialty unless future evidence shows distinct professional identity."
+    },
+    {
+      "code": "PAYMENT_CONTROL",
+      "parentSpecialty": "ADMINISTRATIVE_MANAGEMENT",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Payment processing/control capability."
+    },
+    {
+      "code": "DOCUMENT_ADMIN",
+      "parentSpecialty": "ADMINISTRATIVE_MANAGEMENT",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Document/filing admin capability."
+    },
+    {
+      "code": "FINANCIAL_REPORTING",
+      "parentSpecialty": "BUDGET_FINANCIAL_CONTROL",
+      "parentField": "FINANCE_ADMIN",
+      "note": "Reporting capability across finance/admin practice."
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "PROCUREMENT_ADMINISTRATION",
+      "reason": "Not sufficiently differentiated as specialty identity in this Field; keep as capability under ADMINISTRATIVE_MANAGEMENT."
+    }
+  ]
+}

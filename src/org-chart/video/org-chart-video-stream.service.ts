@@ -63,7 +63,6 @@ export class OrgChartVideoStreamService {
     opts.res.on('close', onClose);
 
     let personVideoId: string | undefined;
-    let headersSent = false;
 
     try {
       const payload = this.verifyTicketOrThrow(opts.ticket);
@@ -121,7 +120,7 @@ export class OrgChartVideoStreamService {
 
       const finalStatus = rangeResult.kind === 'range' ? 206 : 200;
 
-      this.setCommonHeaders(opts.res, contentType);
+      this.setCommonHeaders(opts.res, contentType, opts.req);
       if (upstream.contentRange) {
         opts.res.setHeader('Content-Range', upstream.contentRange);
       } else if (rangeResult.kind === 'range' && sizeBytes != null) {
@@ -135,8 +134,10 @@ export class OrgChartVideoStreamService {
 
       const length =
         upstream.contentLength ??
-        (rangeResult.kind === 'range' && sizeBytes != null
-          ? (rangeResult.end ?? sizeBytes - 1) - rangeResult.start + 1
+        (rangeResult.kind === 'range' &&
+        sizeBytes != null &&
+        rangeResult.end != null
+          ? rangeResult.end - rangeResult.start + 1
           : rangeResult.kind === 'none'
             ? sizeBytes
             : null);
@@ -146,7 +147,12 @@ export class OrgChartVideoStreamService {
       }
 
       opts.res.status(finalStatus);
-      headersSent = true;
+      // Forzar flush de headers (CORS + 206) antes del body; evita que Cloud Run
+      // entregue un 500 opaco sin ACAO si el cliente aborta al instante.
+      const flushable = opts.res as Response & { flushHeaders?: () => void };
+      if (typeof flushable.flushHeaders === 'function') {
+        flushable.flushHeaders();
+      }
 
       this.logger.log(
         `${PERSON_VIDEO_LOG_TAG} stream start requestId=${requestId} personVideoId=${personVideoId} targetPersonId=${opts.personId} status=${finalStatus} range=${rangeToDrive ?? 'none'} upstream=${upstream.status}`,
@@ -158,21 +164,35 @@ export class OrgChartVideoStreamService {
           `${PERSON_VIDEO_LOG_TAG} stream done requestId=${requestId} personVideoId=${personVideoId} ms=${Date.now() - started}`,
         );
       } catch (pipeErr) {
-        if (abort.signal.aborted || isClientAbort(pipeErr)) {
+        // Solo abort de cliente si el AbortController de req/res close se disparó.
+        // ERR_STREAM_PREMATURE_CLOSE también ocurre cuando Drive corta el upstream;
+        // clasificarlo como client-abort dejaba la respuesta a medias → Cloud Run 500.
+        if (abort.signal.aborted) {
           this.logger.log(
             `${PERSON_VIDEO_LOG_TAG} stream aborted requestId=${requestId} personVideoId=${personVideoId} code=STREAM_CLIENT_ABORTED ms=${Date.now() - started}`,
           );
           return;
         }
+        const pipeMsg =
+          pipeErr instanceof Error ? pipeErr.message : String(pipeErr);
         this.logger.error(
-          `${PERSON_VIDEO_LOG_TAG} stream pipe error requestId=${requestId} personVideoId=${personVideoId} code=STREAM_PIPE_ERROR`,
+          `${PERSON_VIDEO_LOG_TAG} stream pipe error requestId=${requestId} personVideoId=${personVideoId} code=STREAM_PIPE_ERROR msg=${pipeMsg}`,
         );
-        if (!headersSent) {
+        if (!opts.res.headersSent) {
           throw new PersonVideoStreamHttpError(
             500,
             'STREAM_PIPE_ERROR',
             'Error al transmitir el video',
           );
+        }
+        try {
+          if (!opts.res.writableEnded) {
+            opts.res.destroy(
+              pipeErr instanceof Error ? pipeErr : new Error(pipeMsg),
+            );
+          }
+        } catch {
+          /* ignore */
         }
       }
     } finally {
@@ -355,7 +375,10 @@ export class OrgChartVideoStreamService {
     }
   }
 
-  private setCommonHeaders(res: Response, contentType: string) {
+  private setCommonHeaders(res: Response, contentType: string, req?: Request) {
+    if (req) {
+      applyPersonVideoStreamCors(req, res);
+    }
     res.setHeader('Content-Type', contentType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Content-Disposition', 'inline');
@@ -364,19 +387,31 @@ export class OrgChartVideoStreamService {
   }
 }
 
+/** CORS explícito para <video crossOrigin> (FE/BE en orígenes Cloud Run distintos). */
+export function applyPersonVideoStreamCors(req: Request, res: Response): void {
+  const origin =
+    typeof req.headers.origin === 'string' ? req.headers.origin.trim() : '';
+  if (!origin) return;
+
+  const allowed = (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  if (!allowed.includes(origin)) return;
+
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader(
+    'Access-Control-Expose-Headers',
+    'Accept-Ranges, Content-Range, Content-Length, Content-Type',
+  );
+}
+
 function toSizeNumber(raw: string | number | null): number | null {
   if (raw == null || raw === '') return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
-}
-
-function isClientAbort(err: unknown): boolean {
-  const e = err as { code?: string; name?: string; message?: string };
-  return (
-    e?.code === 'ERR_STREAM_PREMATURE_CLOSE' ||
-    e?.code === 'ECONNRESET' ||
-    /aborted|premature close/i.test(String(e?.message ?? ''))
-  );
 }
 
 /** Construye streamUrl relativo con ticket encodeado. */

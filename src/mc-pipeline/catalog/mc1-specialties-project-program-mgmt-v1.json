@@ -1,0 +1,115 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.PROJECT_PROGRAM_MGMT",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["PROJECT_PROGRAM_MGMT"],
+  "note": "FASE 9A — minimal specialty catalog for PROJECT_PROGRAM_MGMT. Agile/Scrum/Kanban are methods not specialties. Risk/planning/budget reserved as future skills. QUALITY_PROCESS remains excluded as Professional Field.",
+  "specialties": [
+    {
+      "code": "PROJECT_MANAGEMENT",
+      "name": "Gestión de proyectos",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "definition": "Identidad de gestor/a de proyectos: planificar, coordinar y cerrar proyectos de entrega con alcance, tiempo y recursos definidos.",
+      "positiveSignals": [
+        "liderazgo o responsabilidad de proyectos de punta a punta",
+        "planificación de alcance, cronograma y entregables de un proyecto",
+        "coordinación de equipo/proveedores para cumplir hitos de proyecto",
+        "cierre, lecciones aprendidas o handover de proyecto"
+      ],
+      "exclusions": [
+        "solo usar Scrum/Kanban/Jira sin responsabilidad de proyecto",
+        "solo tareas operativas dentro de un proyecto ajeno",
+        "gestión de programa multi-proyecto (ver PROGRAM_MANAGEMENT)",
+        "solo gobierno PMO sin ownership de proyectos (ver PMO_GOVERNANCE)",
+        "mejora continua de procesos como práctica dominante (ver PROCESS_IMPROVEMENT)"
+      ]
+    },
+    {
+      "code": "PROGRAM_MANAGEMENT",
+      "name": "Gestión de programas",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "definition": "Identidad de gestor/a de programas: orquestar múltiples proyectos o iniciativas interdependientes hacia un resultado de negocio/organizacional compartido.",
+      "positiveSignals": [
+        "coordinación de varios proyectos bajo un mismo programa",
+        "alineación de beneficios/outcomes entre iniciativas",
+        "priorización y dependencias cross-project",
+        "responsabilidad de resultados de programa (no de un solo proyecto)"
+      ],
+      "exclusions": [
+        "un único proyecto aislado (ver PROJECT_MANAGEMENT)",
+        "solo portfolio reporting sin orquestación de iniciativas",
+        "solo PMO metodológico sin ownership de programa (ver PMO_GOVERNANCE)"
+      ]
+    },
+    {
+      "code": "PMO_GOVERNANCE",
+      "name": "PMO y gobernanza de proyectos",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "definition": "Identidad de profesional de PMO/gobernanza: estándares, control, reportes y aseguramiento del sistema de proyectos de la organización.",
+      "positiveSignals": [
+        "diseño u operación de PMO / project governance",
+        "definición de estándares, plantillas y controles de proyectos",
+        "seguimiento multi-proyecto para control/gobierno (no delivery ownership)",
+        "aseguramiento de cumplimiento de proceso de proyectos"
+      ],
+      "exclusions": [
+        "ser PM de un proyecto concreto como práctica principal (ver PROJECT_MANAGEMENT)",
+        "solo herramientas (MS Project, Jira) sin rol de gobernanza",
+        "auditoría de calidad de producto/software (no es Field QUALITY_PROCESS ni specialty PPM)"
+      ]
+    },
+    {
+      "code": "PROCESS_IMPROVEMENT",
+      "name": "Mejora de procesos",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "definition": "Identidad de profesional de mejora de procesos: diagnosticar, rediseñar y estabilizar procesos de trabajo/entrega (sin reintroducir QUALITY_PROCESS como Field).",
+      "positiveSignals": [
+        "rediseño o mejora sistemática de procesos operativos/de entrega",
+        "mapeo de procesos, eliminación de desperdicios, estandarización",
+        "liderazgo de iniciativas de mejora continua en contexto de entrega"
+      ],
+      "exclusions": [
+        "solo QA/testing de software o control de calidad de producto",
+        "solo gestión de un proyecto de mejora sin práctica de procesos (ver PROJECT_MANAGEMENT)",
+        "solo frameworks (Lean/Six Sigma) nombrados sin práctica demostrada",
+        "no inventar Professional Field QUALITY_PROCESS"
+      ]
+    }
+  ],
+  "reservedFutureSkills": [
+    {
+      "code": "RISK_MANAGEMENT",
+      "parentSpecialty": "PROJECT_MANAGEMENT",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "note": "Capability within PM/program practice; not a specialty identity."
+    },
+    {
+      "code": "SCHEDULE_PLANNING",
+      "parentSpecialty": "PROJECT_MANAGEMENT",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "note": "Planning capability; not a specialty."
+    },
+    {
+      "code": "BUDGET_TRACKING",
+      "parentSpecialty": "PROJECT_MANAGEMENT",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "note": "Resource/budget capability; not a specialty."
+    },
+    {
+      "code": "AGILE_FACILITATION",
+      "parentSpecialty": "PROJECT_MANAGEMENT",
+      "parentField": "PROJECT_PROGRAM_MGMT",
+      "note": "Method/facilitation skill (Scrum/Kanban). Not a specialty."
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "AGILE_SCRUM",
+      "reason": "Methodology/framework, not professional identity specialty."
+    },
+    {
+      "code": "QUALITY_PROCESS",
+      "reason": "Previously rejected as Professional Field; not reintroduced as PPM specialty umbrella."
+    }
+  ]
+}

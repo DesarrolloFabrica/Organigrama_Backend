@@ -15,7 +15,11 @@
 GET /api/org-chart/person/:personId/video
 ```
 
-Auth: JWT de sesión. Visibilidad: `canViewFullProfile`.
+Auth: JWT de sesión.  
+**Visibilidad Presentación:** cualquier usuario **autenticado** (no usa `canViewFullProfile`).  
+Ficha y CV siguen la política jerárquica. Vacantes → `{ hasVideo: false }`.  
+Persona inexistente/inactiva → 404.  
+Auditoría + implementación: [`../../docs/person-profile-video-visibility-audit.md`](../../docs/person-profile-video-visibility-audit.md).
 
 ### Contrato definitivo
 

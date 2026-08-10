@@ -275,7 +275,13 @@ Si `drive_file_size` NULL: reenviar Range a Drive; validación local mínima (si
 
 ### 9.5 CORS
 
-Igual que el resto de la API (origins ya configurados). El media suele ser same-origin vía proxy Vite/API.
+En producción FE y BE están en orígenes distintos (Cloud Run). El stream debe permitir:
+
+- `Access-Control-Allow-Origin` = frontend
+- `Access-Control-Allow-Headers` incluye `Range`
+- `Access-Control-Expose-Headers` incluye `Accept-Ranges`, `Content-Range`, `Content-Length`, `Content-Type`
+
+El `<video>` usa `crossOrigin="anonymous"` (ticket en query; sin cookies).
 
 ---
 
