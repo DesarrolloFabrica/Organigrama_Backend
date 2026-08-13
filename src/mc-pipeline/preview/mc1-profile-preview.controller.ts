@@ -19,7 +19,7 @@ import {
 @UseGuards(Mc1ProfilePreviewGuard)
 @Controller('dev/mc1-profile-preview')
 export class Mc1ProfilePreviewController {
-  private readonly service = new Mc1ProfilePreviewService();
+  private service: Mc1ProfilePreviewService | null = null;
 
   constructor(
     @Optional()
@@ -27,12 +27,20 @@ export class Mc1ProfilePreviewController {
     private readonly dataSource?: DataSource,
   ) {}
 
+  /** Lazy: avoid resolving tmp/backendRoot during Nest boot in production. */
+  private getPreviewService(): Mc1ProfilePreviewService {
+    if (!this.service) {
+      this.service = new Mc1ProfilePreviewService();
+    }
+    return this.service;
+  }
+
   @Get('cases')
   async listCases() {
     const lookups = await this.resolvePersonLookups();
     return {
       mode: 'ARTIFACT_ONLY',
-      cases: this.service.listCases(lookups),
+      cases: this.getPreviewService().listCases(lookups),
     };
   }
 
@@ -53,7 +61,7 @@ export class Mc1ProfilePreviewController {
       throw new NotFoundException('caseId or snapshot required');
     }
 
-    const presentation = this.service.getCase({
+    const presentation = this.getPreviewService().getCase({
       caseId: resolvedCaseId,
       debug,
       personLookups: lookups,
@@ -68,7 +76,7 @@ export class Mc1ProfilePreviewController {
     const map = new Map<string, PersonLookupRow>();
     if (!this.dataSource?.isInitialized) return map;
 
-    for (const { caseId, document } of this.service.realPersonDocuments()) {
+    for (const { caseId, document } of this.getPreviewService().realPersonDocuments()) {
       try {
         const rows = await this.dataSource.query(
           `

@@ -116,7 +116,11 @@ import {
           host,
           port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
           username: config.get<string>('DB_USERNAME'),
-          password: config.get<string>('DB_PASSWORD'),
+          // .env suele envolver el password en comillas simples; pg debe recibir el valor crudo.
+          password: (config.get<string>('DB_PASSWORD') ?? '').replace(
+            /^'|'$/g,
+            '',
+          ),
           database: dbName,
           schema,
           /** Producción: pocos reintentos + timeout corto (Cloud Run ya tiene el puerto abierto). */

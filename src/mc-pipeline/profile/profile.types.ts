@@ -25,6 +25,22 @@ export type ProfileRadarAxis = {
   supportingEvidenceUnitIds: string[];
 };
 
+/** FASE 12A — presentation eligibility (not P2/R1 discovery/resolution). */
+export type ProfileFieldPublicationStatus =
+  | 'PUBLISHABLE'
+  | 'PROVENANCE_ONLY';
+
+export type ProfileResolvedFieldProvenance = {
+  fieldCode: string;
+  role: 'PRIMARY' | 'SECONDARY';
+  r1Confidence?: number;
+  publicationStatus: ProfileFieldPublicationStatus;
+  reasonCode: string;
+  taxonomyPending: boolean;
+  observedSpecialtyCount: number;
+  observedSkillCount: number;
+};
+
 export type ProfileFieldBlock = {
   fieldCode: string;
   role: 'PRIMARY' | 'SECONDARY';
@@ -41,6 +57,13 @@ export type ProfileFieldBlock = {
   evidenceUnitCount: number;
   /** Descriptor visual opcional (nunca specialty almacenada). Ej: "Perfil Full Stack". */
   derivedPresentationLabel?: string | null;
+  /**
+   * FASE 12A — PersonDetail tab eligibility.
+   * RESOLVED fields that are PROVENANCE_ONLY stay in resolvedFieldsProvenance.
+   */
+  publicationStatus?: ProfileFieldPublicationStatus;
+  taxonomyPending?: boolean;
+  publicationReasonCode?: string;
 };
 
 export type ProfilePilotEnvelope = {
@@ -52,12 +75,20 @@ export type ProfilePilotEnvelope = {
   payload: {
     snapshotId: string;
     r1FieldResolutionStatus: 'RESOLVED' | 'MULTI_FIELD' | 'UNRESOLVED';
+    /** PUBLISHABLE fields only (PersonDetail tabs). */
     fields: ProfileFieldBlock[];
+    /**
+     * All R1-resolved fields with publication classification (audit / ambiguity).
+     * Includes PROVENANCE_ONLY secondaries that must not become empty tabs.
+     */
+    resolvedFieldsProvenance?: ProfileResolvedFieldProvenance[];
     presentationNotes: {
       weakHiddenFromPrimary: true;
       toolsSeparatedFromSkills: true;
       radarSemantics: 'RELATIVE_COVERAGE_WITHIN_FIELD_NOT_ABSOLUTE_MASTERY';
       formulaVersion: string;
+      /** FASE 12A */
+      fieldPublicationGate?: 'MC1.PROFILE.PUBLICATION_GATE.1.0.0';
     };
     provenance: {
       r1PackDir: string;

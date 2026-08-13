@@ -18,10 +18,16 @@ import {
 } from './profile-radar';
 import { mapSkillToDimensions } from './profile-skill-dimension-mapper';
 import {
+  classifyFieldPublication,
+  selectPublishableFields,
+} from './profile-publication-gate';
+import { resolveR1FieldCatalogCode } from '../r1/r1-field-catalog-resolver';
+import {
   PROFILE_CONTRACT_CODE,
   PROFILE_CONTRACT_VERSION,
   type ProfileFieldBlock,
   type ProfilePilotEnvelope,
+  type ProfileResolvedFieldProvenance,
 } from './profile.types';
 import { SPECIALTY_CATALOG_SCOPE } from '../catalog/specialties-visual-education';
 
@@ -43,19 +49,26 @@ function fieldsFromR1(packs: ProfileSourcePacks): Array<{
     role: 'PRIMARY' | 'SECONDARY';
     confidence: number;
   }> = [];
-  if (p.primaryField?.fieldCode) {
-    out.push({
-      fieldCode: p.primaryField.fieldCode,
-      role: 'PRIMARY',
-      confidence: p.primaryField.confidence,
-    });
-  }
-  if (p.fieldResolutionStatus === 'MULTI_FIELD') {
-    for (const s of p.secondaryFields ?? []) {
-      if (!s.fieldCode) continue;
-      if (out.some((x) => x.fieldCode === s.fieldCode)) continue;
+  if (p.primaryField) {
+    const code = resolveR1FieldCatalogCode(p.primaryField);
+    if (code) {
       out.push({
-        fieldCode: s.fieldCode,
+        fieldCode: code,
+        role: 'PRIMARY',
+        confidence: p.primaryField.confidence,
+      });
+    }
+  }
+  if (
+    p.fieldResolutionStatus === 'MULTI_FIELD' ||
+    p.fieldResolutionStatus === 'RESOLVED'
+  ) {
+    for (const s of p.secondaryFields ?? []) {
+      const code = resolveR1FieldCatalogCode(s);
+      if (!code) continue;
+      if (out.some((x) => x.fieldCode === code)) continue;
+      out.push({
+        fieldCode: code,
         role: 'SECONDARY',
         confidence: s.confidence,
       });
@@ -85,10 +98,13 @@ export function assembleProfilePilot(args: {
 
   const r1Fields = fieldsFromR1(packs);
   const p3Specs = listObservedP3Specialties(packs.p3);
-  const p4Skills = listObservedP4Skills(packs.p4);
+  // 12I: filter at Profile Assembly via listObservedP4Skills(+ P3 OBSERVED keys).
+  // Skills under WEAK routing parents are excluded from public skills + radar.
+  // Mapper 12E semantic rules are unchanged.
+  const p4Skills = listObservedP4Skills(packs.p4, p3Specs);
   const expIndex = args.explicitnessIndex ?? new Map<string, string>();
 
-  const fieldBlocks: ProfileFieldBlock[] = [];
+  const resolvedBlocks: ProfileFieldBlock[] = [];
 
   for (const rf of r1Fields) {
     const specialties = p3Specs
@@ -177,7 +193,7 @@ export function assembleProfilePilot(args: {
         ? 'Perfil Full Stack'
         : null;
 
-    fieldBlocks.push({
+    const blockBase: ProfileFieldBlock = {
       fieldCode: rf.fieldCode,
       role: rf.role,
       r1Confidence: rf.confidence,
@@ -195,6 +211,14 @@ export function assembleProfilePilot(args: {
       evidenceVolume,
       evidenceUnitCount: allEu.length,
       derivedPresentationLabel,
+    };
+
+    const pub = classifyFieldPublication(blockBase);
+    resolvedBlocks.push({
+      ...blockBase,
+      publicationStatus: pub.status,
+      taxonomyPending: pub.taxonomyPending,
+      publicationReasonCode: pub.reasonCode,
     });
 
     if (specialties.length === 0) {
@@ -202,9 +226,20 @@ export function assembleProfilePilot(args: {
         warnings.push({
           code: `SPECIALTY_CATALOG_NOT_AVAILABLE:${rf.fieldCode}`,
           severity: 'INFO',
-          messageSafe: `No specialty catalog for ${rf.fieldCode}; Field retained without specialties/skills`,
+          messageSafe:
+            rf.role === 'PRIMARY'
+              ? `No specialty catalog for primary ${rf.fieldCode}; Field retained (taxonomy pending)`
+              : `No specialty catalog for secondary ${rf.fieldCode}; provenance only (not a PersonDetail tab)`,
         });
       }
+    }
+
+    if (pub.status === 'PROVENANCE_ONLY') {
+      warnings.push({
+        code: `FIELD_NOT_PUBLISHABLE:${rf.fieldCode}`,
+        severity: 'INFO',
+        messageSafe: `${rf.fieldCode} resolved by R1 but not publishable (${pub.reasonCode})`,
+      });
     }
   }
 
@@ -216,6 +251,19 @@ export function assembleProfilePilot(args: {
     });
   }
 
+  const publishable = selectPublishableFields(resolvedBlocks);
+  const resolvedFieldsProvenance: ProfileResolvedFieldProvenance[] =
+    resolvedBlocks.map((b) => ({
+      fieldCode: b.fieldCode,
+      role: b.role,
+      r1Confidence: b.r1Confidence,
+      publicationStatus: b.publicationStatus ?? 'PUBLISHABLE',
+      reasonCode: b.publicationReasonCode ?? 'LEGACY_UNCLASSIFIED',
+      taxonomyPending: !!b.taxonomyPending,
+      observedSpecialtyCount: b.specialties.length,
+      observedSkillCount: b.skills.length,
+    }));
+
   return {
     contractCode: PROFILE_CONTRACT_CODE,
     contractVersion: PROFILE_CONTRACT_VERSION,
@@ -225,12 +273,14 @@ export function assembleProfilePilot(args: {
     payload: {
       snapshotId: packs.snapshotId,
       r1FieldResolutionStatus: packs.r1.payload.fieldResolutionStatus,
-      fields: fieldBlocks,
+      fields: publishable,
+      resolvedFieldsProvenance,
       presentationNotes: {
         weakHiddenFromPrimary: true,
         toolsSeparatedFromSkills: true,
         radarSemantics: 'RELATIVE_COVERAGE_WITHIN_FIELD_NOT_ABSOLUTE_MASTERY',
         formulaVersion: PROFILE_RADAR_FORMULA_VERSION,
+        fieldPublicationGate: 'MC1.PROFILE.PUBLICATION_GATE.1.0.0',
       },
       provenance: {
         r1PackDir: packs.r1PackDir,

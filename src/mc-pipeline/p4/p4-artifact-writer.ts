@@ -70,6 +70,8 @@ export function writeP4ArtifactPack(args: {
         r1FieldResolutionStatus: p.r1FieldResolutionStatus,
         specialtiesEvaluated: p.specialtiesEvaluated,
         skills: flat,
+        specialtyCorroborationHints: p.specialtyCorroborationHints ?? [],
+        routingPolicyVersion: p.routingPolicyVersion,
         r1Unchanged: true,
         p3Unchanged: true,
       },

@@ -106,11 +106,34 @@ export function listObservedP3Specialties(p3: P3ContractEnvelope): Array<{
   return out;
 }
 
-export function listObservedP4Skills(p4: P4ContractEnvelope): P4ObservedSkill[] {
+/**
+ * Skills P4 OBSERVED eligible for public Profile / radar.
+ *
+ * FASE 12I filter (applied HERE — not in mapper 12E):
+ * parentSpecialtyCode must be a P3 OBSERVED specialty for the same field.
+ * Skills parented only under P3 WEAK (ROUTING_CANDIDATE) remain in the P4
+ * artifact but must not alter the public radar or publishable skill list.
+ */
+export function listObservedP4Skills(
+  p4: P4ContractEnvelope,
+  observedP3Specialties?: Array<{ fieldCode: string; specialtyCode: string }>,
+): P4ObservedSkill[] {
+  const observedKeys =
+    observedP3Specialties === undefined
+      ? null
+      : new Set(
+          observedP3Specialties.map(
+            (s) => `${s.fieldCode}::${s.specialtyCode}`,
+          ),
+        );
   const out: P4ObservedSkill[] = [];
   for (const sr of p4.payload.specialtyResults ?? []) {
     for (const sk of sr.observedSkills ?? []) {
       if (sk.status !== 'OBSERVED') continue;
+      if (observedKeys) {
+        const key = `${sk.parentFieldCode}::${sk.parentSpecialtyCode}`;
+        if (!observedKeys.has(key)) continue;
+      }
       out.push(sk);
     }
   }

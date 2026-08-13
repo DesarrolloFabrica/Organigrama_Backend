@@ -18,6 +18,8 @@ import {
   P4_GENERATION_POLICY_VERSION,
   P4_PROMPT_VERSION,
   P4_REASONING_POLICY_VERSION,
+  P4_ROUTING_POLICY_VERSION,
+  hasAuthoritativeP4Target,
   type P4ContractEnvelope,
   type P4ModelRawOutput,
 } from './p4.types';
@@ -40,9 +42,9 @@ function parseModelJson(text: string): P4ModelRawOutput {
 }
 
 /**
- * Runner P4 v1 — ARTIFACT_ONLY.
- * R1 + P3 OBSERVED specialties + Evidence Units → Skills.
- * No modifica R1/P3. Sin niveles, radar ni persistencia.
+ * Runner P4 v1.1 — ARTIFACT_ONLY (12I).
+ * R1 + P3 OBSERVED (AUTHORITATIVE) + P3 WEAK (ROUTING_CANDIDATE) + Evidence → Skills.
+ * WEAK-only abstains. No modifica R1/P3. Sin niveles, radar ni persistencia.
  */
 export async function runP4ArtifactOnly(args: {
   backendRoot: string;
@@ -76,27 +78,36 @@ export async function runP4ArtifactOnly(args: {
     promptVersion: P4_PROMPT_VERSION,
     reasoningPolicy: P4_REASONING_POLICY_VERSION,
     generationPolicy: P4_GENERATION_POLICY_VERSION,
+    routingPolicy: P4_ROUTING_POLICY_VERSION,
     specialtyCatalog: SPECIALTY_CATALOG_VERSION,
     model: args.model,
     mode: 'ARTIFACT_ONLY',
     specialties: specialtiesEvaluated
-      .map((s) => `${s.fieldCode}:${s.specialtyCode}`)
+      .map(
+        (s) =>
+          `${s.fieldCode}:${s.specialtyCode}:${s.evaluationRole ?? s.p3Status}`,
+      )
       .join(','),
   });
 
   const registryFingerprint = fingerprintP4Config({
     registry: 'mc1-local-lab',
     promptVersion: P4_PROMPT_VERSION,
+    routingPolicy: P4_ROUTING_POLICY_VERSION,
   });
 
   let raw: P4ModelRawOutput;
   let geminiInvoked = false;
 
-  if (specialtiesEvaluated.length === 0) {
+  if (!hasAuthoritativeP4Target(specialtiesEvaluated)) {
     raw = {
-      specialtyResults: [],
+      specialtyResults: specialtiesEvaluated.map((s) => ({
+        fieldCode: s.fieldCode,
+        specialtyCode: s.specialtyCode,
+        observedSkills: [],
+      })),
       outcomeStatus: 'ABSTAINED_NO_OBSERVED_SPECIALTY',
-      warnings: ['no_observed_specialties'],
+      warnings: ['no_authoritative_observed_specialty'],
     };
   } else if (loaded.evidence.units.length === 0) {
     raw = {

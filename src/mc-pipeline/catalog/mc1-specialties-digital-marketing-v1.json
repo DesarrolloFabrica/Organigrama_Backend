@@ -1,0 +1,131 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.DIGITAL_MARKETING",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["DIGITAL_MARKETING"],
+  "note": "DIGITAL_MARKETING V1 foundation — specialties = recognizable digital marketing practice identities focused on attraction, conversion and growth. Tools (Google Ads, CMS, Moodle, Power BI, Adobe, etc.) are never specialties. Instructional design / e-learning facilitation belongs to EDUCATION. UX/UI product design belongs to VISUAL_DESIGN. Institutional messaging without growth intent belongs to COMMUNICATIONS.",
+  "fieldBoundaryNote": "DIGITAL_MARKETING = atracción, conversión y crecimiento vía canales digitales/campañas. COMMUNICATIONS = mensaje/relación institucional o periodística. VISUAL_DESIGN = diseñar sistemas/piezas visuales. EDUCATION = docencia/diseño instruccional. DATA_ANALYTICS = análisis cuantitativo para decisión (no growth marketing). AUDIOVISUAL_PRODUCTION = producir obras AV. MULTI_FIELD is legitimate.",
+  "specialties": [
+    {
+      "code": "CAMPAIGN_MARKETING",
+      "name": "Marketing de campañas",
+      "parentField": "DIGITAL_MARKETING",
+      "definition": "Práctica de planear, ejecutar y hacer seguimiento de campañas de publicidad/marketing orientadas a visibilidad, posicionamiento o resultados comerciales.",
+      "positiveSignals": [
+        "planeación estratégica, ejecución y seguimiento de campañas de marketing/publicidad",
+        "campañas de posicionamiento o publicidad para productos/servicios",
+        "coordinación de campañas multidisciplinarias con objetivos de marketing"
+      ],
+      "exclusions": [
+        "solo diseñar piezas gráficas sin responsabilidad de campaña (ver VISUAL_DESIGN)",
+        "solo comunicar institucionalmente sin objetivo de campaña/crecimiento (ver COMMUNICATIONS)",
+        "solo optimizar embudos/conversión como identidad dominante (ver GROWTH_MARKETING)",
+        "solo listar Google Ads/Meta Ads sin práctica de campaña"
+      ]
+    },
+    {
+      "code": "GROWTH_MARKETING",
+      "name": "Marketing de crecimiento y conversión",
+      "parentField": "DIGITAL_MARKETING",
+      "definition": "Práctica de crecer tráfico, adquisición y conversión: embudos, optimización de conversión, KPIs de crecimiento y performance orientado a resultados.",
+      "positiveSignals": [
+        "estructuración/optimización de funnels o embudos de conversión",
+        "crecimiento de tráfico web y conversión de usuarios como práctica central",
+        "definición/seguimiento de KPIs/OKRs de crecimiento o performance digital"
+      ],
+      "exclusions": [
+        "solo reporting BI sin práctica de growth (ver DATA_ANALYTICS)",
+        "solo campañas creativas/publicitarias sin foco de conversión (ver CAMPAIGN_MARKETING)",
+        "solo UX/UI de producto sin práctica de growth (ver VISUAL_DESIGN)",
+        "solo listar analytics tools sin práctica de conversión/crecimiento"
+      ]
+    },
+    {
+      "code": "PRODUCT_MARKETING",
+      "name": "Product marketing / Go-to-Market",
+      "parentField": "DIGITAL_MARKETING",
+      "definition": "Práctica de llevar productos digitales al mercado: estrategias Go-to-Market, ciclo de vida de producto con enfoque comercial/marketing y posicionamiento de oferta.",
+      "positiveSignals": [
+        "estrategias Go-to-Market para productos digitales",
+        "participación en ciclo de vida de producto con análisis de mercado y KPIs de oferta",
+        "liderazgo de marketing/crecimiento de productos digitales (lanzamiento, portafolio)"
+      ],
+      "exclusions": [
+        "solo product management técnico/ingeniería sin marketing (border SOFTWARE / PPM)",
+        "solo diseño instruccional de cursos (ver EDUCATION)",
+        "solo campañas sin vínculo a producto/GTM (ver CAMPAIGN_MARKETING)",
+        "solo mención de Product Owner/Scrum sin práctica GTM"
+      ]
+    },
+    {
+      "code": "BRAND_DIGITAL_MARKETING",
+      "name": "Marketing digital de marca",
+      "parentField": "DIGITAL_MARKETING",
+      "definition": "Práctica de construir y activar marca en canales digitales/comerciales: estrategia digital de marca, tono, visibilidad y posicionamiento alineados a metas comerciales.",
+      "positiveSignals": [
+        "estrategia digital alineando identidad/tono de marca con metas comerciales",
+        "planes de marketing orientados a visibilidad y posicionamiento de marca",
+        "iniciativas de alto impacto para fortalecer imagen de marca con objetivo de marketing"
+      ],
+      "exclusions": [
+        "diseño de identidad visual como práctica dominante (ver VISUAL_DESIGN / BRAND_IDENTITY_DESIGN)",
+        "comunicación corporativa institucional sin objetivo de marketing/crecimiento (ver COMMUNICATIONS)",
+        "solo SEO técnico sin práctica de marca (skill futura; no specialty V1)",
+        "solo listar redes sociales sin práctica de marca"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "DIGITAL_ADS": "CAMPAIGN_MARKETING",
+    "ADVERTISING_CAMPAIGNS": "CAMPAIGN_MARKETING",
+    "PERFORMANCE_MARKETING": "GROWTH_MARKETING",
+    "CONVERSION_OPTIMIZATION": "GROWTH_MARKETING",
+    "GO_TO_MARKET": "PRODUCT_MARKETING",
+    "GTM": "PRODUCT_MARKETING",
+    "BRAND_STRATEGY_MARKETING": "BRAND_DIGITAL_MARKETING"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "SEO_CONTENT_MARKETING",
+      "parentSpecialty": "GROWTH_MARKETING",
+      "parentField": "DIGITAL_MARKETING",
+      "note": "Deferred V1 — no clear SEO practice mass in pilot; avoid inventing from keywords"
+    },
+    {
+      "code": "SOCIAL_MEDIA_MARKETING",
+      "parentSpecialty": "CAMPAIGN_MARKETING",
+      "parentField": "DIGITAL_MARKETING",
+      "note": "Deferred V1 — channel skill; not a specialty identity without dedicated practice evidence"
+    },
+    {
+      "code": "EMAIL_MARKETING",
+      "parentSpecialty": "GROWTH_MARKETING",
+      "parentField": "DIGITAL_MARKETING",
+      "note": "Channel/skill under growth or campaigns — not a specialty V1"
+    },
+    {
+      "code": "MARKETING_MIX_MODELING",
+      "parentSpecialty": "GROWTH_MARKETING",
+      "parentField": "DIGITAL_MARKETING",
+      "note": "Border with DATA_ANALYTICS; reserved, not specialty"
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "CONTENT_MARKETING",
+      "reason": "Too generic; contaminates COMMUNICATIONS, EDUCATION and VISUAL_DESIGN"
+    },
+    {
+      "code": "GOOGLE_ADS_SPECIALIST",
+      "reason": "Tool identity rejected"
+    },
+    {
+      "code": "UX_MARKETING",
+      "reason": "UX/UI practice belongs primarily under VISUAL_DESIGN; conversion UX is skill under GROWTH_MARKETING"
+    },
+    {
+      "code": "ELEARNING_MARKETING",
+      "reason": "Domain context only; instructional practice is EDUCATION"
+    }
+  ]
+}

@@ -21,7 +21,7 @@ export function buildP3SystemPrompt(fieldCodes: string[]): string {
     `Prompt version: ${P3_PROMPT_VERSION}`,
     `Reasoning policy: ${P3_REASONING_POLICY_VERSION}`,
     `Generation policy: ${P3_GENERATION_POLICY_VERSION}`,
-    `Specialty catalog version: ${SPECIALTY_CATALOG_VERSION} (ACTIVE; VE/ED 1.1.0 frozen + PPM 1.0.0 + FA 1.0.0 + SE 1.0.0 + AV 1.0.0 + COMM 1.0.0)`,
+    `Specialty catalog version: ${SPECIALTY_CATALOG_VERSION} (ACTIVE; VE/ED 1.1.0 frozen + PPM 1.0.0 + FA 1.0.0 + SE 1.0.0 + AV 1.0.0 + COMM 1.0.0 + DA 1.0.0 + DM 1.0.0 + CS 1.0.0 + HR 1.0.0 + IT 1.0.0 + LEGAL 1.0.0)`,
     ``,
     `MISSION: Observe 0..N specialties INSIDE each evaluated professional field, using Evidence Units only.`,
     `You do NOT change R1 field resolution. You do NOT invent skills. You do NOT invent map dimensions.`,
@@ -48,6 +48,8 @@ export function buildP3SystemPrompt(fieldCodes: string[]): string {
     `12) UI craft belongs under UX_PRODUCT_DESIGN. Learning assessment capacity belongs under INSTRUCTIONAL_DESIGN practice — do not emit LEARNING_ASSESSMENT.`,
     `13) Agile/Scrum/Kanban and risk/schedule/budget practices are NOT specialties; use PROJECT_MANAGEMENT / PROGRAM_MANAGEMENT / PMO_GOVERNANCE / PROCESS_IMPROVEMENT only when identity-level practice is observed.`,
     `14) For FINANCE_ADMIN: budget elaboration/tracking, reconciliation, billing, purchasing, payments, and document filing are NOT specialties. Use FINANCIAL_MANAGEMENT / BUDGET_FINANCIAL_CONTROL / ACCOUNTING_OPERATIONS / ADMINISTRATIVE_MANAGEMENT only for identity-level practice. Do not place academic program admin under FINANCE_ADMIN (use EDUCATION).`,
+    `15) For IT_SYSTEMS: titles/education (ingeniero en telecomunicaciones, tecnólogo en sistemas, diplomado SQL/seguridad) are NOT specialties. Git/M365/Power BI/Azure Data/GLPI/IAM knowledge alone are NOT specialties. SOFTWARE_ENGINEERING = build software. DATA_ANALYTICS = analyze data. Tool usage ≠ IT practice. Use NETWORK_INFRASTRUCTURE / IT_SERVICE_DESK / SYSTEMS_ADMINISTRATION / IT_SECURITY_OPERATIONS only for identity-level IT operations practice.`,
+    `16) For LEGAL: lawyer title, professional card, law degree, courses/diplomas, law names (Ley 80/1150), SECOP, Colombia Compra Eficiente, generic "jurídico", belonging to a legal team, teaching law, Moodle, generic admin/contract management, procurement/compras, customer service are NOT specialties. SECOP and Ley 80/1150 are TOOL/KNOWLEDGE context only. FINANCE_ADMIN = procurement/compras operations. PROJECT_PROGRAM_MGMT = coordinate projects. EDUCATION = teach law. PEOPLE_HR = workforce admin (labor demands are LITIGATION_DISPUTES not HR). CUSTOMER_SUCCESS = client care not legal counsel. Use LEGAL_ADVISORY / LEGAL_DOCUMENT_DRAFTING / PUBLIC_SECTOR_CONTRACTING / ADMINISTRATIVE_LAW / LITIGATION_DISPUTES only for identity-level legal practice with ACTION/RESPONSIBILITY-level evidence.`,
     ``,
     `KNOWN SPECIALTIES FOR THIS RUN (catalog ${SPECIALTY_CATALOG_VERSION}):`,
     ...specs.map(

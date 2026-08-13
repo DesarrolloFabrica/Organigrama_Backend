@@ -1,0 +1,126 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.DATA_ANALYTICS",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["DATA_ANALYTICS"],
+  "note": "DATA_ANALYTICS V1 foundation — specialties = recognizable analytics practice identities. Tools (Power BI, Tableau, SQL, Python, R, GCP, LightGBM, etc.) are never specialties. Business Analytics as degree is EDUCATION_SIGNAL, not a specialty. Marketing Mix Modeling deferred (border DIGITAL_MARKETING). Leadership/storytelling soft skills are not specialties.",
+  "fieldBoundaryNote": "DATA_ANALYTICS = obtain/transform/analyze quantitative evidence for decision. SOFTWARE_ENGINEERING = build software products. IT_SYSTEMS = operate/support infra. DIGITAL_MARKETING = growth/campaigns. EDUCATION = teaching/instructional design. FINANCE_ADMIN = financial/admin ops. MULTI_FIELD is legitimate.",
+  "specialties": [
+    {
+      "code": "BUSINESS_INTELLIGENCE",
+      "name": "Business Intelligence",
+      "parentField": "DATA_ANALYTICS",
+      "definition": "Práctica de convertir datos operativos o corporativos en reporting, tableros e insights para seguimiento y decisión, como identidad profesional dominante (no solo operar una herramienta BI).",
+      "positiveSignals": [
+        "diseño o implementación recurrente de dashboards/tableros/reporting dinámico para decisión",
+        "conversión de datos en insights/KPIs/monitoreo continuo para stakeholders",
+        "soluciones de visualización analítica orientadas a control operativo o lectura estratégica de indicadores"
+      ],
+      "exclusions": [
+        "solo listar Power BI/Tableau/Looker sin práctica de reporting/BI",
+        "solo pipelines/ETL/repositorios sin identidad de reporting (ver DATA_ENGINEERING)",
+        "solo modelos predictivos/ML como identidad dominante (ver PREDICTIVE_ANALYTICS)",
+        "diseño gráfico de piezas sin práctica analítica (ver VISUAL_DESIGN)",
+        "estrategia de campañas digitales como práctica dominante (ver DIGITAL_MARKETING)"
+      ]
+    },
+    {
+      "code": "DATA_ENGINEERING",
+      "name": "Ingeniería de datos analíticos",
+      "parentField": "DATA_ANALYTICS",
+      "definition": "Práctica de obtener, consolidar y estructurar datos para consumo analítico: ETL, repositorios, arquitecturas y esquemas al servicio del análisis.",
+      "positiveSignals": [
+        "ETL / pipelines de datos para analítica como responsabilidad central",
+        "consolidación de repositorios o arquitecturas de datos operacionales para análisis",
+        "administración de esquemas/fuentes orientada a disponibilidad y consumo analítico"
+      ],
+      "exclusions": [
+        "construcción de producto software como identidad dominante (ver SOFTWARE_ENGINEERING)",
+        "operación TI genérica sin foco analítico (ver IT_SYSTEMS)",
+        "solo dashboards/reporting como identidad dominante (ver BUSINESS_INTELLIGENCE)",
+        "solo nombrar GCP/SQL/Python sin práctica de ingeniería de datos"
+      ]
+    },
+    {
+      "code": "PREDICTIVE_ANALYTICS",
+      "name": "Analítica predictiva",
+      "parentField": "DATA_ANALYTICS",
+      "definition": "Práctica de construir y aplicar modelos predictivos o de machine learning para anticipar resultados y apoyar decisión (MVP o producción), más allá del reporting descriptivo.",
+      "positiveSignals": [
+        "construcción o despliegue de modelos predictivos / ML aplicados a outcomes",
+        "analítica predictiva como responsabilidad recurrente (no solo mención de algoritmos)",
+        "integración de modelos en herramientas analíticas para decisión"
+      ],
+      "exclusions": [
+        "solo dashboards descriptivos sin modelado (ver BUSINESS_INTELLIGENCE)",
+        "IA aplicada como feature de producto software (ver SOFTWARE_ENGINEERING / APPLIED_AI)",
+        "investigación académica sin entrega analítica profesional (ver ACADEMIC_RESEARCH)",
+        "solo listar LightGBM/Python/R sin práctica de modelado"
+      ]
+    },
+    {
+      "code": "DATA_GOVERNANCE",
+      "name": "Gobernanza y calidad de datos",
+      "parentField": "DATA_ANALYTICS",
+      "definition": "Práctica de asegurar integridad, trazabilidad, disponibilidad y gobierno de activos de datos usados para analítica.",
+      "positiveSignals": [
+        "responsabilidad explícita de gobernanza, integridad o calidad de datos analíticos",
+        "trazabilidad/disponibilidad de información como práctica profesional recurrente",
+        "políticas o controles de gobierno de datos al servicio de analítica"
+      ],
+      "exclusions": [
+        "solo construir pipelines sin práctica de gobierno (ver DATA_ENGINEERING)",
+        "gestión documental administrativa genérica (ver FINANCE_ADMIN)",
+        "mención aislada de 'calidad' sin práctica de gobernanza",
+        "solo listar herramientas cloud/SQL sin señales de gobierno"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "BI": "BUSINESS_INTELLIGENCE",
+    "BUSINESS_ANALYTICS_PRACTICE": "BUSINESS_INTELLIGENCE",
+    "DATA_PIPELINE": "DATA_ENGINEERING",
+    "ETL_ENGINEERING": "DATA_ENGINEERING",
+    "ML_ANALYTICS": "PREDICTIVE_ANALYTICS",
+    "PREDICTIVE_MODELING": "PREDICTIVE_ANALYTICS",
+    "DATA_QUALITY": "DATA_GOVERNANCE"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "MARKETING_MIX_MODELING",
+      "parentSpecialty": "PREDICTIVE_ANALYTICS",
+      "parentField": "DATA_ANALYTICS",
+      "note": "Deferred V1 — keyword-only in pilot CV; border with DIGITAL_MARKETING"
+    },
+    {
+      "code": "EXPERIMENTATION_ANALYTICS",
+      "parentSpecialty": "PREDICTIVE_ANALYTICS",
+      "parentField": "DATA_ANALYTICS",
+      "note": "Deferred V1 — A/B testing / causal analytics without V1 evidence mass"
+    },
+    {
+      "code": "ANALYTICS_STORYTELLING",
+      "parentSpecialty": "BUSINESS_INTELLIGENCE",
+      "parentField": "DATA_ANALYTICS",
+      "note": "Capability/skill under BI or DA_DECISION_ENABLEMENT — not a specialty"
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "BUSINESS_ANALYTICS",
+      "reason": "Too close to Field name; degree/education signal is not a specialty identity"
+    },
+    {
+      "code": "POWER_BI_SPECIALIST",
+      "reason": "Tool identity rejected"
+    },
+    {
+      "code": "DATA_SCIENTIST",
+      "reason": "Job title; practice covered by PREDICTIVE_ANALYTICS + BI without title specialty"
+    },
+    {
+      "code": "ANALYTICS_LEADERSHIP",
+      "reason": "Soft/leadership capability — not a data practice specialty"
+    }
+  ]
+}

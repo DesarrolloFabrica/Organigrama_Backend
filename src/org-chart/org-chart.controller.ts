@@ -19,6 +19,7 @@ import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartCvService } from './org-chart-cv.service';
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
 import { OrgChartCompetenciesService } from './org-chart-competencies.service';
+import { CompetencyPeopleSearchService } from './competency-people-search.service';
 import { OrgChartVideoService } from './video/org-chart-video.service';
 import {
   OrgChartVideoStreamService,
@@ -37,6 +38,7 @@ import type {
 } from './dto/competencies.response.dto';
 import type { PersonVideoResponseDto } from './video/org-chart-video.types';
 import { Public } from '../auth/public.decorator';
+import type { CompetencyPeopleSearchResponseDto } from './dto/competency-people-search.response.dto';
 
 @Controller('org-chart')
 export class OrgChartController {
@@ -48,6 +50,7 @@ export class OrgChartController {
     private readonly cvService: OrgChartCvService,
     private readonly vacancyService: OrgChartVacancyService,
     private readonly competenciesService: OrgChartCompetenciesService,
+    private readonly competencyPeopleSearchService: CompetencyPeopleSearchService,
     private readonly videoService: OrgChartVideoService,
     private readonly videoStreamService: OrgChartVideoStreamService,
   ) {}
@@ -117,6 +120,34 @@ export class OrgChartController {
       query,
       buildOrgViewerContext(req),
       resolvedVersionId,
+    );
+  }
+
+  /**
+   * Buscador progresivo de personas por el perfil MC1 publicado.
+   * Solo opera sobre el mismo universo autorizado de ficha completa.
+   */
+  @Get('competency-people-search')
+  async searchPeopleByCompetency(
+    @Req() req: Request,
+    @Query('domain') domain?: string,
+    @Query('specialty') specialty?: string,
+    @Query('skills') skills?: string | string[],
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ): Promise<CompetencyPeopleSearchResponseDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.competencyPeopleSearchService.search(
+      viewer,
+      resolvedVersionId,
+      { domain, specialty, skills, page, pageSize },
     );
   }
 

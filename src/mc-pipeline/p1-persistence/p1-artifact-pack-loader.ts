@@ -117,14 +117,21 @@ export function resolveCohortArtifactDir(
 ): string | null {
   const regenRoot = resolve(backendRoot, 'tmp', 'mc1-p1-prototype');
   if (existsSync(regenRoot)) {
-    const prefix = `P1P-V11-6I-S${snapshotId}-`;
-    const matches = readdirSync(regenRoot)
-      .filter((n) => n.startsWith(prefix))
+    // Prefer legacy 11D prefix, then any P1P-* pack for this snapshot (e.g. P1P-V12A-S…).
+    const preferredPrefix = `P1P-V11-6I-S${snapshotId}-`;
+    const anyPrefix = new RegExp(`^P1P-.*-S${snapshotId}-`);
+    const dirs = readdirSync(regenRoot)
+      .filter((n) => n.startsWith(preferredPrefix) || anyPrefix.test(n))
       .map((n) => join(regenRoot, n))
       .filter((p) => statSync(p).isDirectory())
       .sort();
-    if (matches.length > 0) {
-      const latest = matches[matches.length - 1];
+    // Prefer V11-6I matches last (sort puts them among peers); pick latest overall.
+    const preferred = dirs.filter((p) =>
+      p.replace(/\\/g, '/').includes(`/${preferredPrefix}`),
+    );
+    const pool = preferred.length ? preferred : dirs;
+    if (pool.length > 0) {
+      const latest = pool[pool.length - 1];
       if (packHasDecisions(latest)) return latest;
     }
   }

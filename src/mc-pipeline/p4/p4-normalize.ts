@@ -8,12 +8,15 @@ import {
   P4_CONTRACT_VERSION,
   P4_PROMPT_VERSION,
   P4_REASONING_POLICY_VERSION,
+  P4_ROUTING_POLICY_VERSION,
+  hasAuthoritativeP4Target,
   type P4ContractEnvelope,
   type P4ModelRawOutput,
   type P4ObservedSkill,
   type P4OutcomeStatus,
   type P4RationaleCode,
   type P4SkillStatus,
+  type P4SpecialtyCorroborationHint,
   type P4SpecialtyEvaluated,
   type P4SpecialtyResult,
 } from './p4.types';
@@ -245,10 +248,16 @@ export function normalizeP4ModelOutput(args: {
     (s) => byKey.get(`${s.fieldCode}::${s.specialtyCode}`)!,
   );
 
+  const hasAuthoritative = hasAuthoritativeP4Target(args.specialtiesEvaluated);
+
   let outcome: P4OutcomeStatus =
     (args.raw.outcomeStatus as P4OutcomeStatus) || 'INSUFFICIENT_SIGNAL';
-  if (args.specialtiesEvaluated.length === 0) {
+  // WEAK-only (or empty) → abstain; ROUTING_CANDIDATE alone never activates P4.
+  if (!hasAuthoritative) {
     outcome = 'ABSTAINED_NO_OBSERVED_SPECIALTY';
+    if (args.specialtiesEvaluated.some((s) => s.evaluationRole === 'ROUTING_CANDIDATE')) {
+      normalizeWarnings.push('WEAK_ONLY_ROUTING_CANDIDATES_ABSTAIN');
+    }
   } else {
     const any = specialtyResults.some((r) => r.observedSkills.length > 0);
     if (any) outcome = 'SKILLS_OBSERVED';
@@ -259,6 +268,94 @@ export function normalizeP4ModelOutput(args: {
       outcome = 'NO_SKILL_EVIDENCE';
     }
   }
+
+  const routingWeakKeys = new Set(
+    args.specialtiesEvaluated
+      .filter((s) => s.evaluationRole === 'ROUTING_CANDIDATE')
+      .map((s) => `${s.fieldCode}::${s.specialtyCode}`),
+  );
+  const skillSupportByKey = new Map<string, string[]>();
+  for (const sr of specialtyResults) {
+    for (const sk of sr.observedSkills) {
+      skillSupportByKey.set(
+        `${sr.fieldCode}::${sr.specialtyCode}::${sk.skillCode}`,
+        sk.supportingEvidenceUnitIds,
+      );
+    }
+  }
+
+  const specialtyCorroborationHints: P4SpecialtyCorroborationHint[] = [];
+  if (hasAuthoritative) {
+    const seenHint = new Set<string>();
+    if (Array.isArray(args.raw.specialtyCorroborationHints)) {
+      for (const h of args.raw.specialtyCorroborationHints) {
+        const fieldCode = (h.fieldCode ?? '').trim();
+        const specialtyCode = (h.specialtyCode ?? '').trim();
+        const skillCode = sanitizeSkillCode(h.skillCode ?? '', '');
+        const key = `${fieldCode}::${specialtyCode}`;
+        if (!fieldCode || !specialtyCode || !skillCode) continue;
+        if (!routingWeakKeys.has(key)) {
+          normalizeWarnings.push(
+            'CORROBORATION_HINT_NOT_ROUTING_CANDIDATE_DROPPED',
+          );
+          continue;
+        }
+        const supportKey = `${key}::${skillCode}`;
+        const fromSkill = skillSupportByKey.get(supportKey);
+        if (!fromSkill || fromSkill.length === 0) {
+          normalizeWarnings.push(
+            'CORROBORATION_HINT_WITHOUT_MATCHING_SKILL_DROPPED',
+          );
+          continue;
+        }
+        const supporting = (h.supportingEvidenceUnitIds ?? [])
+          .filter((id) => unitSet.has(id))
+          .filter((id) => fromSkill.includes(id));
+        const evidenceIds = supporting.length > 0 ? supporting : fromSkill;
+        if (seenHint.has(supportKey)) continue;
+        seenHint.add(supportKey);
+        specialtyCorroborationHints.push({
+          fieldCode,
+          specialtyCode,
+          p3Status: 'WEAK',
+          skillCode,
+          supportingEvidenceUnitIds: evidenceIds,
+          hintCode: 'SKILL_EVIDENCE_CORROBORATES_WEAK_SPECIALTY',
+          doesNotMutateP3: true,
+        });
+      }
+    }
+    // Derive hints for skills placed under ROUTING_CANDIDATE (WEAK) when
+    // the model omitted specialtyCorroborationHints — still p3Unchanged.
+    for (const sr of specialtyResults) {
+      const key = `${sr.fieldCode}::${sr.specialtyCode}`;
+      if (!routingWeakKeys.has(key)) continue;
+      for (const sk of sr.observedSkills) {
+        const supportKey = `${key}::${sk.skillCode}`;
+        if (seenHint.has(supportKey)) continue;
+        if (sk.supportingEvidenceUnitIds.length === 0) continue;
+        seenHint.add(supportKey);
+        specialtyCorroborationHints.push({
+          fieldCode: sr.fieldCode,
+          specialtyCode: sr.specialtyCode,
+          p3Status: 'WEAK',
+          skillCode: sk.skillCode,
+          supportingEvidenceUnitIds: sk.supportingEvidenceUnitIds,
+          hintCode: 'SKILL_EVIDENCE_CORROBORATES_WEAK_SPECIALTY',
+          doesNotMutateP3: true,
+        });
+      }
+    }
+  }
+
+  // When abstaining, keep evaluated list for audit but clear skill results.
+  const finalSpecialtyResults = hasAuthoritative
+    ? specialtyResults
+    : args.specialtiesEvaluated.map((s) => ({
+        fieldCode: s.fieldCode,
+        specialtyCode: s.specialtyCode,
+        observedSkills: [] as P4ObservedSkill[],
+      }));
 
   const envelope: P4ContractEnvelope = {
     contractCode: P4_CONTRACT_CODE,
@@ -284,10 +381,15 @@ export function normalizeP4ModelOutput(args: {
       snapshotId: args.snapshotId,
       configFingerprint: args.configFingerprint,
       specialtyCatalogVersion: SPECIALTY_CATALOG_VERSION,
+      routingPolicyVersion: P4_ROUTING_POLICY_VERSION,
       r1FieldResolutionStatus: args.r1FieldResolutionStatus,
       specialtiesEvaluated: args.specialtiesEvaluated,
       outcomeStatus: outcome,
-      specialtyResults,
+      specialtyResults: finalSpecialtyResults,
+      specialtyCorroborationHints:
+        specialtyCorroborationHints.length > 0
+          ? specialtyCorroborationHints
+          : undefined,
       r1Unchanged: true,
       p3Unchanged: true,
       r1PackDir: args.r1PackDir,

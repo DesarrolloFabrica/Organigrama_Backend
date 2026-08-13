@@ -1,6 +1,7 @@
 /**
- * FASE 9F — Local ARTIFACT_ONLY reader for MC1 Profile Assembly → PersonDetail.
- * Resolves by personId (never by display name). Does not persist or call Gemini.
+ * FASE 9F / deploy B — Reader MC1 Profile → PersonDetail.
+ * Orden: Cloud presentation store → (lab) ARTIFACT_ONLY local tmp/.
+ * No persiste ni llama Gemini. No modifica Publication Gate.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,6 +13,11 @@ import {
 } from '../preview/mc1-profile-preview.service';
 import { resolveBackendRoot } from '../preview/mc1-preview-backend-root';
 import type { ProfilePilotEnvelope } from '../profile/profile.types';
+import { selectPublishableFields } from '../profile/profile-publication-gate';
+import {
+  readActiveMc1PresentationFromStore,
+  validateMc1PresentationPayload,
+} from './mc1-person-profile-store';
 import type {
   Mc1PersonCompetenciesPresentationDto,
   Mc1PersonProfileReadResult,
@@ -72,13 +78,22 @@ function fieldLabel(code: string): string {
   return FIELD_LABELS[code] ?? code;
 }
 
+function allowArtifactLocalFallback(explicit?: boolean): boolean {
+  if (explicit != null) return explicit;
+  if (process.env.MC1_ALLOW_ARTIFACT_LOCAL === 'true') return true;
+  if (process.env.MC1_ALLOW_ARTIFACT_LOCAL === 'false') return false;
+  return process.env.NODE_ENV !== 'production';
+}
+
 function toPresentation(
   envelope: ProfilePilotEnvelope,
 ): Mc1PersonCompetenciesPresentationDto {
+  // FASE 12A — tabs = PUBLISHABLE only (legacy packs inferred via gate).
+  const fields = selectPublishableFields(envelope.payload.fields ?? []);
   return {
     status: 'AVAILABLE',
     source: 'ARTIFACT_ONLY_LOCAL',
-    fields: (envelope.payload.fields ?? []).map((f) => {
+    fields: fields.map((f) => {
       const skillsBySpec = new Map<string, Array<{ code: string; name: string }>>();
       for (const sp of f.specialties ?? []) {
         skillsBySpec.set(sp.specialtyCode, []);
@@ -160,25 +175,34 @@ export function mapProfilePackToPresentation(
   return toPresentation(pack.envelope);
 }
 
-/**
- * Resolve MC1 Profile Assembly for a person (local ARTIFACT_ONLY).
- */
-export async function readMc1PersonProfile(args: {
+async function readFromCloudStore(
+  dataSource: DataSource,
+  personId: string,
+): Promise<Mc1PersonProfileReadResult | null> {
+  const row = await readActiveMc1PresentationFromStore({
+    dataSource,
+    personId,
+  });
+  if (!row) return null;
+  if (!row.configFingerprint.trim()) {
+    return { status: 'INVALID', reason: 'STORE_FINGERPRINT_MISSING' };
+  }
+  const validated = validateMc1PresentationPayload(row.payloadJson);
+  if (!validated.ok) {
+    return { status: 'INVALID', reason: `STORE_${validated.reason}` };
+  }
+  return { status: 'AVAILABLE', presentation: validated.presentation };
+}
+
+async function readFromArtifactLocal(args: {
   personId: string;
   dataSource: DataSource;
-  backendRoot?: string;
+  backendRoot: string;
 }): Promise<Mc1PersonProfileReadResult> {
-  let backendRoot: string;
-  try {
-    backendRoot = args.backendRoot ?? resolveBackendRoot(__dirname);
-  } catch {
-    return { status: 'NOT_AVAILABLE' };
-  }
-
   let snapshotId: string | null;
   try {
     snapshotId = await resolveSnapshotIdForPerson({
-      backendRoot,
+      backendRoot: args.backendRoot,
       personId: String(args.personId),
       dataSource: args.dataSource,
     });
@@ -188,7 +212,7 @@ export async function readMc1PersonProfile(args: {
 
   if (!snapshotId) return { status: 'NOT_AVAILABLE' };
 
-  const pack = findBestValidProfilePack(backendRoot, snapshotId);
+  const pack = findBestValidProfilePack(args.backendRoot, snapshotId);
   if (!pack) return { status: 'NOT_AVAILABLE' };
 
   try {
@@ -203,6 +227,52 @@ export async function readMc1PersonProfile(args: {
       reason: String(e instanceof Error ? e.message : e).slice(0, 200),
     };
   }
+}
+
+/**
+ * Resolve MC1 Profile Assembly for a person.
+ * 1) Cloud store (organigrama.mc1_person_profile_presentation)
+ * 2) Lab ARTIFACT_ONLY local (tmp/), unless production / disabled
+ */
+export async function readMc1PersonProfile(args: {
+  personId: string;
+  dataSource: DataSource;
+  backendRoot?: string;
+  /** Override: allow tmp/ fallback (default: non-production). */
+  allowArtifactLocal?: boolean;
+}): Promise<Mc1PersonProfileReadResult> {
+  try {
+    const fromStore = await readFromCloudStore(
+      args.dataSource,
+      String(args.personId),
+    );
+    if (fromStore) return fromStore;
+  } catch (e) {
+    // Store read errors should not break PersonDetail; fall through to local/lab.
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        status: 'INVALID',
+        reason: String(e instanceof Error ? e.message : e).slice(0, 200),
+      };
+    }
+  }
+
+  if (!allowArtifactLocalFallback(args.allowArtifactLocal)) {
+    return { status: 'NOT_AVAILABLE' };
+  }
+
+  let backendRoot: string;
+  try {
+    backendRoot = args.backendRoot ?? resolveBackendRoot(__dirname);
+  } catch {
+    return { status: 'NOT_AVAILABLE' };
+  }
+
+  return readFromArtifactLocal({
+    personId: String(args.personId),
+    dataSource: args.dataSource,
+    backendRoot,
+  });
 }
 
 /** Write helper for cohort scripts (optional). */

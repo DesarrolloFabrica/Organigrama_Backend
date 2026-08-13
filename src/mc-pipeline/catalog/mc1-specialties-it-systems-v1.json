@@ -1,0 +1,134 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.IT_SYSTEMS",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["IT_SYSTEMS"],
+  "note": "IT_SYSTEMS V1 foundation — specialties = stable IT operations practices: network infrastructure, service desk, systems administration, and operational security. Education credentials (ingeniero en telecomunicaciones, tecnólogo en sistemas, diplomado SQL/seguridad) are NOT experience. Tools (VMware, Hyper-V, Git, M365, Power BI, Azure Data, GLPI, IAM consoles) are never specialties. SOFTWARE_ENGINEERING = build/maintain software. DATA_ANALYTICS = analyze data for decision. Isolated tool usage ≠ IT practice. Vendor/SLA and availability appear as radar dimensions when skill-backed.",
+  "fieldBoundaryNote": "IT_SYSTEMS = operate, support and keep reliable information systems (networks, servers, helpdesk, operational security). SOFTWARE_ENGINEERING = design/build/test software. DATA_ANALYTICS = quantitative evidence for decision (incl. Power BI/Azure Data as analytics tools). FINANCE_ADMIN = admin-finance processes, not IT ops. EDUCATION = teaching/academic ops, not running institutional IT. PROJECT_PROGRAM_MGMT = coordinate initiatives, not day-to-day IT operations. MULTI_FIELD is legitimate (e.g. DA primary + IT secondary).",
+  "specialties": [
+    {
+      "code": "NETWORK_INFRASTRUCTURE",
+      "name": "Infraestructura de red",
+      "parentField": "IT_SYSTEMS",
+      "definition": "Práctica de diseñar, administrar y operar redes e infraestructura de conectividad: LAN/WAN/VPN/wireless, routers, switches y monitoreo de red.",
+      "positiveSignals": [
+        "administración, diseño o planificación de redes LAN, WAN, VPN, wireless o WIFI",
+        "configuración y monitoreo de routers, switches u otros dispositivos de red",
+        "actualizaciones tecnológicas de redes y telecomunicaciones para continuidad operativa"
+      ],
+      "exclusions": [
+        "solo título de ingeniería en telecomunicaciones o sistemas sin práctica de red (educación ≠ experiencia)",
+        "solo listar VPN/M365/Azure como herramienta de usuario (tool usage ≠ práctica IT)",
+        "solo desarrollo de software o automatización low-code (ver SOFTWARE_ENGINEERING / DATA_ANALYTICS)",
+        "solo mesa de ayuda ofimática sin operación de red (ver IT_SERVICE_DESK)"
+      ]
+    },
+    {
+      "code": "IT_SERVICE_DESK",
+      "name": "Mesa de ayuda y soporte TI",
+      "parentField": "IT_SYSTEMS",
+      "definition": "Práctica de soporte operativo a usuarios y servicios TI: mesa de ayuda, ANS/SLA, incidentes de conectividad y soporte especializado de infraestructura para continuidad.",
+      "positiveSignals": [
+        "mesa de ayuda con ANS/SLA o soporte ofimático/VPN a usuarios",
+        "soporte técnico especializado en infraestructura de TI para continuidad de servicios críticos",
+        "atención o reducción de incidentes de conectividad con proveedores o usuarios"
+      ],
+      "exclusions": [
+        "solo listar GLPI, Moodle u otras plataformas sin práctica de soporte/incidentes",
+        "solo servicio al cliente comercial o PQRS no-TI (ver CUSTOMER_SUCCESS)",
+        "solo administración de servidores/AD sin canal de soporte (ver SYSTEMS_ADMINISTRATION)",
+        "solo conocimiento de herramientas de colaboración (M365/Git) sin mesa de ayuda"
+      ]
+    },
+    {
+      "code": "SYSTEMS_ADMINISTRATION",
+      "name": "Administración de sistemas",
+      "parentField": "IT_SYSTEMS",
+      "definition": "Práctica de instalar, configurar y mantener sistemas: servidores físicos/virtuales, sistemas operativos, directorio, virtualización y mantenimiento preventivo/correctivo.",
+      "positiveSignals": [
+        "instalación, configuración o mantenimiento de servidores físicos y virtuales",
+        "administración de sistemas operativos (Windows Server, Linux) o Active Directory",
+        "gestión de plataformas de virtualización (p. ej. VMware, Hyper-V) o mantenimiento preventivo/correctivo de infra TI"
+      ],
+      "exclusions": [
+        "solo diplomado o título en bases de datos/sistemas sin administración real (educación ≠ experiencia)",
+        "solo usar Power BI / Power Platform / low-code (ver DATA_ANALYTICS / SE)",
+        "solo desarrollo .NET/Java/Python (ver SOFTWARE_ENGINEERING)",
+        "solo inventariar equipos sin administrar sistemas (radar endpoints; no specialty si no hay práctica de sysadmin)"
+      ]
+    },
+    {
+      "code": "IT_SECURITY_OPERATIONS",
+      "name": "Seguridad operativa de TI",
+      "parentField": "IT_SYSTEMS",
+      "definition": "Práctica de proteger y endurecer la operación TI: seguridad perimetral, firewalls, parches, respaldos y políticas operativas de seguridad.",
+      "positiveSignals": [
+        "implementación de medidas de seguridad perimetral o gestión de firewalls",
+        "aplicación de parches de seguridad y políticas de respaldo (backups)",
+        "aseguramiento operativo de sistemas en producción (no solo política IAM teórica)"
+      ],
+      "exclusions": [
+        "solo especialización/diplomado en seguridad de la información sin práctica operativa",
+        "solo conocimiento IAM/cloud sin implementación (conocimiento ≠ práctica)",
+        "solo configurar roles en GLPI/LMS (ticketing académico ≠ security ops)",
+        "solo listar Azure/M365 como usuario (tool usage ≠ práctica IT)"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "NETWORK_ADMIN": "NETWORK_INFRASTRUCTURE",
+    "NETWORKING": "NETWORK_INFRASTRUCTURE",
+    "TELECOM_INFRASTRUCTURE": "NETWORK_INFRASTRUCTURE",
+    "HELP_DESK": "IT_SERVICE_DESK",
+    "SERVICE_DESK": "IT_SERVICE_DESK",
+    "IT_SUPPORT": "IT_SERVICE_DESK",
+    "SYSADMIN": "SYSTEMS_ADMINISTRATION",
+    "SYSTEM_ADMIN": "SYSTEMS_ADMINISTRATION",
+    "SERVER_ADMINISTRATION": "SYSTEMS_ADMINISTRATION",
+    "IT_SECURITY": "IT_SECURITY_OPERATIONS",
+    "CYBERSECURITY_OPS": "IT_SECURITY_OPERATIONS",
+    "INFOSEC_OPS": "IT_SECURITY_OPERATIONS"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "CLOUD_INFRASTRUCTURE",
+      "parentSpecialty": "SYSTEMS_ADMINISTRATION",
+      "parentField": "IT_SYSTEMS",
+      "note": "Azure/cloud fundamentals appeared as tooling/knowledge only in foundation cohort; not specialty V1"
+    },
+    {
+      "code": "IT_ASSET_INVENTORY",
+      "parentSpecialty": "SYSTEMS_ADMINISTRATION",
+      "parentField": "IT_SYSTEMS",
+      "note": "Endpoint/inventory practice is radar IT_ENDPOINTS_ASSETS; not a separate V1 specialty"
+    },
+    {
+      "code": "IDENTITY_ACCESS_MANAGEMENT",
+      "parentSpecialty": "IT_SECURITY_OPERATIONS",
+      "parentField": "IT_SYSTEMS",
+      "note": "IAM appeared as knowledge-only (Karolina); deferred until operational IAM practice is evidenced"
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "DBA_SQL_SERVER",
+      "reason": "Education/diplomado signal only — not recurrent IT ops practice"
+    },
+    {
+      "code": "M365_ADMIN",
+      "reason": "Tool identity rejected"
+    },
+    {
+      "code": "GLPI_SPECIALIST",
+      "reason": "Tool-only ticketing without IT ops practice"
+    },
+    {
+      "code": "LOW_CODE_AUTOMATION",
+      "reason": "Belongs to DATA_ANALYTICS / SE tooling, not IT_SYSTEMS"
+    },
+    {
+      "code": "TELECOM_ENGINEER",
+      "reason": "Role/education label — not a transferable practice specialty"
+    }
+  ]
+}

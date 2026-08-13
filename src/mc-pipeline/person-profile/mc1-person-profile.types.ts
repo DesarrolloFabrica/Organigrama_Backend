@@ -10,7 +10,7 @@ export type Mc1PersonProfileReadStatus =
 
 export type Mc1PersonCompetenciesPresentationDto = {
   status: 'AVAILABLE';
-  source: 'ARTIFACT_ONLY_LOCAL';
+  source: 'ARTIFACT_ONLY_LOCAL' | 'CLOUD_PRESENTATION_STORE';
   fields: Array<{
     code: string;
     label: string;

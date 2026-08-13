@@ -3,6 +3,10 @@
  *
  *   npx ts-node --transpile-only scripts/mc1-software-cohort-9e.ts --confirm
  *   npx ts-node --transpile-only scripts/mc1-software-cohort-9e.ts --confirm --only=person-zuany
+ *   npx ts-node --transpile-only scripts/mc1-software-cohort-9e.ts --confirm --force-live-ai
+ *
+ * --force-live-ai (validación local 11D.1): desactiva reuseProfileOnly y fuerza P1 LIVE
+ * sin cambiar la semántica productiva por defecto.
  *
  * Role/hierarchy used only to select candidates externally — never as pipeline evidence.
  * Reports use caseId only (no documents/PII).
@@ -40,6 +44,12 @@ const BINDINGS_PATH = resolve(
   'tmp',
   'mc1-profile-preview',
   'real-person-bindings.json',
+);
+const INDEX_PATH = resolve(
+  ROOT,
+  'tmp',
+  'mc1-profile-preview',
+  'person-snapshot-index.json',
 );
 const REPORT_PATH = resolve(
   ROOT,
@@ -96,6 +106,31 @@ function writeBinding(caseId: string, snapshotId: string) {
     boundAt: new Date().toISOString(),
   };
   writeFileSync(BINDINGS_PATH, JSON.stringify(current, null, 2), 'utf8');
+}
+
+function writePersonSnapshotIndex(
+  personId: string | number,
+  snapshotId: string,
+  caseId: string,
+) {
+  mkdirSync(resolve(ROOT, 'tmp', 'mc1-profile-preview'), { recursive: true });
+  let current: Record<
+    string,
+    { snapshotId: string; caseId?: string; boundAt?: string }
+  > = {};
+  if (existsSync(INDEX_PATH)) {
+    try {
+      current = JSON.parse(readFileSync(INDEX_PATH, 'utf8'));
+    } catch {
+      current = {};
+    }
+  }
+  current[String(personId)] = {
+    snapshotId: String(snapshotId),
+    caseId,
+    boundAt: new Date().toISOString(),
+  };
+  writeFileSync(INDEX_PATH, JSON.stringify(current, null, 2), 'utf8');
 }
 
 function summarizeProfile(envelope: ProfilePilotEnvelope) {
@@ -194,6 +229,7 @@ async function processCase(args: {
   caseId: string;
   document: string;
   reuseProfileOnly?: boolean;
+  forceLiveAi?: boolean;
   gem: Record<string, string>;
   mde: {
     host: string;
@@ -203,9 +239,9 @@ async function processCase(args: {
     password: string;
   };
 }): Promise<Record<string, unknown>> {
-  const { caseId, document, reuseProfileOnly, gem, mde } = args;
+  const { caseId, document, reuseProfileOnly, forceLiveAi, gem, mde } = args;
 
-  if (reuseProfileOnly) {
+  if (reuseProfileOnly && !forceLiveAi) {
     const best = findBestValidProfilePack(ROOT, '8');
     if (!best) {
       return {
@@ -263,13 +299,14 @@ async function processCase(args: {
     await dsP0.destroy();
     return { caseId, status: 'PROCESSING_ERROR', error: 'PERSON_CV_NOT_FOUND' };
   }
+  const personId = String(row.person_id);
   const personCvId = Number(row.person_cv_id);
   let snapshotId = row.ready_snapshot_id ? String(row.ready_snapshot_id) : null;
-  let p0Origin: string = 'REUSED_EXISTING_PARSED';
+  let p0Origin: string = 'REUSED_VALID';
   if (!snapshotId) {
     const result = await p0.createOrReuseFromPersonCv(personCvId);
     snapshotId = String(result.snapshotId);
-    p0Origin = result.outcome === 'CREATED' ? 'CREATED' : 'REUSED_P0';
+    p0Origin = result.outcome === 'CREATED' ? 'CREATED' : 'REUSED_VALID';
   }
   await dsP0.destroy();
 
@@ -286,10 +323,13 @@ async function processCase(args: {
   await ds.initialize();
 
   try {
-    let p1Dir = resolveCohortArtifactDir(ROOT, snapshotId!);
+    let p1Dir =
+      forceLiveAi ? null : resolveCohortArtifactDir(ROOT, snapshotId!);
     let p1Origin = 'REUSED';
+    let p1GeminiInvoked = false;
+    let p1Stats: Record<string, unknown> = {};
     if (!p1Dir || !packHasDecisions(p1Dir)) {
-      if (p1Dir && !packHasDecisions(p1Dir)) {
+      if (p1Dir && !packHasDecisions(p1Dir) && !forceLiveAi) {
         await ensureDecisionsJson(p1Dir);
         p1Origin = 'REUSED_DECISIONS_FIXED';
       } else {
@@ -315,7 +355,9 @@ async function processCase(args: {
           JSON.stringify(
             {
               classification: 'CONFIDENTIAL',
-              operationType: 'P1_9E_SOFTWARE_COHORT',
+              operationType: forceLiveAi
+                ? 'P1_11D1_SOFTWARE_LIVE'
+                : 'P1_9E_SOFTWARE_COHORT',
               prototypeId,
               snapshotId: String(snapshotId),
               contractVersion: '2.0.0',
@@ -325,6 +367,7 @@ async function processCase(args: {
               modelVersion: gem.GEMINI_MODEL || 'gemini-3.6-flash',
               startedAt: new Date().toISOString(),
               persistence: 'NONE',
+              resultOrigin: 'LIVE',
             },
             null,
             2,
@@ -376,7 +419,25 @@ async function processCase(args: {
           'utf8',
         );
         p1Dir = outDir;
-        p1Origin = 'CREATED';
+        p1Origin = 'LIVE';
+        p1GeminiInvoked = true;
+        const units = p1Result.units ?? [];
+        p1Stats = {
+          candidates: p1Result.candidateCount ?? decisions.length,
+          evidenceUnits: units.length,
+          explicit: units.filter((u) => u.explicitness === 'EXPLICIT').length,
+          stronglySupported: units.filter(
+            (u) => u.explicitness === 'STRONGLY_SUPPORTED',
+          ).length,
+          batches: p1Result.batchCount ?? batchesFile.batches.length,
+          reviewRequired: decisions.filter(
+            (d) => d.decision === 'REVIEW_REQUIRED',
+          ).length,
+          resultOrigin: 'LIVE',
+          model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
+          executionId: prototypeId,
+          geminiInvoked: true,
+        };
       }
     }
 
@@ -400,10 +461,13 @@ async function processCase(args: {
 
     let p3Origin: string = 'SKIPPED_NO_SOFTWARE_FIELD';
     let p3Pack: string | null = null;
-    let p3Observed: string[] = [];
-    let p3Weak: string[] = [];
+    let p3Observed: Array<{ specialtyCode: string; confidence?: number }> = [];
+    let p3Weak: Array<{ specialtyCode: string; confidence?: number }> = [];
+    let p3GeminiInvoked = false;
     let p4Origin = 'SKIPPED';
     let p4Pack: string | null = null;
+    let p4GeminiInvoked = false;
+    let p4Summary: unknown = null;
     let profilePack: string | null = null;
     let profileSummary: ReturnType<typeof summarizeProfile> | null = null;
 
@@ -425,12 +489,23 @@ async function processCase(args: {
         outRoot: resolve(ROOT, 'tmp', 'mc1-p3-functional'),
         r1PackDir: r1.outDir,
       });
-      p3Origin = 'CREATED';
+      p3Origin = 'LIVE';
       p3Pack = p3.outDir;
+      p3GeminiInvoked = !!p3.geminiInvoked;
       for (const fr of p3.envelope.payload.fieldResults ?? []) {
         for (const s of fr.observedSpecialties ?? []) {
-          if (s.status === 'OBSERVED') p3Observed.push(s.specialtyCode);
-          if (s.status === 'WEAK') p3Weak.push(s.specialtyCode);
+          if (s.status === 'OBSERVED') {
+            p3Observed.push({
+              specialtyCode: s.specialtyCode,
+              confidence: s.confidence,
+            });
+          }
+          if (s.status === 'WEAK') {
+            p3Weak.push({
+              specialtyCode: s.specialtyCode,
+              confidence: s.confidence,
+            });
+          }
         }
       }
 
@@ -445,9 +520,26 @@ async function processCase(args: {
         p3PackDir: p3.outDir,
       });
       p4Origin = p3Observed.length
-        ? 'CREATED'
+        ? 'LIVE'
         : 'ABSTAINED_NO_OBSERVED_SPECIALTY';
       p4Pack = p4.outDir;
+      p4GeminiInvoked = !!p4.geminiInvoked;
+      p4Summary = (p4.envelope.payload.specialtyResults ?? []).map((sr) => ({
+        specialtyCode: sr.specialtyCode,
+        skillsObserved: (sr.observedSkills ?? [])
+          .filter((sk) => sk.status === 'OBSERVED')
+          .map((sk) => sk.skillCode || sk.name),
+        skillsWeak: (sr.observedSkills ?? [])
+          .filter((sk) => sk.status === 'WEAK')
+          .map((sk) => sk.skillCode || sk.name),
+        tools: [
+          ...new Set(
+            (sr.observedSkills ?? []).flatMap(
+              (sk) => sk.toolOrTechnologySignals ?? [],
+            ),
+          ),
+        ],
+      }));
 
       const profile = await runProfilePilot({
         backendRoot: ROOT,
@@ -471,8 +563,9 @@ async function processCase(args: {
         outRoot: resolve(ROOT, 'tmp', 'mc1-p3-functional'),
         r1PackDir: r1.outDir,
       });
-      p3Origin = 'CREATED_ABSTAIN_OR_OUT_OF_SCOPE';
+      p3Origin = 'LIVE_ABSTAIN_OR_OUT_OF_SCOPE';
       p3Pack = p3.outDir;
+      p3GeminiInvoked = !!p3.geminiInvoked;
       const p4 = await runP4ArtifactOnly({
         backendRoot: ROOT,
         snapshotId: String(snapshotId),
@@ -485,6 +578,7 @@ async function processCase(args: {
       });
       p4Origin = 'ABSTAINED';
       p4Pack = p4.outDir;
+      p4GeminiInvoked = !!p4.geminiInvoked;
       const profile = await runProfilePilot({
         backendRoot: ROOT,
         snapshotId: String(snapshotId),
@@ -499,18 +593,28 @@ async function processCase(args: {
     }
 
     writeBinding(caseId, String(snapshotId));
+    writePersonSnapshotIndex(personId, String(snapshotId), caseId);
 
     return {
       caseId,
       status: 'DONE',
+      personId,
       personCvId,
       snapshotId,
       softwareFieldResolved: hasSe,
       p0: p0Origin,
-      p1: { origin: p1Origin, packDir: p1Dir },
+      p1: {
+        origin: p1Origin,
+        packDir: p1Dir,
+        geminiInvoked: p1GeminiInvoked,
+        resultOrigin: p1GeminiInvoked ? 'LIVE' : p1Origin,
+        ...p1Stats,
+      },
       p2: {
-        origin: 'CREATED',
+        origin: 'LIVE',
         packDir: p2.outDir,
+        geminiInvoked: !!p2.geminiInvoked,
+        resultOrigin: p2.geminiInvoked ? 'LIVE' : 'NONE',
         candidates: p2.envelope.payload.domainCandidates.map((c) => ({
           domainCode: c.domainCode,
           status: c.candidateStatus,
@@ -533,8 +637,16 @@ async function processCase(args: {
         packDir: p3Pack,
         observed: p3Observed,
         weak: p3Weak,
+        geminiInvoked: p3GeminiInvoked,
+        resultOrigin: p3GeminiInvoked ? 'LIVE' : p3Origin,
       },
-      p4: { origin: p4Origin, packDir: p4Pack },
+      p4: {
+        origin: p4Origin,
+        packDir: p4Pack,
+        geminiInvoked: p4GeminiInvoked,
+        resultOrigin: p4GeminiInvoked ? 'LIVE' : p4Origin,
+        specialtyResults: p4Summary,
+      },
       profile: profileSummary,
       packDir: profilePack,
     };
@@ -559,6 +671,7 @@ async function main() {
     ?.split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+  const forceLiveAi = process.argv.includes('--force-live-ai');
 
   for (const k of Object.keys(process.env)) {
     if (k.startsWith('DB_') || k.startsWith('DATABASE_')) delete process.env[k];
@@ -600,6 +713,7 @@ async function main() {
         caseId: c.caseId,
         document: c.document,
         reuseProfileOnly: c.reuseProfileOnly,
+        forceLiveAi,
         gem,
         mde,
       });
@@ -624,10 +738,12 @@ async function main() {
     recursive: true,
   });
   const report = {
-    phase: '9E',
-    mode: 'ARTIFACT_ONLY',
+    phase: forceLiveAi ? '11D.1' : '9E',
+    mode: forceLiveAi ? 'LIVE_GEMINI' : 'ARTIFACT_ONLY',
+    forceLiveAi,
     status: 'DONE',
     specialtyCatalogVersion: '1.4.0',
+    model: gem.GEMINI_MODEL || 'gemini-3.6-flash',
     results,
   };
   writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2), 'utf8');

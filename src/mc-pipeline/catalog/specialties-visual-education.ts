@@ -6,13 +6,19 @@
  * - SOFTWARE_ENGINEERING: 1.0.0 ACTIVE (9C foundation)
  * - AUDIOVISUAL_PRODUCTION: 1.0.0 ACTIVE (10B foundation)
  * - COMMUNICATIONS: 1.0.0 ACTIVE (11B foundation)
- * Versión activa unificada para fingerprint P3: 1.6.0
+ * - DATA_ANALYTICS: 1.0.0 ACTIVE (DA foundation)
+ * - DIGITAL_MARKETING: 1.0.0 ACTIVE (DM foundation)
+ * - CUSTOMER_SUCCESS: 1.0.0 ACTIVE (CS foundation)
+ * - PEOPLE_HR: 1.0.0 ACTIVE (HR foundation)
+ * - IT_SYSTEMS: 1.0.0 ACTIVE (IT ops foundation)
+ * - LEGAL: 1.0.0 ACTIVE (LEGAL foundation)
+ * Versión activa unificada para fingerprint P3: 1.12.0
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 /** Versión activa del catálogo unificado consumido por P3/P4/profile. */
-export const SPECIALTY_CATALOG_VERSION = '1.6.0';
+export const SPECIALTY_CATALOG_VERSION = '1.12.0';
 export const SPECIALTY_CATALOG_STATUS = 'ACTIVE' as const;
 export const SPECIALTY_CATALOG_CODE = 'MC1.SPECIALTY_CATALOG' as const;
 
@@ -22,6 +28,12 @@ export const SPECIALTY_CATALOG_FA_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_SE_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_AV_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_COMM_VERSION = '1.0.0';
+export const SPECIALTY_CATALOG_DA_VERSION = '1.0.0';
+export const SPECIALTY_CATALOG_DM_VERSION = '1.0.0';
+export const SPECIALTY_CATALOG_CS_VERSION = '1.0.0';
+export const SPECIALTY_CATALOG_HR_VERSION = '1.0.0';
+export const SPECIALTY_CATALOG_IT_VERSION = '1.0.0';
+export const SPECIALTY_CATALOG_LEGAL_VERSION = '1.0.0';
 
 export type SpecialtyEntry = {
   code: string;
@@ -75,6 +87,12 @@ const fa = loadCatalog('mc1-specialties-finance-admin-v1.json');
 const se = loadCatalog('mc1-specialties-software-engineering-v1.json');
 const av = loadCatalog('mc1-specialties-audiovisual-production-v1.json');
 const comm = loadCatalog('mc1-specialties-communications-v1.json');
+const da = loadCatalog('mc1-specialties-data-analytics-v1.json');
+const dm = loadCatalog('mc1-specialties-digital-marketing-v1.json');
+const cs = loadCatalog('mc1-specialties-customer-success-v1.json');
+const hr = loadCatalog('mc1-specialties-people-hr-v1.json');
+const it = loadCatalog('mc1-specialties-it-systems-v1.json');
+const legal = loadCatalog('mc1-specialties-legal-v1.json');
 
 export const SPECIALTY_CATALOG_SCOPE = new Set([
   ...ve.scope,
@@ -83,6 +101,12 @@ export const SPECIALTY_CATALOG_SCOPE = new Set([
   ...se.scope,
   ...av.scope,
   ...comm.scope,
+  ...da.scope,
+  ...dm.scope,
+  ...cs.scope,
+  ...hr.scope,
+  ...it.scope,
+  ...legal.scope,
 ]);
 
 export const SPECIALTIES: SpecialtyEntry[] = [
@@ -92,6 +116,12 @@ export const SPECIALTIES: SpecialtyEntry[] = [
   ...se.specialties,
   ...av.specialties,
   ...comm.specialties,
+  ...da.specialties,
+  ...dm.specialties,
+  ...cs.specialties,
+  ...hr.specialties,
+  ...it.specialties,
+  ...legal.specialties,
 ];
 
 export const SPECIALTY_BY_CODE = new Map(
@@ -105,6 +135,12 @@ export const RESERVED_FUTURE_SKILLS: ReservedFutureSkill[] = [
   ...(se.reservedFutureSkills ?? []),
   ...(av.reservedFutureSkills ?? []),
   ...(comm.reservedFutureSkills ?? []),
+  ...(da.reservedFutureSkills ?? []),
+  ...(dm.reservedFutureSkills ?? []),
+  ...(cs.reservedFutureSkills ?? []),
+  ...(hr.reservedFutureSkills ?? []),
+  ...(it.reservedFutureSkills ?? []),
+  ...(legal.reservedFutureSkills ?? []),
 ];
 
 export const RESERVED_FUTURE_SKILL_CODES = new Set(
@@ -118,6 +154,12 @@ const LEGACY_ALIAS: Record<string, string> = {
   ...(se.legacySpecialtyAliasesToSpecialty ?? {}),
   ...(av.legacySpecialtyAliasesToSpecialty ?? {}),
   ...(comm.legacySpecialtyAliasesToSpecialty ?? {}),
+  ...(da.legacySpecialtyAliasesToSpecialty ?? {}),
+  ...(dm.legacySpecialtyAliasesToSpecialty ?? {}),
+  ...(cs.legacySpecialtyAliasesToSpecialty ?? {}),
+  ...(hr.legacySpecialtyAliasesToSpecialty ?? {}),
+  ...(it.legacySpecialtyAliasesToSpecialty ?? {}),
+  ...(legal.legacySpecialtyAliasesToSpecialty ?? {}),
 };
 
 export function isKnownSpecialtyCode(code: string | null | undefined): boolean {

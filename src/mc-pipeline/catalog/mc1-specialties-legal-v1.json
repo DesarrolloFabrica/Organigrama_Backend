@@ -1,0 +1,144 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.LEGAL",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["LEGAL"],
+  "note": "LEGAL V1 foundation — specialties = stable legal practice identities. Lawyer title, professional card, law degree, courses/diplomas, law names (Ley 80/1150), SECOP, Colombia Compra Eficiente, generic 'jurídico', belonging to a legal team, teaching law, Moodle, generic admin/contract management, procurement, customer service are NOT specialties. Requires ACTION/RESPONSIBILITY-level practice or equivalent dense cluster.",
+  "fieldBoundaryNote": "LEGAL = professional exercise of law (advisory, legal documents, administrative law, public contracting as legal practice, litigation/procedure). FINANCE_ADMIN = admin-finance/procurement operations, not legal drafting of pliegos/minutas. PROJECT_PROGRAM_MGMT = coordinate initiatives, not legal counsel. EDUCATION = teach law / academic ops, not independent legal practice. PEOPLE_HR = workforce admin; labor demands are litigation not HR. CUSTOMER_SUCCESS = user/client care, not legal advisory.",
+  "specialties": [
+    {
+      "code": "LEGAL_ADVISORY",
+      "name": "Asesoría jurídica",
+      "parentField": "LEGAL",
+      "definition": "Práctica de asesoría jurídica sobre materias de derecho, interpretación jurídica aplicada y acompañamiento profesional a personas naturales o jurídicas.",
+      "positiveSignals": [
+        "asesoría jurídica especializada en materias de derecho",
+        "asesoría legal a personas naturales y jurídicas con materia penal, civil, comercial o laboral",
+        "abogado litigante o asesor legal independiente con práctica demostrada"
+      ],
+      "exclusions": [
+        "solo título de abogado o tarjeta profesional sin práctica",
+        "solo conocimiento de áreas del derecho sin ejercicio (knowledge-only)",
+        "atención al cliente o PQRS no jurídicos (ver CUSTOMER_SUCCESS)",
+        "gestión de personas o nómina (ver PEOPLE_HR)",
+        "docencia de legislación o derecho (ver EDUCATION)"
+      ]
+    },
+    {
+      "code": "LEGAL_DOCUMENT_DRAFTING",
+      "name": "Documentación jurídica",
+      "parentField": "LEGAL",
+      "definition": "Elaboración, revisión o estructuración de documentos cuyo contenido y finalidad son jurídicos.",
+      "positiveSignals": [
+        "elaboración de conceptos jurídicos, actos administrativos y documentos estratégicos",
+        "estructuración jurídica de pliegos y minutas contractuales",
+        "redacción o contestación de demandas y escritos procesales"
+      ],
+      "exclusions": [
+        "redacción administrativa genérica sin objeto jurídico demostrable",
+        "diseño curricular o sílabos (ver EDUCATION)",
+        "gestión documental operativa sin contenido jurídico",
+        "solo listar herramientas (SECOP, Word) sin práctica documental jurídica"
+      ]
+    },
+    {
+      "code": "PUBLIC_SECTOR_CONTRACTING",
+      "name": "Contratación estatal",
+      "parentField": "LEGAL",
+      "definition": "Práctica jurídica aplicada a procesos de contratación pública, incluyendo estructuración y acompañamiento jurídico contractual en entidades públicas.",
+      "positiveSignals": [
+        "acompañamiento legal en etapas precontractual, contractual y postcontractual",
+        "coordinación operativa y legal de procesos precontractuales y contractuales",
+        "control documental y auditoría jurídica a expedientes contractuales",
+        "estructuración jurídica de pliegos y minutas en contratación estatal"
+      ],
+      "exclusions": [
+        "solo mencionar SECOP o Colombia Compra Eficiente como herramienta",
+        "solo Ley 80 / Ley 1150 en lista de conocimientos sin práctica contractual",
+        "compras/procurement administrativo sin marco jurídico (ver FINANCE_ADMIN)",
+        "gestión de proyecto de contratación sin práctica jurídica (ver PROJECT_PROGRAM_MGMT)"
+      ]
+    },
+    {
+      "code": "ADMINISTRATIVE_LAW",
+      "name": "Derecho administrativo y normativo",
+      "parentField": "LEGAL",
+      "definition": "Actos administrativos, conceptos jurídicos, análisis normativo, cumplimiento y práctica de derecho administrativo.",
+      "positiveSignals": [
+        "elaboración de actos administrativos y conceptos jurídicos",
+        "análisis normativo de riesgos y cumplimiento normativo en entidades públicas",
+        "asesoría jurídica en derecho administrativo"
+      ],
+      "exclusions": [
+        "solo especialización en derecho administrativo sin práctica",
+        "gestión administrativa académica o de programas (ver EDUCATION)",
+        "MIPG/PQRS como gestión operativa sin práctica jurídica demostrada",
+        "solo Ley 80/1150 como keyword"
+      ]
+    },
+    {
+      "code": "LITIGATION_DISPUTES",
+      "name": "Litigio y procedimientos jurídicos",
+      "parentField": "LEGAL",
+      "definition": "Demandas, contestaciones, representación, seguimiento procesal y actuaciones jurídicas en procedimientos o controversias.",
+      "positiveSignals": [
+        "abogada litigante independiente en diversas áreas del derecho",
+        "realización de demandas laborales y contestación de demandas",
+        "seguimiento de procesos jurídicos y representación legal independiente",
+        "trámites notariales con representación legal"
+      ],
+      "exclusions": [
+        "solo título de abogado",
+        "docencia de legislación laboral/comercial (ver EDUCATION)",
+        "gestión de talento o relaciones laborales administrativas (ver PEOPLE_HR)",
+        "atención al usuario/cliente (ver CUSTOMER_SUCCESS)"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "LEGAL_COUNSEL": "LEGAL_ADVISORY",
+    "LEGAL_ADVICE": "LEGAL_ADVISORY",
+    "LEGAL_CONSULTING": "LEGAL_ADVISORY",
+    "LEGAL_DRAFTING": "LEGAL_DOCUMENT_DRAFTING",
+    "LEGAL_WRITING": "LEGAL_DOCUMENT_DRAFTING",
+    "PUBLIC_CONTRACTING": "PUBLIC_SECTOR_CONTRACTING",
+    "STATE_CONTRACTING": "PUBLIC_SECTOR_CONTRACTING",
+    "GOVERNMENT_CONTRACTING": "PUBLIC_SECTOR_CONTRACTING",
+    "ADMINISTRATIVE_LAW_PRACTICE": "ADMINISTRATIVE_LAW",
+    "LITIGATION": "LITIGATION_DISPUTES",
+    "DISPUTE_RESOLUTION": "LITIGATION_DISPUTES",
+    "LEGAL_PROCEDURE": "LITIGATION_DISPUTES"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "NOTARIAL_PROCEDURES",
+      "parentSpecialty": "LITIGATION_DISPUTES",
+      "parentField": "LEGAL",
+      "note": "Notarial practice may expand as separate skill cluster; V1 covered under LITIGATION_DISPUTES when representation present"
+    },
+    {
+      "code": "TAX_LAW",
+      "parentSpecialty": "LEGAL_ADVISORY",
+      "parentField": "LEGAL",
+      "note": "Tax law knowledge appeared thin (knowledge-only); deferred until dense practice evidenced"
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "SECOP_OPERATOR",
+      "reason": "Tool/platform usage without legal contracting practice"
+    },
+    {
+      "code": "LAW_DEGREE",
+      "reason": "Education credential — not a specialty"
+    },
+    {
+      "code": "LEGAL_TEAM_MEMBER",
+      "reason": "Organizational context without demonstrated legal practice"
+    },
+    {
+      "code": "CONTRACT_ADMIN",
+      "reason": "Operational contract management — FINANCE_ADMIN / PPM, not LEGAL"
+    }
+  ]
+}

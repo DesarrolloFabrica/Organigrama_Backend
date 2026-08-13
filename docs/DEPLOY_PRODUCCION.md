@@ -75,6 +75,15 @@ En Cloud Run el JSON OAuth **no** va en la imagen ni como variable con el conten
 
 El streaming de presentación (`GET …/video` + `…/video/stream`) usa `drive_file_id` ya persistido en `organigrama.person_video`. **No** requiere Folder ID de videos en runtime.
 
+Aplicado / verificado (2026-08-12 — 3er slice MC1 + búsqueda por dominio/skills):
+
+- Tag: `20260812-101519`
+- Backend: `organigrama-backend-00095-5ss` (100 %; imagen `…/organigrama-backend:20260812-101519`)
+- Frontend: `organigrama-frontend-00046-6bh` (100 %; imagen `…/organigrama-frontend:20260812-101519`)
+- Import: **8** perfiles Aura (128 → **136** activos); held Laura 1109 + 3 taxonomy
+- Nuevo: `GET /api/org-chart/competency-people-search` · FE chunk `competency-explorer-BgSSM1YQ.js`
+- Smoke: BE/FE 200 · search sin auth 401 · Aura 8/8 AVAILABLE · EDUCATION search total 82
+
 Aplicado / verificado (2026-08-05 — redeploy con cambios locales adicionales):
 
 - Tag: `20260805-124150`

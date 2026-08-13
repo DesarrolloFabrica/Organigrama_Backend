@@ -1,11 +1,13 @@
 /**
- * P4 Skill Discovery — tipos ARTIFACT_ONLY (FASE 8D).
+ * P4 Skill Discovery — tipos ARTIFACT_ONLY (FASE 8D → 12I WEAK routing).
  */
 export const P4_CONTRACT_CODE = 'MC1.P4.SKILL_DISCOVERY' as const;
-export const P4_CONTRACT_VERSION = '1.0.0' as const;
-export const P4_PROMPT_VERSION = 'MC1.P4.PROMPT.FUNCTIONAL.1.0.0' as const;
+export const P4_CONTRACT_VERSION = '1.1.0' as const;
+export const P4_PROMPT_VERSION = 'MC1.P4.PROMPT.FUNCTIONAL.1.1.0' as const;
 export const P4_REASONING_POLICY_VERSION = '8D.1' as const;
 export const P4_GENERATION_POLICY_VERSION = '8D.1' as const;
+/** FASE 12H/12I — política de routing WEAK sin promover publishability. */
+export const P4_ROUTING_POLICY_VERSION = '12H.1' as const;
 
 export type P4OutcomeStatus =
   | 'SKILLS_OBSERVED'
@@ -46,11 +48,31 @@ export type P4SpecialtyResult = {
   notes?: string;
 };
 
+/** AUTHORITATIVE = P3 OBSERVED; ROUTING_CANDIDATE = P3 WEAK (placement only). */
+export type P4EvaluationRole =
+  | 'AUTHORITATIVE_TARGET'
+  | 'ROUTING_CANDIDATE';
+
 export type P4SpecialtyEvaluated = {
   fieldCode: string;
   specialtyCode: string;
   p3Status: string;
   p3Confidence?: number;
+  evaluationRole: P4EvaluationRole;
+  routingEligible: boolean;
+  /** Mirror of P3 OBSERVED publishability — P4 must not treat as publication grant. */
+  publishableFromP3: boolean;
+};
+
+/** Hint only — never mutates P3 or authorizes publication (12I). */
+export type P4SpecialtyCorroborationHint = {
+  fieldCode: string;
+  specialtyCode: string;
+  p3Status: 'WEAK';
+  skillCode: string;
+  supportingEvidenceUnitIds: string[];
+  hintCode: 'SKILL_EVIDENCE_CORROBORATES_WEAK_SPECIALTY';
+  doesNotMutateP3: true;
 };
 
 export type P4ArtifactPayload = {
@@ -58,10 +80,12 @@ export type P4ArtifactPayload = {
   snapshotId: string;
   configFingerprint: string;
   specialtyCatalogVersion: string;
+  routingPolicyVersion?: typeof P4_ROUTING_POLICY_VERSION;
   r1FieldResolutionStatus: 'RESOLVED' | 'MULTI_FIELD' | 'UNRESOLVED';
   specialtiesEvaluated: P4SpecialtyEvaluated[];
   outcomeStatus: P4OutcomeStatus;
   specialtyResults: P4SpecialtyResult[];
+  specialtyCorroborationHints?: P4SpecialtyCorroborationHint[];
   r1Unchanged: true;
   p3Unchanged: true;
   r1PackDir?: string;
@@ -112,6 +136,22 @@ export type P4ModelRawOutput = {
     }>;
     notes?: string;
   }>;
+  specialtyCorroborationHints?: Array<{
+    fieldCode?: string;
+    specialtyCode?: string;
+    skillCode?: string;
+    supportingEvidenceUnitIds?: string[];
+  }>;
   outcomeStatus?: string;
   warnings?: string[];
 };
+
+export function hasAuthoritativeP4Target(
+  specialties: P4SpecialtyEvaluated[],
+): boolean {
+  return specialties.some(
+    (s) =>
+      s.evaluationRole === 'AUTHORITATIVE_TARGET' ||
+      (s.p3Status === 'OBSERVED' && s.publishableFromP3 !== false),
+  );
+}

@@ -31,14 +31,59 @@ function blobOf(s: SkillMappingInput): string {
     .toLowerCase();
 }
 
+/**
+ * Blob semántico para VISUAL_DESIGN → radar.
+ * Excluye tools: una tool no constituye evidencia de práctica profesional.
+ */
+function semanticBlobOf(s: SkillMappingInput): string {
+  return [s.skillCode, s.name, ...s.supportingSignals]
+    .join(' ')
+    .toLowerCase();
+}
+
+/** Práctica editorial (no maquetación aislada; no tools). */
+function matchesVisualDesignEditorial(b: string): boolean {
+  if (
+    /editorial|ebook|revista|folleto|\blibros?\b|diagramaci[oó]n|layout[\s_-]?editorial|editorial[\s_-]?(?:design|layout)/.test(
+      b,
+    )
+  ) {
+    return true;
+  }
+  // maquetación solo con contexto editorial / publicación impresa
+  if (
+    /maquetaci[oó]n\s+(?:editorial|de\s+(?:la\s+)?(?:revista|libro|ebook|publicaci[oó]n|folleto)|impres)/.test(
+      b,
+    )
+  ) {
+    return true;
+  }
+  // maquetación web / app / interfaz / pantalla → no editorial
+  return false;
+}
+
+/** Product UI por práctica UI/UX, no por substring accidental (/ui/ en guidelines|Suite). */
+function matchesVisualDesignProductUi(b: string): boolean {
+  return /\bui\b|ui[\s_-]?design|user[\s_-]?interface|interfaz|\bux\b|producto digital|design system|pantalla/.test(
+    b,
+  );
+}
+
+/** Motion Design — no video/audiovisual genérico ni NLEs. */
+function matchesVisualDesignMotion(b: string): boolean {
+  return /motion\s*graphics|motion\s*design|motion[\s_-]graphics|motion[\s_-]design|animaci[oó]n(?:\s+gr[aá]fica)?|gr[aá]ficos?\s+animados|kinetic\s+typograph/.test(
+    b,
+  );
+}
+
 function mapVisualDesign(s: SkillMappingInput): SkillDimensionMapping {
-  const b = blobOf(s);
+  const b = semanticBlobOf(s);
   const dims = new Set<string>();
   const reasons: string[] = [];
 
-  if (/editorial|maquet|ebook|revista|folleto|indesign/.test(b)) {
+  if (matchesVisualDesignEditorial(b)) {
     dims.add('VD_EDITORIAL');
-    reasons.push('señales editoriales/maquetación');
+    reasons.push('señales editoriales/diagramación/maquetación editorial');
   }
   if (
     /brand|identidad|identidad gr[aá]fica|l[ií]nea gr[aá]fica|branding/.test(
@@ -56,7 +101,7 @@ function mapVisualDesign(s: SkillMappingInput): SkillDimensionMapping {
     dims.add('VD_VISUAL_COMMUNICATION');
     reasons.push('señales de comunicación visual / piezas');
   }
-  if (/ui|interfaz|ux|producto digital|design system|pantalla/.test(b)) {
+  if (matchesVisualDesignProductUi(b)) {
     dims.add('VD_PRODUCT_INTERFACE');
     reasons.push('señales de interfaz/producto');
   }
@@ -64,9 +109,9 @@ function mapVisualDesign(s: SkillMappingInput): SkillDimensionMapping {
     dims.add('VD_ILLUSTRATION');
     reasons.push('señales de ilustración');
   }
-  if (/motion|animaci[oó]n|after effects|capcut|premiere/.test(b)) {
+  if (matchesVisualDesignMotion(b)) {
     dims.add('VD_MOTION');
-    reasons.push('señales de motion/video');
+    reasons.push('señales de motion design / animación gráfica');
   }
   if (
     /arte final|producci[oó]n|qa|calidad|export|preprensa/.test(b)
@@ -587,6 +632,512 @@ function mapCommunications(s: SkillMappingInput): SkillDimensionMapping {
   };
 }
 
+function mapDataAnalytics(s: SkillMappingInput): SkillDimensionMapping {
+  // Tools excluded from semantic blob — tools must not activate radar axes.
+  const b = semanticBlobOf(s);
+  const dims = new Set<string>();
+  const reasons: string[] = [];
+
+  if (
+    /etl|pipeline|transformaci[oó]n|ingesta|integraci[oó]n de datos|automatizaci[oó]n de (?:datos|flujos)|data[\s_-]?prep|consolidaci[oó]n de datos/.test(
+      b,
+    )
+  ) {
+    dims.add('DA_DATA_PIPELINE');
+    reasons.push('señales de pipeline/ETL/transformación');
+  }
+  if (
+    /repositorio|arquitectura(?:s)? de datos|esquema|data[\s_-]?platform|almacenamiento de datos|disponibilidad de (?:la )?informaci[oó]n|centraliz(?:ar|aci[oó]n) (?:de )?datos/.test(
+      b,
+    )
+  ) {
+    dims.add('DA_DATA_PLATFORM');
+    reasons.push('señales de plataforma/repositorio/esquema');
+  }
+  if (
+    /dashboard|tablero|reporting|business intelligence|\bbi\b|visualizaci[oó]n (?:de datos|anal[ií]tica|integral|ejecutiva)|kpi|monitoreo continuo|informe(?:s)? ejecutiv/.test(
+      b,
+    )
+  ) {
+    // Note: tool names in skill NAME/signals may appear; tools array is excluded via semanticBlobOf.
+    dims.add('DA_BUSINESS_REPORTING');
+    reasons.push('señales de reporting/BI/tableros');
+  }
+  if (
+    /predictiv|modelo(?:s)? predictiv|machine learning|\bml\b|lightgbm|[aá]rbol(?:es)? de decisi[oó]n|ciencia de datos|data science/.test(
+      b,
+    )
+  ) {
+    dims.add('DA_PREDICTIVE_MODELING');
+    reasons.push('señales de modelado predictivo/ML');
+  }
+  if (
+    /gobernanza|gobierno de datos|integridad|trazabilidad|calidad de datos|data[\s_-]?quality|data[\s_-]?governance/.test(
+      b,
+    )
+  ) {
+    dims.add('DA_GOVERNANCE_QUALITY');
+    reasons.push('señales de gobernanza/calidad');
+  }
+  if (
+    /toma de decisiones|decisiones anal[ií]ticas|lectura estrat[eé]gica|insights?|alertas de riesgo|habilitaci[oó]n de decisi[oó]n|soporte anal[ií]tico|indicadores/.test(
+      b,
+    )
+  ) {
+    dims.add('DA_DECISION_ENABLEMENT');
+    reasons.push('señales de habilitación de decisión/insights');
+  }
+
+  if (dims.size === 0) {
+    if (s.parentSpecialtyCode === 'BUSINESS_INTELLIGENCE') {
+      dims.add('DA_BUSINESS_REPORTING');
+      reasons.push('fallback specialty BUSINESS_INTELLIGENCE');
+    } else if (s.parentSpecialtyCode === 'DATA_ENGINEERING') {
+      dims.add('DA_DATA_PIPELINE');
+      reasons.push('fallback specialty DATA_ENGINEERING');
+    } else if (s.parentSpecialtyCode === 'PREDICTIVE_ANALYTICS') {
+      dims.add('DA_PREDICTIVE_MODELING');
+      reasons.push('fallback specialty PREDICTIVE_ANALYTICS');
+    } else if (s.parentSpecialtyCode === 'DATA_GOVERNANCE') {
+      dims.add('DA_GOVERNANCE_QUALITY');
+      reasons.push('fallback specialty DATA_GOVERNANCE');
+    } else {
+      dims.add('DA_BUSINESS_REPORTING');
+      reasons.push('fallback DATA_ANALYTICS → reporting');
+    }
+  }
+
+  return {
+    skillCode: s.skillCode,
+    dimensionCodes: [...dims],
+    supportingEvidenceUnitIds: [...s.supportingEvidenceUnitIds],
+    mappingJustification: reasons.join('; '),
+  };
+}
+
+function mapDigitalMarketing(s: SkillMappingInput): SkillDimensionMapping {
+  const b = semanticBlobOf(s);
+  const dims = new Set<string>();
+  const reasons: string[] = [];
+
+  if (
+    /estrategia digital|planeaci[oó]n estrat[eé]gica|plan(?:es)? de marketing|marketing strategy|alineaci[oó]n con (?:los )?objetivos/.test(
+      b,
+    )
+  ) {
+    dims.add('DM_STRATEGY_PLANNING');
+    reasons.push('señales de estrategia/planeación de marketing');
+  }
+  if (
+    /campa[nñ]a|publicidad|advertising|pauta|ejecuci[oó]n de campa[nñ]a|seguimiento de campa[nñ]a/.test(
+      b,
+    )
+  ) {
+    dims.add('DM_CAMPAIGN_EXECUTION');
+    reasons.push('señales de ejecución de campañas/publicidad');
+  }
+  if (
+    /crecimiento|growth|tr[aá]fico web|adquisici[oó]n|portafolio|marketing 360|posicionamiento de productos/.test(
+      b,
+    )
+  ) {
+    dims.add('DM_GROWTH_ACQUISITION');
+    reasons.push('señales de crecimiento/adquisición');
+  }
+  if (
+    /conversi[oó]n|funnel|embudo|optimizaci[oó]n de embudos|conversion|kpi|okr/.test(
+      b,
+    )
+  ) {
+    dims.add('DM_CONVERSION_OPTIMIZATION');
+    reasons.push('señales de conversión/embudos/KPIs');
+  }
+  if (
+    /go[\s_-]?to[\s_-]?market|\bgtm\b|ciclo de vida del producto|product marketing|productos? digitales|lanzamiento de producto|an[aá]lisis de mercado/.test(
+      b,
+    )
+  ) {
+    dims.add('DM_PRODUCT_GTM');
+    reasons.push('señales de producto/GTM');
+  }
+  if (
+    /marca|brand|identidad corporativa|tono de comunicaci[oó]n|visibilidad|posicionamiento|imagen de marca|branding/.test(
+      b,
+    )
+  ) {
+    dims.add('DM_BRAND_POSITIONING');
+    reasons.push('señales de marca/posicionamiento');
+  }
+
+  if (dims.size === 0) {
+    if (s.parentSpecialtyCode === 'CAMPAIGN_MARKETING') {
+      dims.add('DM_CAMPAIGN_EXECUTION');
+      reasons.push('fallback specialty CAMPAIGN_MARKETING');
+    } else if (s.parentSpecialtyCode === 'GROWTH_MARKETING') {
+      dims.add('DM_CONVERSION_OPTIMIZATION');
+      reasons.push('fallback specialty GROWTH_MARKETING');
+    } else if (s.parentSpecialtyCode === 'PRODUCT_MARKETING') {
+      dims.add('DM_PRODUCT_GTM');
+      reasons.push('fallback specialty PRODUCT_MARKETING');
+    } else if (s.parentSpecialtyCode === 'BRAND_DIGITAL_MARKETING') {
+      dims.add('DM_BRAND_POSITIONING');
+      reasons.push('fallback specialty BRAND_DIGITAL_MARKETING');
+    } else {
+      dims.add('DM_STRATEGY_PLANNING');
+      reasons.push('fallback DIGITAL_MARKETING → estrategia');
+    }
+  }
+
+  return {
+    skillCode: s.skillCode,
+    dimensionCodes: [...dims],
+    supportingEvidenceUnitIds: [...s.supportingEvidenceUnitIds],
+    mappingJustification: reasons.join('; '),
+  };
+}
+
+function mapPeopleHr(s: SkillMappingInput): SkillDimensionMapping {
+  const b = semanticBlobOf(s);
+  const dims = new Set<string>();
+  const reasons: string[] = [];
+
+  // tools alone never activate axes (tools listed separately; blob may include names)
+  const toolOnly =
+    /^(?:\s*(?:bamboo|workday|sap successfactors|successfactors|adp|softland n[oó]mina|siigo n[oó]mina|talento humano hcm|ats)\s*)+$/i.test(
+      b.trim(),
+    );
+
+  if (!toolOnly) {
+    if (
+      /selecci[oó]n(?:\s+de)?\s+personal|reclutamiento|recruiting|hiring|staffing|vinculaci[oó]n(?:\s+de)?\s+(?:personal|pasantes|colaboradores|empleados)|contrataci[oó]n(?:\s+de)?\s+(?:personal|pasantes|colaboradores)/.test(
+        b,
+      )
+    ) {
+      dims.add('HR_TALENT_ACQUISITION');
+      reasons.push('señales de selección/reclutamiento/vinculación laboral');
+    }
+    if (
+      /descriptivos? de cargo|perfiles? requeridos|perfil(?:es)? de (?:cargo|puesto|rol)|job description|dise[nñ]o de (?:cargos|puestos)/.test(
+        b,
+      )
+    ) {
+      dims.add('HR_ROLE_PROFILING');
+      reasons.push('señales de perfiles/descriptivos de cargo');
+    }
+    if (
+      /integraci[oó]n(?:\s+de)?(?:\s+nuevo)?\s+talento|onboarding(?:\s+de)?\s+(?:personal|colaboradores|empleados)|inducci[oó]n(?:\s+de)?\s+(?:personal|colaboradores)|incorporaci[oó]n(?:\s+de)?\s+(?:personal|colaboradores)/.test(
+        b,
+      )
+    ) {
+      dims.add('HR_ONBOARDING_INTEGRATION');
+      reasons.push('señales de integración/onboarding de talento');
+    }
+    if (
+      /turnos?(?:\s+del)?\s+personal|permisos?(?:\s+del)?\s+personal|coordinaci[oó]n(?:\s+de)?\s+(?:turnos|permisos)|administraci[oó]n operativa(?:\s+de)?\s+personal|ops(?:\s+de)?\s+personal/.test(
+        b,
+      )
+    ) {
+      dims.add('HR_WORKFORCE_OPS');
+      reasons.push('señales de ops de personal (turnos/permisos)');
+    }
+    if (
+      /capacitaci[oó]n(?:es)?(?:\s+del|\s+al|\s+de)?\s+personal|formaci[oó]n(?:\s+del|\s+al|\s+de)?\s+personal|entrenamiento(?:\s+del|\s+al|\s+de)?\s+personal|people learning/.test(
+        b,
+      )
+    ) {
+      dims.add('HR_PEOPLE_LEARNING');
+      reasons.push('señales de capacitación del personal');
+    }
+    if (
+      /bienestar(?:\s+laboral|\s+organizacional)?|actividades internas|eventos corporativos internos|clima laboral|cultura organizacional/.test(
+        b,
+      )
+    ) {
+      dims.add('HR_WELLBEING_INTERNAL');
+      reasons.push('señales de bienestar/actividades internas');
+    }
+    if (
+      /entrevista(?:s)? de retiro|exit interview|desvinculaci[oó]n(?:\s+de)?\s+(?:personal|colaboradores|empleados)|offboarding|separaci[oó]n laboral/.test(
+        b,
+      )
+    ) {
+      dims.add('HR_EXIT_SEPARATION');
+      reasons.push('señales de retiro/desvinculación');
+    }
+  }
+
+  if (dims.size === 0) {
+    if (s.parentSpecialtyCode === 'TALENT_ACQUISITION') {
+      dims.add('HR_TALENT_ACQUISITION');
+      reasons.push('fallback specialty TALENT_ACQUISITION');
+    } else if (s.parentSpecialtyCode === 'WORKFORCE_ADMINISTRATION') {
+      dims.add('HR_WORKFORCE_OPS');
+      reasons.push('fallback specialty WORKFORCE_ADMINISTRATION');
+    } else {
+      dims.add('HR_TALENT_ACQUISITION');
+      reasons.push('fallback PEOPLE_HR → talent acquisition');
+    }
+  }
+
+  return {
+    skillCode: s.skillCode,
+    dimensionCodes: [...dims],
+    supportingEvidenceUnitIds: [...s.supportingEvidenceUnitIds],
+    mappingJustification: reasons.join('; '),
+  };
+}
+
+function mapCustomerSuccess(s: SkillMappingInput): SkillDimensionMapping {
+  const b = semanticBlobOf(s);
+  const dims = new Set<string>();
+  const reasons: string[] = [];
+
+  if (
+    /vinculaci[oó]n|admisi[oó]n|matr[ií]cul|captaci[oó]n|onboarding|alta de (?:cliente|usuario|aspirante)|incorporaci[oó]n|enrollment|intake/.test(
+      b,
+    )
+  ) {
+    dims.add('CS_INTAKE_ENROLLMENT');
+    reasons.push('señales de vinculación/admisión/intake');
+  }
+  if (
+    /ciclo (?:de vida|integral)|lifecycle|seguimiento (?:de |a )?(?:prospect|cliente|usuario|aspirante)|embudo|funnel|cuidado (?:del|de la) (?:cliente|relaci[oó]n)/.test(
+      b,
+    )
+  ) {
+    dims.add('CS_LIFECYCLE_FOLLOWUP');
+    reasons.push('señales de ciclo de vida/seguimiento');
+  }
+  if (
+    /retenci[oó]n|fidelizaci[oó]n|postventa|post[\s_-]?venta|lealtad|permanencia|loyalty|evitar (?:abandono|cancelaci[oó]n|deserción)/.test(
+      b,
+    )
+  ) {
+    dims.add('CS_RETENTION_LOYALTY');
+    reasons.push('señales de retención/fidelización');
+  }
+  if (
+    /servicio al cliente|atenci[oó]n al (?:cliente|usuario)|pqrs|soporte|resoluci[oó]n de (?:conflicto|caso|queja)|customer service|help ?desk/.test(
+      b,
+    )
+  ) {
+    dims.add('CS_SERVICE_RESOLUTION');
+    reasons.push('señales de servicio/atención/soporte');
+  }
+  if (
+    /asesor[ií]a|acompa[nñ]amiento|orientaci[oó]n (?:al|de) (?:cliente|usuario|aspirante)|relaci[oó]n (?:con el |con la )?(?:cliente|usuario)|account (?:care|management)/.test(
+      b,
+    )
+  ) {
+    dims.add('CS_RELATIONSHIP_ADVISING');
+    reasons.push('señales de asesoría/acompañamiento');
+  }
+  if (
+    /cierre consultivo|venta consultiva|negociaci[oó]n|metas? comerciales|conversi[oó]n comercial|prospecci[oó]n|portabilidad|cierre de (?:venta|vinculaci[oó]n)|comercial b2b/.test(
+      b,
+    )
+  ) {
+    dims.add('CS_COMMERCIAL_CONVERSION');
+    reasons.push('señales de conversión comercial');
+  }
+
+  if (dims.size === 0) {
+    if (s.parentSpecialtyCode === 'CUSTOMER_INTAKE_ONBOARDING') {
+      dims.add('CS_INTAKE_ENROLLMENT');
+      reasons.push('fallback specialty CUSTOMER_INTAKE_ONBOARDING');
+    } else if (s.parentSpecialtyCode === 'CUSTOMER_LIFECYCLE_CARE') {
+      dims.add('CS_LIFECYCLE_FOLLOWUP');
+      reasons.push('fallback specialty CUSTOMER_LIFECYCLE_CARE');
+    } else if (s.parentSpecialtyCode === 'CUSTOMER_RETENTION_LOYALTY') {
+      dims.add('CS_RETENTION_LOYALTY');
+      reasons.push('fallback specialty CUSTOMER_RETENTION_LOYALTY');
+    } else if (s.parentSpecialtyCode === 'CUSTOMER_SERVICE_SUPPORT') {
+      dims.add('CS_SERVICE_RESOLUTION');
+      reasons.push('fallback specialty CUSTOMER_SERVICE_SUPPORT');
+    } else {
+      dims.add('CS_RELATIONSHIP_ADVISING');
+      reasons.push('fallback CUSTOMER_SUCCESS → asesoría');
+    }
+  }
+
+  return {
+    skillCode: s.skillCode,
+    dimensionCodes: [...dims],
+    supportingEvidenceUnitIds: [...s.supportingEvidenceUnitIds],
+    mappingJustification: reasons.join('; '),
+  };
+}
+
+function mapItSystems(s: SkillMappingInput): SkillDimensionMapping {
+  const b = semanticBlobOf(s);
+  const dims = new Set<string>();
+  const reasons: string[] = [];
+
+  if (
+    /(?:administraci[oó]n|dise[nñ]o|planificaci[oó]n|monitoreo|gesti[oó]n)(?:\s+de)?\s+redes?|redes?\s+(?:lan|wan|vpn|wireless|wifi)|infraestructura de red|\b(?:lan|wan|vpn|wifi|wireless)\b|routers?|switches?|conectividad(?:\s+de\s+red)?|telecomunicaciones/.test(
+      b,
+    )
+  ) {
+    dims.add('IT_NETWORKING');
+    reasons.push('señales de redes/conectividad');
+  }
+  if (
+    /mesa de ayuda|help\s?desk|soporte(?:\s+t[eé]cnico|\s+ofim[aá]tico|\s+a\s+usuarios|\s+especializado)?|incidentes?(?:\s+de)?(?:\s+(?:conectividad|ti|sistemas|infra))?|ans\b|acuerdos? de nivel de servicio|\bsla\b/.test(
+      b,
+    )
+  ) {
+    dims.add('IT_SERVICE_DESK');
+    reasons.push('señales de mesa de ayuda/soporte');
+  }
+  if (
+    /servidores?(?:\s+(?:f[ií]sicos?|virtuales?))?|sistemas operativos|windows server|\blinux\b|active directory|\bvirtualizaci[oó]n\b|mantenimiento(?:\s+(?:preventivo|correctivo))?(?:\s+de)?(?:\s+(?:infra(?:estructura)?|sistemas?|servidores?))?/.test(
+      b,
+    )
+  ) {
+    dims.add('IT_SYSADMIN');
+    reasons.push('señales de administración de sistemas');
+  }
+  if (
+    /seguridad perimetral|firewalls?|parches?(?:\s+de)?(?:\s+seguridad)?|respaldos?|\bbackups?\b|pol[ií]ticas? de (?:seguridad|respaldo)|aseguramiento operativo|seguridad operativa/.test(
+      b,
+    )
+  ) {
+    dims.add('IT_SECURITY_OPS');
+    reasons.push('señales de seguridad operativa');
+  }
+  if (
+    /inventarios?(?:\s+de)?(?:\s+(?:equipos?|activos?|hardware|ti))?|endpoints?|equipos? de c[oó]mputo|activos? de ti|inventario tecnol[oó]gico/.test(
+      b,
+    )
+  ) {
+    dims.add('IT_ENDPOINTS_ASSETS');
+    reasons.push('señales de endpoints/inventarios');
+  }
+  if (
+    /continuidad(?:\s+(?:operativa|de servicios|de negocio|del servicio))?|disponibilidad|servicios? cr[ií]ticos?|disaster recovery|\bdrp\b|\bbcp\b|uptime|reduc(?:ci[oó]n|ir)\s+(?:de\s+)?(?:tasas?\s+de\s+)?incidentes/.test(
+      b,
+    )
+  ) {
+    dims.add('IT_AVAILABILITY_CONTINUITY');
+    reasons.push('señales de disponibilidad/continuidad');
+  }
+  if (
+    /proveedores?\s+(?:estrat[eé]gicos?|de\s+(?:red|conectividad|telecom(?:unicaciones)?|ti|infraestructura))|gesti[oó]n de proveedores|acuerdos? de nivel de servicio con proveedores|ans con proveedores/.test(
+      b,
+    )
+  ) {
+    dims.add('IT_VENDOR_SLA');
+    reasons.push('señales de proveedores/ANS');
+  }
+
+  if (dims.size === 0) {
+    if (s.parentSpecialtyCode === 'NETWORK_INFRASTRUCTURE') {
+      dims.add('IT_NETWORKING');
+      reasons.push('fallback specialty NETWORK_INFRASTRUCTURE');
+    } else if (s.parentSpecialtyCode === 'IT_SERVICE_DESK') {
+      dims.add('IT_SERVICE_DESK');
+      reasons.push('fallback specialty IT_SERVICE_DESK');
+    } else if (s.parentSpecialtyCode === 'SYSTEMS_ADMINISTRATION') {
+      dims.add('IT_SYSADMIN');
+      reasons.push('fallback specialty SYSTEMS_ADMINISTRATION');
+    } else if (s.parentSpecialtyCode === 'IT_SECURITY_OPERATIONS') {
+      dims.add('IT_SECURITY_OPS');
+      reasons.push('fallback specialty IT_SECURITY_OPERATIONS');
+    } else {
+      dims.add('IT_SYSADMIN');
+      reasons.push('fallback IT_SYSTEMS → systems administration');
+    }
+  }
+
+  return {
+    skillCode: s.skillCode,
+    dimensionCodes: [...dims],
+    supportingEvidenceUnitIds: [...s.supportingEvidenceUnitIds],
+    mappingJustification: reasons.join('; '),
+  };
+}
+
+function mapLegal(s: SkillMappingInput): SkillDimensionMapping {
+  const b = semanticBlobOf(s);
+  const dims = new Set<string>();
+  const reasons: string[] = [];
+
+  if (
+    /asesor[ií]a jur[ií]dica|asesor[ií]a legal|interpretaci[oó]n jur[ií]dica|acompa[nñ]amiento (?:jur[ií]dico|legal)|counsel|legal advisory|abogado (?:litigante|asesor|independiente)/.test(
+      b,
+    )
+  ) {
+    dims.add('LEGAL_ADVISORY');
+    reasons.push('señales de asesoría jurídica');
+  }
+  if (
+    /an[aá]lisis normativo|conceptos? jur[ií]dicos?|actos administrativos|cumplimiento normativo|derecho administrativo|riesgos? normativ/.test(
+      b,
+    )
+  ) {
+    dims.add('LEGAL_ANALYSIS_NORMATIVE');
+    reasons.push('señales de análisis normativo/administrativo');
+  }
+  if (
+    /(?:elaboraci[oó]n|redacci[oó]n|revisi[oó]n|estructuraci[oó]n)(?:\s+de)?\s+(?:documentos?|escritos?|minutas?|pliegos?|conceptos?)(?:\s+jur[ií]dicos?)?|documentaci[oó]n jur[ií]dica|escritos? procesales|demandas?|contestaci[oó]n(?:es)? de demandas?/.test(
+      b,
+    )
+  ) {
+    dims.add('LEGAL_DOCUMENTATION');
+    reasons.push('señales de documentación jurídica');
+  }
+  if (
+    /seguimiento procesal|procedimientos? jur[ií]dicos?|tr[aá]mites? (?:judiciales?|notariales?)|representaci[oó]n legal|actuaciones? (?:procesales?|jur[ií]dicas?)|expedientes? (?:judiciales?|procesales?)/.test(
+      b,
+    )
+  ) {
+    dims.add('LEGAL_PROCEDURE');
+    reasons.push('señales de procedimiento jurídico');
+  }
+  if (
+    /contrataci[oó]n (?:estatal|p[uú]blica)|procesos? (?:precontractual(?:es)?|contractual(?:es)?|postcontractual(?:es)?)|pliegos?(?:\s+de)?(?:\s+condiciones)?|minutas? contractuales|expedientes? contractuales|acompa[nñ]amiento (?:jur[ií]dico|legal)(?:\s+en)?(?:\s+contrataci[oó]n)?/.test(
+      b,
+    )
+  ) {
+    dims.add('PUBLIC_CONTRACTING_LEGAL');
+    reasons.push('señales de contratación estatal jurídica');
+  }
+  if (
+    /litigio|litigante|controversias?|demandas? (?:laborales?|civiles?|comerciales?)|representaci[oó]n (?:en|ante) (?:tribunales?|juzgados?)|procesos? (?:judiciales?|contenciosos?)/.test(
+      b,
+    )
+  ) {
+    dims.add('LITIGATION_DISPUTES');
+    reasons.push('señales de litigio/controversias');
+  }
+
+  if (dims.size === 0) {
+    if (s.parentSpecialtyCode === 'LEGAL_ADVISORY') {
+      dims.add('LEGAL_ADVISORY');
+      reasons.push('fallback specialty LEGAL_ADVISORY');
+    } else if (s.parentSpecialtyCode === 'LEGAL_DOCUMENT_DRAFTING') {
+      dims.add('LEGAL_DOCUMENTATION');
+      reasons.push('fallback specialty LEGAL_DOCUMENT_DRAFTING');
+    } else if (s.parentSpecialtyCode === 'PUBLIC_SECTOR_CONTRACTING') {
+      dims.add('PUBLIC_CONTRACTING_LEGAL');
+      reasons.push('fallback specialty PUBLIC_SECTOR_CONTRACTING');
+    } else if (s.parentSpecialtyCode === 'ADMINISTRATIVE_LAW') {
+      dims.add('LEGAL_ANALYSIS_NORMATIVE');
+      reasons.push('fallback specialty ADMINISTRATIVE_LAW');
+    } else if (s.parentSpecialtyCode === 'LITIGATION_DISPUTES') {
+      dims.add('LITIGATION_DISPUTES');
+      reasons.push('fallback specialty LITIGATION_DISPUTES');
+    }
+  }
+
+  return {
+    skillCode: s.skillCode,
+    dimensionCodes: [...dims],
+    supportingEvidenceUnitIds: [...s.supportingEvidenceUnitIds],
+    mappingJustification: reasons.join('; '),
+  };
+}
+
 export function mapSkillToDimensions(
   s: SkillMappingInput,
 ): SkillDimensionMapping {
@@ -604,6 +1155,24 @@ export function mapSkillToDimensions(
   }
   if (s.parentFieldCode === 'COMMUNICATIONS') {
     return mapCommunications(s);
+  }
+  if (s.parentFieldCode === 'DATA_ANALYTICS') {
+    return mapDataAnalytics(s);
+  }
+  if (s.parentFieldCode === 'DIGITAL_MARKETING') {
+    return mapDigitalMarketing(s);
+  }
+  if (s.parentFieldCode === 'CUSTOMER_SUCCESS') {
+    return mapCustomerSuccess(s);
+  }
+  if (s.parentFieldCode === 'PEOPLE_HR') {
+    return mapPeopleHr(s);
+  }
+  if (s.parentFieldCode === 'IT_SYSTEMS') {
+    return mapItSystems(s);
+  }
+  if (s.parentFieldCode === 'LEGAL') {
+    return mapLegal(s);
   }
   // Campos sin heurística piloto: sin dimensiones (no cross-field inventado)
   return {

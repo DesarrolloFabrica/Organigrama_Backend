@@ -9,7 +9,7 @@ export type DimensionDef = {
   fieldCode: string;
 };
 
-export const PROFILE_DIMENSIONS_VERSION = '8C.5';
+export const PROFILE_DIMENSIONS_VERSION = '8C.10';
 
 export const DIMENSIONS_BY_FIELD: Record<string, DimensionDef[]> = {
   VISUAL_DESIGN: [
@@ -257,6 +257,208 @@ export const DIMENSIONS_BY_FIELD: Record<string, DimensionDef[]> = {
       code: 'COMM_SPOKESPERSONSHIP',
       label: 'Vocería / representación',
       fieldCode: 'COMMUNICATIONS',
+    },
+  ],
+  DATA_ANALYTICS: [
+    {
+      code: 'DA_DATA_PIPELINE',
+      label: 'Pipeline / transformación',
+      fieldCode: 'DATA_ANALYTICS',
+    },
+    {
+      code: 'DA_DATA_PLATFORM',
+      label: 'Plataforma / repositorio',
+      fieldCode: 'DATA_ANALYTICS',
+    },
+    {
+      code: 'DA_BUSINESS_REPORTING',
+      label: 'Reporting / BI',
+      fieldCode: 'DATA_ANALYTICS',
+    },
+    {
+      code: 'DA_PREDICTIVE_MODELING',
+      label: 'Modelado predictivo',
+      fieldCode: 'DATA_ANALYTICS',
+    },
+    {
+      code: 'DA_GOVERNANCE_QUALITY',
+      label: 'Gobernanza / calidad',
+      fieldCode: 'DATA_ANALYTICS',
+    },
+    {
+      code: 'DA_DECISION_ENABLEMENT',
+      label: 'Habilitación de decisión',
+      fieldCode: 'DATA_ANALYTICS',
+    },
+  ],
+  DIGITAL_MARKETING: [
+    {
+      code: 'DM_STRATEGY_PLANNING',
+      label: 'Estrategia / planeación',
+      fieldCode: 'DIGITAL_MARKETING',
+    },
+    {
+      code: 'DM_CAMPAIGN_EXECUTION',
+      label: 'Ejecución de campañas',
+      fieldCode: 'DIGITAL_MARKETING',
+    },
+    {
+      code: 'DM_GROWTH_ACQUISITION',
+      label: 'Adquisición / crecimiento',
+      fieldCode: 'DIGITAL_MARKETING',
+    },
+    {
+      code: 'DM_CONVERSION_OPTIMIZATION',
+      label: 'Conversión / embudos',
+      fieldCode: 'DIGITAL_MARKETING',
+    },
+    {
+      code: 'DM_PRODUCT_GTM',
+      label: 'Producto / Go-to-Market',
+      fieldCode: 'DIGITAL_MARKETING',
+    },
+    {
+      code: 'DM_BRAND_POSITIONING',
+      label: 'Marca / posicionamiento',
+      fieldCode: 'DIGITAL_MARKETING',
+    },
+  ],
+  CUSTOMER_SUCCESS: [
+    {
+      code: 'CS_INTAKE_ENROLLMENT',
+      label: 'Vinculación / ingreso',
+      fieldCode: 'CUSTOMER_SUCCESS',
+    },
+    {
+      code: 'CS_LIFECYCLE_FOLLOWUP',
+      label: 'Ciclo de vida / seguimiento',
+      fieldCode: 'CUSTOMER_SUCCESS',
+    },
+    {
+      code: 'CS_RETENTION_LOYALTY',
+      label: 'Retención / fidelización',
+      fieldCode: 'CUSTOMER_SUCCESS',
+    },
+    {
+      code: 'CS_SERVICE_RESOLUTION',
+      label: 'Servicio / resolución',
+      fieldCode: 'CUSTOMER_SUCCESS',
+    },
+    {
+      code: 'CS_RELATIONSHIP_ADVISING',
+      label: 'Asesoría / acompañamiento',
+      fieldCode: 'CUSTOMER_SUCCESS',
+    },
+    {
+      code: 'CS_COMMERCIAL_CONVERSION',
+      label: 'Conversión comercial',
+      fieldCode: 'CUSTOMER_SUCCESS',
+    },
+  ],
+  PEOPLE_HR: [
+    {
+      code: 'HR_TALENT_ACQUISITION',
+      label: 'Selección / reclutamiento',
+      fieldCode: 'PEOPLE_HR',
+    },
+    {
+      code: 'HR_ROLE_PROFILING',
+      label: 'Perfiles / descriptivos de cargo',
+      fieldCode: 'PEOPLE_HR',
+    },
+    {
+      code: 'HR_ONBOARDING_INTEGRATION',
+      label: 'Integración de talento',
+      fieldCode: 'PEOPLE_HR',
+    },
+    {
+      code: 'HR_WORKFORCE_OPS',
+      label: 'Ops de personal (turnos/permisos)',
+      fieldCode: 'PEOPLE_HR',
+    },
+    {
+      code: 'HR_PEOPLE_LEARNING',
+      label: 'Capacitación del personal',
+      fieldCode: 'PEOPLE_HR',
+    },
+    {
+      code: 'HR_WELLBEING_INTERNAL',
+      label: 'Bienestar / actividades internas',
+      fieldCode: 'PEOPLE_HR',
+    },
+    {
+      code: 'HR_EXIT_SEPARATION',
+      label: 'Retiro / desvinculación',
+      fieldCode: 'PEOPLE_HR',
+    },
+  ],
+  IT_SYSTEMS: [
+    {
+      code: 'IT_NETWORKING',
+      label: 'Redes / conectividad',
+      fieldCode: 'IT_SYSTEMS',
+    },
+    {
+      code: 'IT_SERVICE_DESK',
+      label: 'Mesa de ayuda / soporte',
+      fieldCode: 'IT_SYSTEMS',
+    },
+    {
+      code: 'IT_SYSADMIN',
+      label: 'Administración de sistemas',
+      fieldCode: 'IT_SYSTEMS',
+    },
+    {
+      code: 'IT_SECURITY_OPS',
+      label: 'Seguridad operativa',
+      fieldCode: 'IT_SYSTEMS',
+    },
+    {
+      code: 'IT_ENDPOINTS_ASSETS',
+      label: 'Endpoints / inventarios',
+      fieldCode: 'IT_SYSTEMS',
+    },
+    {
+      code: 'IT_AVAILABILITY_CONTINUITY',
+      label: 'Disponibilidad / continuidad',
+      fieldCode: 'IT_SYSTEMS',
+    },
+    {
+      code: 'IT_VENDOR_SLA',
+      label: 'Proveedores / ANS',
+      fieldCode: 'IT_SYSTEMS',
+    },
+  ],
+  LEGAL: [
+    {
+      code: 'LEGAL_ADVISORY',
+      label: 'Asesoría jurídica',
+      fieldCode: 'LEGAL',
+    },
+    {
+      code: 'LEGAL_ANALYSIS_NORMATIVE',
+      label: 'Análisis normativo',
+      fieldCode: 'LEGAL',
+    },
+    {
+      code: 'LEGAL_DOCUMENTATION',
+      label: 'Documentación jurídica',
+      fieldCode: 'LEGAL',
+    },
+    {
+      code: 'LEGAL_PROCEDURE',
+      label: 'Procedimiento jurídico',
+      fieldCode: 'LEGAL',
+    },
+    {
+      code: 'PUBLIC_CONTRACTING_LEGAL',
+      label: 'Contratación estatal (práctica jurídica)',
+      fieldCode: 'LEGAL',
+    },
+    {
+      code: 'LITIGATION_DISPUTES',
+      label: 'Litigio y controversias',
+      fieldCode: 'LEGAL',
     },
   ],
 };

@@ -201,7 +201,11 @@ export class OrgChartCompetenciesService {
         evaluatedDomains: [],
         mvpCapabilities: null,
         mc1Profile: mc1.presentation,
-        warnings: ['MC1_ARTIFACT_ONLY_LOCAL'],
+        warnings: [
+          mc1.presentation.source === 'CLOUD_PRESENTATION_STORE'
+            ? 'MC1_CLOUD_PRESENTATION_STORE'
+            : 'MC1_ARTIFACT_ONLY_LOCAL',
+        ],
       };
     }
 

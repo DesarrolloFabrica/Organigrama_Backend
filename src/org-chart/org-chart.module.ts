@@ -16,6 +16,8 @@ import { OrgChartCvService } from './org-chart-cv.service';
 
 import { OrgChartCompetenciesService } from './org-chart-competencies.service';
 
+import { CompetencyPeopleSearchService } from './competency-people-search.service';
+
 import { OrgChartVideoService } from './video/org-chart-video.service';
 
 import { OrgChartVideoTicketService } from './video/org-chart-video-ticket.service';
@@ -113,6 +115,8 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartCvService,
 
     OrgChartCompetenciesService,
+
+    CompetencyPeopleSearchService,
 
     OrgChartVideoService,
 

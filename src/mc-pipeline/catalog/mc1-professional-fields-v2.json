@@ -67,6 +67,11 @@
       "code": "CUSTOMER_SUCCESS",
       "name": "Relación con usuario/cliente",
       "definition": "Acompañamiento, adopción y éxito del usuario/cliente."
+    },
+    {
+      "code": "LEGAL",
+      "name": "Práctica jurídica",
+      "definition": "Ejercicio profesional del derecho: asesoría, documentación jurídica, derecho administrativo, contratación estatal como práctica legal y litigio/procedimiento."
     }
   ],
   "reservedSpecialtyConcepts": [
@@ -130,6 +135,8 @@
     "field.people_hr": "PEOPLE_HR",
     "field.finance_admin": "FINANCE_ADMIN",
     "field.customer_success": "CUSTOMER_SUCCESS",
+    "field.legal_administrative": "LEGAL",
+    "field.legal_services": "LEGAL",
     "field.digital_content": null
   }
 }

@@ -1,0 +1,105 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.PEOPLE_HR",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["PEOPLE_HR"],
+  "note": "PEOPLE_HR V1 foundation — specialties = stable professional practices of the talent cycle: attraction/staffing and operational workforce administration. Education credentials in HR (e.g. técnico en recursos humanos) are NOT experience. Tools (HCM/ATS/nómina software) are never specialties. Generic team leadership/supervision without HR-cycle practice is NOT PEOPLE_HR specialty evidence. Payroll/accounting ops belong to FINANCE_ADMIN. Customer/student intake belongs to CUSTOMER_SUCCESS. Academic instruction belongs to EDUCATION. Wellbeing/exit practices appear as radar dimensions when skill-backed; not separate V1 specialties (single-CV / thin evidence).",
+  "fieldBoundaryNote": "PEOPLE_HR = ciclo de talento y administración de personal (selección/vinculación laboral, ops de fuerza de trabajo). CUSTOMER_SUCCESS = vinculación/cuidado de clientes o usuarios (aspirantes/estudiantes/clientes). FINANCE_ADMIN = trámites admin-financieros, archivo documental genérico, nómina contable como proceso financiero. EDUCATION = docencia/ops académicos (incl. carpetas docentes sin proceso de talento). PROJECT_PROGRAM_MGMT = coordinación de iniciativas, no administración de personal. MULTI_FIELD is legitimate.",
+  "specialties": [
+    {
+      "code": "TALENT_ACQUISITION",
+      "name": "Atracción y vinculación de talento",
+      "parentField": "PEOPLE_HR",
+      "definition": "Práctica de atraer, evaluar y vincular personas al rol: reclutamiento, selección, descriptivos/perfiles de cargo y vinculación laboral de personal o pasantes.",
+      "positiveSignals": [
+        "procesos de selección o reclutamiento de personal",
+        "vinculación laboral de personal, colaboradores o pasantes con cumplimiento de perfiles",
+        "elaboración de descriptivos de cargo u orientación de perfiles requeridos para staffing"
+      ],
+      "exclusions": [
+        "solo título/formación en recursos humanos sin práctica de selección/vinculación (educación ≠ experiencia)",
+        "solo archivo de hojas de vida docentes u ops académicas sin proceso de talento (ver EDUCATION / FINANCE_ADMIN)",
+        "solo vinculación/admisión de aspirantes, estudiantes o clientes (ver CUSTOMER_SUCCESS)",
+        "solo liderazgo/coordinación genérica de equipo sin ciclo de atracción/vinculación",
+        "solo listar ATS/HCM sin práctica de adquisición"
+      ]
+    },
+    {
+      "code": "WORKFORCE_ADMINISTRATION",
+      "name": "Administración operativa de personal",
+      "parentField": "PEOPLE_HR",
+      "definition": "Práctica de administrar operativamente la fuerza de trabajo: turnos, permisos, coordinación de capacitaciones del personal e integración del talento ya vinculado.",
+      "positiveSignals": [
+        "coordinación de turnos, permisos u operaciones cotidianas del personal",
+        "organización de capacitaciones del personal (ops de fuerza de trabajo, no docencia curricular)",
+        "integración de nuevo talento al área tras vinculación"
+      ],
+      "exclusions": [
+        "solo supervisión/liderazgo genérico sin ops de personal (turno/permiso/capacitación/integración)",
+        "solo trámites administrativos/documentales o archivo sin ciclo de personal (ver FINANCE_ADMIN)",
+        "solo docencia o diseño instruccional académico (ver EDUCATION)",
+        "solo selección/reclutamiento como identidad dominante (ver TALENT_ACQUISITION)",
+        "solo bienestar/eventos internos sin administración operativa de personal (radar wellbeing; no specialty V1)"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "RECRUITMENT": "TALENT_ACQUISITION",
+    "STAFFING": "TALENT_ACQUISITION",
+    "HIRING": "TALENT_ACQUISITION",
+    "SELECTION": "TALENT_ACQUISITION",
+    "TALENT_RECRUITMENT": "TALENT_ACQUISITION",
+    "PEOPLE_OPERATIONS": "WORKFORCE_ADMINISTRATION",
+    "HR_OPERATIONS": "WORKFORCE_ADMINISTRATION",
+    "WORKFORCE_OPS": "WORKFORCE_ADMINISTRATION",
+    "PERSONNEL_ADMINISTRATION": "WORKFORCE_ADMINISTRATION"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "EMPLOYEE_WELLBEING",
+      "parentSpecialty": "WORKFORCE_ADMINISTRATION",
+      "parentField": "PEOPLE_HR",
+      "note": "Radar-capable practice; deferred as specialty V1 (single-CV support evidence only)"
+    },
+    {
+      "code": "EXIT_INTERVIEWS",
+      "parentSpecialty": "WORKFORCE_ADMINISTRATION",
+      "parentField": "PEOPLE_HR",
+      "note": "Separation practice; radar dim HR_EXIT_SEPARATION; not specialty V1 (single CV)"
+    },
+    {
+      "code": "PERFORMANCE_MANAGEMENT",
+      "parentSpecialty": "WORKFORCE_ADMINISTRATION",
+      "parentField": "PEOPLE_HR",
+      "note": "No recurrent CV evidence in foundation cohort"
+    },
+    {
+      "code": "PAYROLL_HR",
+      "parentSpecialty": "WORKFORCE_ADMINISTRATION",
+      "parentField": "PEOPLE_HR",
+      "note": "Payroll/accounting ops belong primarily to FINANCE_ADMIN until HR-specific payroll practice is evidenced"
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "HR_GENERALIST",
+      "reason": "Role label / education identity — not a transferable practice specialty"
+    },
+    {
+      "code": "TEAM_LEADERSHIP_HR",
+      "reason": "Generic supervision ≠ talent-cycle practice"
+    },
+    {
+      "code": "HCM_SPECIALIST",
+      "reason": "Tool identity rejected"
+    },
+    {
+      "code": "WELLBEING_SPECIALIST",
+      "reason": "Single-CV thin evidence — radar only in V1"
+    },
+    {
+      "code": "OHS_SST",
+      "reason": "No supporting evidence in foundation cohort"
+    }
+  ]
+}

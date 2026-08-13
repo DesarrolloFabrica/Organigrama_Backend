@@ -68,30 +68,57 @@ export function loadP3Contract(packDir: string): P3ContractEnvelope {
 }
 
 /**
- * Solo especialidades P3 con status OBSERVED (no WEAK) y código congelado.
+ * Resuelve destinos P4 desde P3:
+ * - OBSERVED → AUTHORITATIVE_TARGET (publishableFromP3)
+ * - WEAK → ROUTING_CANDIDATE (no publishable)
+ * - NOT_EMITTED / otros → no entran
+ *
+ * Abstención P4 si no hay ningún AUTHORITATIVE_TARGET (WEAK-only no activa P4).
  */
-export function resolveObservedSpecialties(
+export function resolveP4SpecialtiesEvaluated(
   p3: P3ContractEnvelope,
 ): P4SpecialtyEvaluated[] {
   const out: P4SpecialtyEvaluated[] = [];
   const seen = new Set<string>();
   for (const fr of p3.payload.fieldResults ?? []) {
     for (const s of fr.observedSpecialties ?? []) {
-      if (s.status !== 'OBSERVED') continue;
+      if (s.status !== 'OBSERVED' && s.status !== 'WEAK') continue;
       if (!isKnownSpecialtyCode(s.specialtyCode)) continue;
       if (s.parentFieldCode !== fr.fieldCode) continue;
       const key = `${fr.fieldCode}::${s.specialtyCode}`;
       if (seen.has(key)) continue;
       seen.add(key);
+      const isObserved = s.status === 'OBSERVED';
       out.push({
         fieldCode: fr.fieldCode,
         specialtyCode: s.specialtyCode,
         p3Status: s.status,
         p3Confidence: s.confidence,
+        evaluationRole: isObserved
+          ? 'AUTHORITATIVE_TARGET'
+          : 'ROUTING_CANDIDATE',
+        routingEligible: true,
+        publishableFromP3: isObserved,
       });
     }
   }
   return out;
+}
+
+/**
+ * @deprecated Prefer resolveP4SpecialtiesEvaluated — kept for call sites that
+ * historically meant "OBSERVED only". Now returns OBSERVED + WEAK routing.
+ */
+export function resolveObservedSpecialties(
+  p3: P3ContractEnvelope,
+): P4SpecialtyEvaluated[] {
+  return resolveP4SpecialtiesEvaluated(p3);
+}
+
+export function authoritativeTargetsOnly(
+  specialties: P4SpecialtyEvaluated[],
+): P4SpecialtyEvaluated[] {
+  return specialties.filter((s) => s.evaluationRole === 'AUTHORITATIVE_TARGET');
 }
 
 export async function loadP4Context(args: {
@@ -129,7 +156,7 @@ export async function loadP4Context(args: {
     // Soft warn — still proceed if specialties resolve
   }
 
-  const specialtiesEvaluated = resolveObservedSpecialties(p3);
+  const specialtiesEvaluated = resolveP4SpecialtiesEvaluated(p3);
   const evidence = await loadP2EvidenceFromP1Pack({
     backendRoot: args.backendRoot,
     snapshotId: args.snapshotId,
@@ -139,7 +166,7 @@ export async function loadP4Context(args: {
   const warningCodes = [
     'INPUT_SOURCE_R1_P3_PLUS_P1_PACK_ARTIFACT_ONLY',
     'SPECIALTY_CATALOG_ACTIVE_V1_3_0',
-    'ONLY_P3_OBSERVED_SPECIALTIES_EVALUATED',
+    'P3_OBSERVED_AUTHORITATIVE_AND_WEAK_ROUTING_CANDIDATES',
     ...evidence.warningCodes.filter((w) => w.startsWith('CANONICAL_')),
   ];
   if (p3.payload.specialtyCatalogVersion !== SPECIALTY_CATALOG_VERSION) {

@@ -94,11 +94,85 @@ describe('mc1 person profile reader 9F', () => {
     expect(JSON.stringify(presentation)).not.toContain('/tmp/');
   });
 
+  it('12A gate: drops empty SECONDARY tabs from presentation (legacy packs)', () => {
+    const envelope: ProfilePilotEnvelope = {
+      contractCode: 'MC1.PROFILE.PILOT',
+      contractVersion: '1.0.0',
+      stageCode: 'PROFILE_PILOT',
+      producedAt: '2026-08-11T15:00:00.000Z',
+      warnings: [],
+      payload: {
+        snapshotId: '10',
+        r1FieldResolutionStatus: 'MULTI_FIELD',
+        fields: [
+          {
+            fieldCode: 'COMMUNICATIONS',
+            role: 'PRIMARY',
+            specialties: [
+              { specialtyCode: 'DIGITAL_COMMUNICATIONS', confidence: 0.85 },
+            ],
+            skills: [],
+            toolsTechnologies: [],
+            skillDimensionMappings: [],
+            radar: { fieldCode: 'COMMUNICATIONS', axes: [] },
+            evidenceVolume: 'HIGH',
+            evidenceUnitCount: 4,
+          },
+          {
+            fieldCode: 'AUDIOVISUAL_PRODUCTION',
+            role: 'SECONDARY',
+            specialties: [],
+            skills: [],
+            toolsTechnologies: [],
+            skillDimensionMappings: [],
+            radar: { fieldCode: 'AUDIOVISUAL_PRODUCTION', axes: [] },
+            evidenceVolume: 'LOW',
+            evidenceUnitCount: 0,
+          },
+          {
+            fieldCode: 'DIGITAL_MARKETING',
+            role: 'SECONDARY',
+            specialties: [],
+            skills: [],
+            toolsTechnologies: [],
+            skillDimensionMappings: [],
+            radar: { fieldCode: 'DIGITAL_MARKETING', axes: [] },
+            evidenceVolume: 'LOW',
+            evidenceUnitCount: 0,
+          },
+        ],
+        presentationNotes: {
+          weakHiddenFromPrimary: true,
+          toolsSeparatedFromSkills: true,
+          radarSemantics: 'RELATIVE_COVERAGE_WITHIN_FIELD_NOT_ABSOLUTE_MASTERY',
+          formulaVersion: '8E.EXPERIMENTAL.1',
+        },
+        provenance: {
+          r1PackDir: '/tmp/r1',
+          p3PackDir: '/tmp/p3',
+          p4PackDir: '/tmp/p4',
+          mode: 'ARTIFACT_ONLY',
+          dimensionsDoc: 'docs/x.md',
+        },
+      },
+    };
+
+    const presentation = mapProfilePackToPresentation({
+      packDir: '/tmp/pack',
+      envelope,
+      producedAtMs: 1,
+    });
+    expect(presentation.fields.map((f) => f.code)).toEqual(['COMMUNICATIONS']);
+  });
+
   it('returns NOT_AVAILABLE when index and document miss', async () => {
     const root = mkdtempSync(join(tmpdir(), 'mc1-9f-'));
     mkdirSync(join(root, 'tmp', 'mc1-profile-pilot'), { recursive: true });
     const ds = {
-      query: async () => [{ document: '9999999999' }],
+      query: async (sql: string) => {
+        if (/mc1_person_profile_presentation/i.test(sql)) return [];
+        return [{ document: '9999999999' }];
+      },
     } as never;
     try {
       const r = await readMc1PersonProfile({
@@ -167,7 +241,12 @@ describe('mc1 person profile reader 9F', () => {
       'utf8',
     );
 
-    const ds = { query: async () => [] } as never;
+    const ds = {
+      query: async (sql: string) => {
+        if (/mc1_person_profile_presentation/i.test(sql)) return [];
+        return [];
+      },
+    } as never;
     try {
       const r = await readMc1PersonProfile({
         personId: '4',

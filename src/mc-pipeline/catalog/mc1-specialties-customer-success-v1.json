@@ -1,0 +1,126 @@
+{
+  "catalogCode": "MC1.SPECIALTY_CATALOG.CUSTOMER_SUCCESS",
+  "catalogVersion": "1.0.0",
+  "status": "ACTIVE",
+  "scope": ["CUSTOMER_SUCCESS"],
+  "note": "CUSTOMER_SUCCESS V1 foundation — specialties = stable professional practices of customer/user relationship: intake/onboarding, lifecycle care, retention/loyalty, and service/support. CRM/Zoho/Salesforce/SINU/Five9 are tools, never specialties. Campaign growth/advertising belongs to DIGITAL_MARKETING. Academic operations/instruction belongs to EDUCATION. Pure collections/admin ops belongs to FINANCE_ADMIN. CUN-only process names are context, not specialty identity.",
+  "fieldBoundaryNote": "CUSTOMER_SUCCESS = acompañar, convertir y retener clientes/usuarios a lo largo del ciclo (intake → cuidado → retención → servicio). DIGITAL_MARKETING = atracción/campañas/growth de mercado. EDUCATION = docencia/diseño instruccional/ops académicos. COMMUNICATIONS = mensaje institucional. FINANCE_ADMIN = procesos admin/financieros. MULTI_FIELD is legitimate.",
+  "specialties": [
+    {
+      "code": "CUSTOMER_INTAKE_ONBOARDING",
+      "name": "Vinculación e incorporación de clientes/usuarios",
+      "parentField": "CUSTOMER_SUCCESS",
+      "definition": "Práctica de captar, asesorar e incorporar clientes/usuarios al inicio del ciclo: prospección consultiva, vinculación/admisión/alta, orientación de requisitos y cierre de ingreso.",
+      "positiveSignals": [
+        "captación/vinculación/admisión de aspirantes, clientes o usuarios",
+        "asesoría de ingreso sobre requisitos, programas u oferta y registro de altas/matrículas",
+        "prospección y seguimiento de prospectos/leads hasta cierre de vinculación o activación"
+      ],
+      "exclusions": [
+        "solo campañas publicitarias/growth de mercado sin práctica de vinculación (ver DIGITAL_MARKETING)",
+        "solo operaciones académicas/curriculares sin relación con el cliente (ver EDUCATION)",
+        "solo listar CRM/SINU sin práctica de intake (tools ≠ specialty)",
+        "solo retención/postventa como identidad dominante (ver CUSTOMER_RETENTION_LOYALTY)"
+      ]
+    },
+    {
+      "code": "CUSTOMER_LIFECYCLE_CARE",
+      "name": "Cuidado y seguimiento del ciclo de cliente",
+      "parentField": "CUSTOMER_SUCCESS",
+      "definition": "Práctica de acompañar al cliente/usuario a lo largo del ciclo: seguimiento continuo, cuidado de la relación, embudos de conversión consultiva y habilitación para que complete su recorrido.",
+      "positiveSignals": [
+        "gestión del ciclo integral de vinculación/relación con seguimiento continuo",
+        "acompañamiento al cliente/usuario durante procesos clave del recorrido",
+        "seguimiento de prospectos/usuarios con cierre consultivo y cuidado de la relación"
+      ],
+      "exclusions": [
+        "solo atención/PQRS reactiva sin cuidado de ciclo (ver CUSTOMER_SERVICE_SUPPORT)",
+        "solo retención/fidelización como identidad dominante (ver CUSTOMER_RETENTION_LOYALTY)",
+        "solo marketing de adquisición masiva (ver DIGITAL_MARKETING)",
+        "solo listar herramientas CRM sin práctica de lifecycle"
+      ]
+    },
+    {
+      "code": "CUSTOMER_RETENTION_LOYALTY",
+      "name": "Retención y fidelización",
+      "parentField": "CUSTOMER_SUCCESS",
+      "definition": "Práctica de prevenir abandono y fortalecer lealtad: retención, fidelización, postventa y planes orientados a permanencia/satisfacción continua.",
+      "positiveSignals": [
+        "retención de clientes/usuarios/estudiantes para evitar abandono o cancelación",
+        "planes de fidelización y atención postventa ajustados a necesidades del cliente",
+        "estrategias de permanencia/satisfacción continua y lealtad"
+      ],
+      "exclusions": [
+        "solo captación/intake inicial sin práctica de retención (ver CUSTOMER_INTAKE_ONBOARDING)",
+        "solo PQRS/servicio reactivo sin objetivo de lealtad (ver CUSTOMER_SERVICE_SUPPORT)",
+        "solo KPIs comerciales de adquisición sin retención (border DIGITAL_MARKETING / intake)",
+        "solo mención de NPS/satisfacción sin práctica de fidelización"
+      ]
+    },
+    {
+      "code": "CUSTOMER_SERVICE_SUPPORT",
+      "name": "Servicio al cliente y soporte",
+      "parentField": "CUSTOMER_SUCCESS",
+      "definition": "Práctica de atender y resolver necesidades del cliente/usuario: servicio al cliente, atención presencial/remota, PQRS, soporte y resolución de conflictos en la relación.",
+      "positiveSignals": [
+        "servicio al cliente / atención al usuario como práctica central",
+        "gestión de PQRS, soporte o resolución de conflictos en la relación con el cliente",
+        "atención presencial o remota orientada a resolver casos y mejorar experiencia"
+      ],
+      "exclusions": [
+        "solo soporte técnico de sistemas/IT sin relación de cliente (border SOFTWARE / IT)",
+        "solo retención/fidelización estratégica sin atención operativa (ver CUSTOMER_RETENTION_LOYALTY)",
+        "solo ventas/cierre comercial sin servicio (ver CUSTOMER_INTAKE_ONBOARDING / LIFECYCLE)",
+        "solo listar Zoho Desk/Five9/Salesforce sin práctica de servicio"
+      ]
+    }
+  ],
+  "legacySpecialtyAliasesToSpecialty": {
+    "CUSTOMER_ONBOARDING": "CUSTOMER_INTAKE_ONBOARDING",
+    "ADMISSIONS_ENROLLMENT": "CUSTOMER_INTAKE_ONBOARDING",
+    "CUSTOMER_LIFECYCLE": "CUSTOMER_LIFECYCLE_CARE",
+    "ACCOUNT_MANAGEMENT": "CUSTOMER_LIFECYCLE_CARE",
+    "CUSTOMER_RETENTION": "CUSTOMER_RETENTION_LOYALTY",
+    "LOYALTY_MANAGEMENT": "CUSTOMER_RETENTION_LOYALTY",
+    "CUSTOMER_SERVICE": "CUSTOMER_SERVICE_SUPPORT",
+    "CUSTOMER_SUPPORT": "CUSTOMER_SERVICE_SUPPORT"
+  },
+  "reservedFutureSkills": [
+    {
+      "code": "CRM_ADMINISTRATION",
+      "parentSpecialty": "CUSTOMER_LIFECYCLE_CARE",
+      "parentField": "CUSTOMER_SUCCESS",
+      "note": "Tool/ops skill — CRM remains a tool signal, not a specialty"
+    },
+    {
+      "code": "CONSULTATIVE_SELLING",
+      "parentSpecialty": "CUSTOMER_INTAKE_ONBOARDING",
+      "parentField": "CUSTOMER_SUCCESS",
+      "note": "Skill under intake/lifecycle; deferred as specialty to avoid DM contamination"
+    },
+    {
+      "code": "NPS_VOICE_OF_CUSTOMER",
+      "parentSpecialty": "CUSTOMER_RETENTION_LOYALTY",
+      "parentField": "CUSTOMER_SUCCESS",
+      "note": "Measurement skill; not specialty V1"
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "code": "CRM_SPECIALIST",
+      "reason": "Tool identity rejected"
+    },
+    {
+      "code": "B2B_SUPERVISOR",
+      "reason": "Role/cargo identity rejected"
+    },
+    {
+      "code": "CUN_VINCULACIONES",
+      "reason": "Institution-specific process label — not transferable specialty"
+    },
+    {
+      "code": "SALES_OPERATIONS",
+      "reason": "Too close to DIGITAL_MARKETING / generic sales; commercial signals live under intake/lifecycle"
+    }
+  ]
+}

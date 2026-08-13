@@ -6,6 +6,7 @@ import {
   SPECIALTY_CATALOG_SCOPE,
   specialtiesForField,
 } from '../catalog/specialties-visual-education';
+import { resolveR1FieldCatalogCode } from '../r1/r1-field-catalog-resolver';
 import {
   loadP2EvidenceFromP1Pack,
   type P2LoadedEvidence,
@@ -70,10 +71,10 @@ export function loadR1Contract(packDir: string): R1ContractEnvelope {
 
 /**
  * Campos a evaluar en P3:
- * - RESOLVED: solo primary (KNOWN en scope de catálogo specialty)
+ * - RESOLVED: primary + secondaries con catálogo de specialty (R1 CLEAR_LEAD aún emite secondaries)
  * - MULTI_FIELD: primary + secondaries
  * - UNRESOLVED: ninguno
- * Solo VISUAL_DESIGN / EDUCATION tienen especialidades en 8B.
+ * Solo fields en SPECIALTY_CATALOG_SCOPE.
  */
 export function resolveFieldsToEvaluate(
   r1: R1ContractEnvelope,
@@ -84,7 +85,7 @@ export function resolveFieldsToEvaluate(
   }
 
   const out: P3ResolvedFieldInput[] = [];
-  const primary = p.primaryField.fieldCode;
+  const primary = resolveR1FieldCatalogCode(p.primaryField);
   if (primary && SPECIALTY_CATALOG_SCOPE.has(primary)) {
     out.push({
       fieldCode: primary,
@@ -93,9 +94,12 @@ export function resolveFieldsToEvaluate(
     });
   }
 
-  if (p.fieldResolutionStatus === 'MULTI_FIELD') {
+  if (
+    p.fieldResolutionStatus === 'MULTI_FIELD' ||
+    p.fieldResolutionStatus === 'RESOLVED'
+  ) {
     for (const s of p.secondaryFields ?? []) {
-      const code = s.fieldCode;
+      const code = resolveR1FieldCatalogCode(s);
       if (!code || !SPECIALTY_CATALOG_SCOPE.has(code)) continue;
       if (out.some((x) => x.fieldCode === code)) continue;
       out.push({
@@ -137,7 +141,7 @@ export async function loadP3Context(args: {
 
   const warningCodes = [
     'INPUT_SOURCE_R1_PLUS_P1_PACK_ARTIFACT_ONLY',
-    'SPECIALTY_CATALOG_SCOPE_VE_ED_PPM_FA_SE_AV_COMM',
+    'SPECIALTY_CATALOG_SCOPE_VE_ED_PPM_FA_SE_AV_COMM_DA_DM_CS_HR_IT_LEGAL',
     ...evidence.warningCodes.filter((w) => w.startsWith('CANONICAL_')),
   ];
 
