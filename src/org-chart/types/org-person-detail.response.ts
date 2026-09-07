@@ -9,5 +9,15 @@ export type OrgPersonDetailResponseDto = {
   canViewFullProfile: boolean;
   photoUrl: string | null;
   nodeKind?: OrgNodeKind;
+  /**
+   * Teléfono visible para este viewer.
+   *
+   * - Ficha completa (self / descendiente / ORG_READ_ALL): mismo valor que
+   *   `profile.phone`.
+   * - Ficha redactada: `null`, salvo que el viewer tenga ORG_CONTACT_READ_ALL.
+   *
+   * Es el ÚNICO campo privado que puede venir informado con `profile === null`.
+   */
+  phone: string | null;
   profile: OrgPersonFullProfileDto | null;
 };

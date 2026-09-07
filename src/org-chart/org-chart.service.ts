@@ -66,9 +66,14 @@ import {
   redactOrgChartSearchHit,
   redactOrgNodeTreeForViewer,
   redactOrgSummaryItem,
+  resolveVisiblePhone,
 } from './org-chart-visibility.mapper';
+import type { OrgRedactionOptions } from './org-chart-visibility.mapper';
 import type { OrgViewerContext } from './org-viewer-context';
-import { viewerHasGlobalReadAccess } from './org-viewer-context';
+import {
+  viewerCanReadAllContacts,
+  viewerHasGlobalReadAccess,
+} from './org-viewer-context';
 
 // ─── Catalog maps helper ──────────────────────────────────────────────────────
 
@@ -209,6 +214,17 @@ export class OrgChartService {
     return relationId
       ? `${readKey}:${personId}:rel:${relationId}`
       : `${readKey}:${personId}`;
+  }
+
+  /**
+   * Derechos de lectura puntuales del viewer (hoy solo ORG_CONTACT_READ_ALL).
+   *
+   * SOLO se usa en la ficha individual (`getPersonDetail`). Las superficies
+   * masivas —árbol, hijos y búsqueda— no lo consultan a propósito: tener derecho
+   * al teléfono no significa recibirlo en una carga masiva del organigrama.
+   */
+  private redactionOptions(viewer: OrgViewerContext): OrgRedactionOptions {
+    return { canReadAllContacts: viewerCanReadAllContacts(viewer) };
   }
 
   private async applyTreeVisibility(
@@ -1015,6 +1031,7 @@ export class OrgChartService {
           path: [this.buildPathNode(person, role, hierarchy, roleId)],
       };
 
+        // Superficie masiva: nunca emite teléfono de terceros redactados.
         return redactOrgChartSearchHit(hit, canView);
       }),
     );
@@ -1055,6 +1072,13 @@ export class OrgChartService {
       canViewFullProfile,
       photoUrl,
       nodeKind,
+      // Único campo privado que puede aparecer con la ficha redactada
+      // (ORG_CONTACT_READ_ALL). La decisión vive en el mapper central.
+      phone: resolveVisiblePhone(
+        person.phone,
+        canViewFullProfile,
+        this.redactionOptions(viewer),
+      ),
       profile: null,
     };
 

@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "npm run build && node dist/database/run-seed.js",
     "org:grant-admin": "npm run build && node dist/database/scripts/grant-admin.js",
+    "org:grant-contact-read-all": "npm run build && node dist/database/scripts/grant-contact-read-all.js",
     "diag:profile-photo": "npm run build && node dist/database/scripts/diag-profile-photo.js",
     "diag:drive-cv": "npm run build && node dist/database/scripts/diag-drive-cv.js",
     "diag:drive-cv-compare": "npm run build && node dist/database/scripts/diag-drive-cv-compare.js",
