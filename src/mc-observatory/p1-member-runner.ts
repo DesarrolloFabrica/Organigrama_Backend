@@ -2,8 +2,14 @@
  * Ejecutor P1 para un miembro del Observatory — reutiliza APIs públicas P1.
  * Concurrencia 1 · máx 2 retries técnicos por lote · sin persistencia BD.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { DeterministicEvidenceCandidateSegmenter } from '../mc-pipeline/p1/deterministic-evidence-candidate-segmenter';
 import { P1EvidenceBatchBuilder } from '../mc-pipeline/p1/p1-evidence-batch-builder';
 import {
@@ -15,11 +21,27 @@ import { callP1GeminiJson } from '../mc-pipeline/p1/p1-gemini-client';
 import {
   P1_CONTRACT_VERSION,
   P1_PROMPT_VERSION,
+  P1_SEGMENTER_NAME,
   P1_SEGMENTER_VERSION,
   type EvidenceCandidate,
   type P1CandidateDecision,
 } from '../mc-pipeline/p1/p1.types';
 import type { ValidatedEvidenceUnit } from '../mc-pipeline/p1/p1-batch-output-validator';
+import {
+  BATCH_BUILDER_VERSION,
+  VALIDATOR_VERSION,
+} from './observatory.constants';
+import {
+  computeP1ReuseFingerprint,
+  findReusableP1Pack,
+  hashSnapshotContent,
+  recordGeminiReuse,
+  resolveForceRecompute,
+} from '../mc-pipeline/gemini';
+import type { Mc1ThinkingConfig } from '../mc-pipeline/gemini/gemini-thinking-config';
+import { serializeThinkingConfig } from '../mc-pipeline/gemini/gemini-thinking-config';
+
+export type P1PhaseStatus = 'EXECUTED' | 'REUSED' | 'FAILED';
 
 export type P1MemberRunInput = {
   prototypeId: string;
@@ -31,11 +53,23 @@ export type P1MemberRunInput = {
   model: string;
   outDir: string;
   maxTechnicalRetries?: number;
+  personId?: string;
+  personCvId?: string;
+  runId?: string;
+  backendRoot?: string;
+  forceRecompute?: boolean;
+  fingerprintOverrides?: Record<string, string>;
+  reuseSearchRoot?: string;
+  thinkingConfig?: Mc1ThinkingConfig;
 };
 
 export type P1MemberRunResult = {
   ok: boolean;
   status: 'COMPLETED' | 'PARTIAL' | 'FAILED';
+  executionStatus: P1PhaseStatus;
+  geminiInvoked: boolean;
+  reuseFingerprint: string | null;
+  sourceArtifactId: string | null;
   candidateCount: number;
   batchCount: number;
   successfulBatches: number;
@@ -73,12 +107,134 @@ function writeJson(dir: string, name: string, data: unknown) {
   writeFileSync(join(dir, name), JSON.stringify(data, null, 2), 'utf8');
 }
 
+const P1_PACK_FILES = [
+  'candidates.json',
+  'batches.json',
+  'prototype-manifest.json',
+  'model-output.raw.json',
+  'validated-evidence.json',
+  'execution-summary.json',
+  'decisions.json',
+];
+
+function loadP1ResultFromPack(dir: string, durationMs: number): P1MemberRunResult {
+  const summary = JSON.parse(
+    readFileSync(join(dir, 'execution-summary.json'), 'utf8'),
+  ) as {
+    status?: string;
+    candidates?: number;
+    batches?: number;
+    successfulBatches?: number;
+    failedBatches?: number;
+    retries?: number;
+    unsupportedSpans?: number;
+    forbiddenTaxonomyHits?: number;
+  };
+  const validated = JSON.parse(
+    readFileSync(join(dir, 'validated-evidence.json'), 'utf8'),
+  ) as { units?: ValidatedEvidenceUnit[] };
+  const units = validated.units ?? [];
+  const decisions = new Map<string, P1CandidateDecision>();
+  const sidecarPath = join(dir, 'decisions.json');
+  if (existsSync(sidecarPath)) {
+    const sidecar = JSON.parse(readFileSync(sidecarPath, 'utf8')) as {
+      decisions?: Array<{ candidateId: string; decision: P1CandidateDecision }>;
+    };
+    for (const d of sidecar.decisions ?? []) {
+      decisions.set(d.candidateId, d.decision);
+    }
+  } else {
+    for (const u of units) decisions.set(u.candidateId, u.decision);
+  }
+  const manifest = JSON.parse(
+    readFileSync(join(dir, 'prototype-manifest.json'), 'utf8'),
+  ) as { reuseFingerprint?: string };
+  const status =
+    summary.status === 'COMPLETED' || summary.status === 'PARTIAL'
+      ? summary.status
+      : 'FAILED';
+  return {
+    ok: status === 'COMPLETED',
+    status,
+    executionStatus: 'REUSED',
+    geminiInvoked: false,
+    reuseFingerprint: manifest.reuseFingerprint ?? null,
+    sourceArtifactId: basename(dir),
+    candidateCount: summary.candidates ?? 0,
+    batchCount: summary.batches ?? 0,
+    successfulBatches: summary.successfulBatches ?? 0,
+    failedBatches: summary.failedBatches ?? 0,
+    retries: summary.retries ?? 0,
+    units,
+    decisions,
+    unsupportedSpanCount: summary.unsupportedSpans ?? 0,
+    forbiddenTaxonomyHits: summary.forbiddenTaxonomyHits ?? 0,
+    durationMs,
+    errorCode: status === 'COMPLETED' ? null : 'BATCH_OR_SEGMENT_FAILURE',
+  };
+}
+
+function copyP1Pack(sourceDir: string, destDir: string): void {
+  mkdirSync(destDir, { recursive: true });
+  for (const name of P1_PACK_FILES) {
+    const src = join(sourceDir, name);
+    if (existsSync(src)) copyFileSync(src, join(destDir, name));
+  }
+}
+
 export async function runP1ForMember(
   input: P1MemberRunInput,
 ): Promise<P1MemberRunResult> {
   const t0 = Date.now();
   mkdirSync(input.outDir, { recursive: true });
   const maxRetries = input.maxTechnicalRetries ?? 2;
+  const forceRecompute = resolveForceRecompute(input.forceRecompute);
+  const reuseFingerprint = computeP1ReuseFingerprint({
+    snapshotContentHash: hashSnapshotContent(input.normalizedText),
+    segmenterName: P1_SEGMENTER_NAME,
+    segmenterVersion: P1_SEGMENTER_VERSION,
+    promptVersion: P1_PROMPT_VERSION,
+    contractVersion: P1_CONTRACT_VERSION,
+    model: input.model,
+    batchBuilderVersion: BATCH_BUILDER_VERSION,
+    validatorVersion: VALIDATOR_VERSION,
+    overrides: input.fingerprintOverrides,
+  });
+
+  if (!forceRecompute) {
+    const searchRoot = input.reuseSearchRoot ?? dirname(input.outDir);
+    const hit = findReusableP1Pack({
+      searchRoot,
+      snapshotId: input.snapshotId,
+      reuseFingerprint,
+    });
+    if (hit && hit.dir !== input.outDir) {
+      copyP1Pack(hit.dir, input.outDir);
+      writeJson(input.outDir, 'reuse.json', {
+        status: 'REUSED',
+        sourceArtifactId: hit.artifactId,
+        reuseFingerprint,
+        copiedAt: new Date().toISOString(),
+      });
+      recordGeminiReuse({
+        context: {
+          phase: 'P1',
+          snapshotId: input.snapshotId,
+          personId: input.personId,
+          personCvId: input.personCvId,
+          runId: input.runId,
+          model: input.model,
+          promptVersion: P1_PROMPT_VERSION,
+          contractVersion: P1_CONTRACT_VERSION,
+          reuseFingerprint,
+        },
+        sourceArtifactId: hit.artifactId,
+        durationMs: Date.now() - t0,
+        backendRoot: input.backendRoot,
+      });
+      return loadP1ResultFromPack(input.outDir, Date.now() - t0);
+    }
+  }
 
   const segmenter = new DeterministicEvidenceCandidateSegmenter();
   const segmentation = segmenter.segment({
@@ -100,6 +256,10 @@ export async function runP1ForMember(
     return {
       ok: false,
       status: 'FAILED',
+      executionStatus: 'FAILED',
+      geminiInvoked: false,
+      reuseFingerprint,
+      sourceArtifactId: null,
       candidateCount: segmentation.metrics.candidateCount,
       batchCount: 0,
       successfulBatches: 0,
@@ -135,6 +295,7 @@ export async function runP1ForMember(
     promptVersion: P1_PROMPT_VERSION,
     modelProvider: 'google-genai',
     modelVersion: input.model,
+    reuseFingerprint,
     startedAt: new Date().toISOString(),
     persistence: 'NONE',
   });
@@ -174,6 +335,22 @@ export async function runP1ForMember(
           systemPrompt,
           userPayload,
           attempt,
+          backendRoot: input.backendRoot,
+          ledger: {
+            phase: 'P1',
+            snapshotId: input.snapshotId,
+            personId: input.personId,
+            personCvId: input.personCvId,
+            runId: input.runId,
+            batchId: batch.batchId,
+            batchIndex: batches.indexOf(batch),
+            promptVersion: P1_PROMPT_VERSION,
+            contractVersion: P1_CONTRACT_VERSION,
+            reuseFingerprint,
+            forceRecompute,
+            inputFingerprint: serializeThinkingConfig(input.thinkingConfig),
+          },
+          thinkingConfig: input.thinkingConfig,
         });
         parsed = JSON.parse(res.text);
         break;
@@ -258,6 +435,7 @@ export async function runP1ForMember(
     unsupportedSpans: unsupportedSpanCount,
     forbiddenTaxonomyHits,
     persistence: 'NONE',
+    reuseFingerprint,
     P2: false,
     Cloud: false,
   });
@@ -265,6 +443,10 @@ export async function runP1ForMember(
   return {
     ok: status === 'COMPLETED',
     status,
+    executionStatus: status === 'FAILED' ? 'FAILED' : 'EXECUTED',
+    geminiInvoked: successfulBatches + failedBatches > 0,
+    reuseFingerprint,
+    sourceArtifactId: null,
     candidateCount: segmentation.candidates.length,
     batchCount: batches.length,
     successfulBatches,

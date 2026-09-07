@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -40,7 +41,7 @@ describe('OrgChartVersionService', () => {
   beforeEach(async () => {
     versionsRepo = {
       findOne: jest.fn(),
-      find: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -147,6 +148,94 @@ describe('OrgChartVersionService', () => {
       await expect(
         service.resolveVersionForRequest(versionAdminViewer(), { versionId: '2' }),
       ).resolves.toBe('2');
+    });
+
+    it('400 si versionId es una versión de coordinación', async () => {
+      versionsRepo.findOne.mockResolvedValueOnce({
+        id: '9',
+        code: 'fabrica-contenidos',
+        is_active: false,
+        scope_type: 'COORDINATION',
+      } as OrgChartVersion);
+
+      await expect(
+        service.resolveVersionForRequest(versionAdminViewer(), {
+          versionId: '9',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('resolveReadPlan', () => {
+    it('sin scopeVersionId usa overlays activos de coordinación', async () => {
+      versionsRepo.findOne.mockResolvedValueOnce({
+        id: '1',
+        code: 'current',
+        is_active: true,
+        scope_type: 'GLOBAL',
+      } as OrgChartVersion);
+      versionsRepo.find.mockResolvedValueOnce([
+        {
+          id: '9',
+          code: 'fabrica-contenidos',
+          name: 'Fábrica de contenidos',
+          is_active: true,
+          scope_type: 'COORDINATION',
+          scope_code: 'fabrica-contenidos',
+          scope_label: 'Fábrica de contenidos',
+          scope_root_person_id: '49',
+        } as OrgChartVersion,
+      ]);
+
+      await expect(
+        service.resolveReadPlan(normalViewer(), {}),
+      ).resolves.toMatchObject({
+        globalVersionId: '1',
+        overlays: [
+          {
+            versionId: '9',
+            scopeCode: 'fabrica-contenidos',
+            rootPersonId: '49',
+          },
+        ],
+      });
+    });
+
+    it('scopeVersionId=none deja el subárbol en la versión global', async () => {
+      versionsRepo.findOne.mockResolvedValueOnce({
+        id: '1',
+        code: 'current',
+        is_active: true,
+        scope_type: 'GLOBAL',
+      } as OrgChartVersion);
+
+      await expect(
+        service.resolveReadPlan(versionAdminViewer(), {
+          scopeVersionId: 'none',
+        }),
+      ).resolves.toMatchObject({
+        globalVersionId: '1',
+        overlays: [],
+        cacheKey: 'g1|onone',
+      });
+    });
+
+    it('scopeVersionId=none no exige permiso de versiones', async () => {
+      versionsRepo.findOne.mockResolvedValueOnce({
+        id: '1',
+        code: 'current',
+        is_active: true,
+        scope_type: 'GLOBAL',
+      } as OrgChartVersion);
+
+      await expect(
+        service.resolveReadPlan(normalViewer(), {
+          scopeVersionId: 'none',
+        }),
+      ).resolves.toMatchObject({
+        globalVersionId: '1',
+        overlays: [],
+      });
     });
   });
 

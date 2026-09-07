@@ -1,6 +1,6 @@
 {
   "catalogCode": "MC1.SPECIALTY_CATALOG.DATA_ANALYTICS",
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "status": "ACTIVE",
   "scope": ["DATA_ANALYTICS"],
   "note": "DATA_ANALYTICS V1 foundation — specialties = recognizable analytics practice identities. Tools (Power BI, Tableau, SQL, Python, R, GCP, LightGBM, etc.) are never specialties. Business Analytics as degree is EDUCATION_SIGNAL, not a specialty. Marketing Mix Modeling deferred (border DIGITAL_MARKETING). Leadership/storytelling soft skills are not specialties.",
@@ -38,7 +38,8 @@
         "construcción de producto software como identidad dominante (ver SOFTWARE_ENGINEERING)",
         "operación TI genérica sin foco analítico (ver IT_SYSTEMS)",
         "solo dashboards/reporting como identidad dominante (ver BUSINESS_INTELLIGENCE)",
-        "solo nombrar GCP/SQL/Python sin práctica de ingeniería de datos"
+        "solo nombrar GCP/SQL/Python sin práctica de ingeniería de datos",
+        "un outcome explícito de gobierno/integridad/calidad del dato/trazabilidad en la misma actividad no anula DATA_ENGINEERING: puede atribuirse además a DATA_GOVERNANCE (dual attribution)"
       ]
     },
     {
@@ -62,17 +63,20 @@
       "code": "DATA_GOVERNANCE",
       "name": "Gobernanza y calidad de datos",
       "parentField": "DATA_ANALYTICS",
-      "definition": "Práctica de asegurar integridad, trazabilidad, disponibilidad y gobierno de activos de datos usados para analítica.",
+      "definition": "Práctica de asegurar integridad, trazabilidad, disponibilidad y gobierno de activos de datos usados para analítica. Una misma actividad técnica (esquema, repositorio, pipeline) puede constituir práctica de DATA_GOVERNANCE cuando la responsabilidad o el resultado explícito incluye gobierno, integridad, calidad del dato, trazabilidad u otro outcome de gobierno del activo, incluso si esa actividad también evidencia DATA_ENGINEERING. La atribución dual es válida: las dos especialidades no son mutuamente excluyentes.",
       "positiveSignals": [
-        "responsabilidad explícita de gobernanza, integridad o calidad de datos analíticos",
-        "trazabilidad/disponibilidad de información como práctica profesional recurrente",
-        "políticas o controles de gobierno de datos al servicio de analítica"
+        "responsabilidad explícita de gobernanza, integridad o calidad de datos analíticos como outcome de una ACTION/RESPONSIBILITY laboral",
+        "trazabilidad/disponibilidad de información como práctica profesional recurrente (no solo herramienta)",
+        "políticas o controles de gobierno de datos al servicio de analítica",
+        "actividad técnica sobre un activo de datos cuyo result/responsibility declara gobierno, integridad, calidad del dato o trazabilidad"
       ],
       "exclusions": [
-        "solo construir pipelines sin práctica de gobierno (ver DATA_ENGINEERING)",
+        "SQL, ETL, pipelines, cloud, repositorios o arquitectura de datos por sí solos, sin outcome explícito de gobierno/calidad del dato (ver DATA_ENGINEERING)",
+        "solo construir pipelines o administrar esquemas/fuentes sin práctica de gobierno (ver DATA_ENGINEERING)",
         "gestión documental administrativa genérica (ver FINANCE_ADMIN)",
-        "mención aislada de 'calidad' sin práctica de gobernanza",
-        "solo listar herramientas cloud/SQL sin señales de gobierno"
+        "mención aislada de 'calidad' de un entregable/reporting sin práctica de calidad o gobierno del dato",
+        "solo listar herramientas cloud/SQL/BI sin responsabilidad o resultado de gobierno",
+        "declaración aislada de conocimiento (p. ej. 'Gobierno de datos' en un listado) — puede reforzar OBSERVED pero nunca originarlo sola"
       ]
     }
   ],

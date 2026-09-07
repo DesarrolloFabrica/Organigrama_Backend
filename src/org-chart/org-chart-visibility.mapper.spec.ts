@@ -16,6 +16,8 @@ function sampleNode(overrides: Partial<OrgNode> = {}): OrgNode {
     parent_person_id: null,
     assignment_status: null,
     assignment_label: null,
+    current_workforce_event: null,
+    current_workforce_event_count: 0,
     hierarchy_id: 'h2',
     hierarchy: {
       id: 'h2',
@@ -59,6 +61,25 @@ describe('redactOrgNode', () => {
     expect(redacted.phone).toBeNull();
     expect(redacted.area).toBeNull();
     expect(redacted.location).toBeNull();
+  });
+
+  it('preserves current workforce event on restricted nodes', () => {
+    const redacted = redactOrgNode(
+      sampleNode({
+        current_workforce_event: {
+          id: 'evt-1',
+          eventTypeName: 'INCAPACIDAD',
+          status: 'TAKEN',
+          startDate: '2026-08-18',
+          endDate: '2026-08-20',
+        },
+        current_workforce_event_count: 2,
+      }),
+      false,
+    );
+
+    expect(redacted.current_workforce_event?.eventTypeName).toBe('INCAPACIDAD');
+    expect(redacted.current_workforce_event_count).toBe(2);
   });
 
   it('applies visibility per node in the tree', () => {

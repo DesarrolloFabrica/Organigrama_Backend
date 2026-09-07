@@ -16,13 +16,22 @@ export type ProfileSkillDimensionMapping = {
   mappingJustification: string;
 };
 
+export type ProfileRadarEvidenceState =
+  | 'NO_EVIDENCE'
+  | 'WEAK_EVIDENCE'
+  | 'OBSERVED';
+
 export type ProfileRadarAxis = {
   dimensionCode: string;
   label: string;
   rawScore: number;
   relativeCoverage: number;
+  /** Derived presentation value. Optional only for historical profile packs. */
+  displayCoverage?: number;
   contributingSkillCodes: string[];
   supportingEvidenceUnitIds: string[];
+  /** Presentation-only overlay; does not promote P3/P4 WEAK. */
+  evidenceState?: ProfileRadarEvidenceState;
 };
 
 /** FASE 12A — presentation eligibility (not P2/R1 discovery/resolution). */
@@ -89,6 +98,12 @@ export type ProfilePilotEnvelope = {
       formulaVersion: string;
       /** FASE 12A */
       fieldPublicationGate?: 'MC1.PROFILE.PUBLICATION_GATE.1.0.0';
+      /** Presentation overlay: WEAK axes use a floor; skills stay unpublished. */
+      radarWeakSemanticsVersion?: string;
+      radarWeakEvidenceFloor?: number;
+      /** Post-8E presentation calibration; relativeCoverage remains unchanged. */
+      radarCalibrationPolicy?: string;
+      radarCalibrationVersion?: string;
     };
     provenance: {
       r1PackDir: string;

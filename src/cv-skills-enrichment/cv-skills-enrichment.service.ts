@@ -5,6 +5,11 @@ import { DEFAULT_GEMINI_MODEL } from '../cv-skills/cv-skills.types';
 import { CV_SKILLS_ENRICHER_PROMPT } from './cv-skills-enrichment.prompt';
 import { CV_SKILLS_ENRICHER_JSON_SCHEMA } from './cv-skills-enrichment.schema';
 import type { EnrichmentInputSkill } from './cv-skills-enrichment.types';
+import {
+  emptyGeminiUsage,
+  extractGeminiUsage,
+  recordGeminiCall,
+} from '../mc-pipeline/gemini';
 
 export class EnrichmentGeminiError extends Error {
   constructor(message: string) {
@@ -91,9 +96,33 @@ export class CvSkillsEnrichmentService {
         },
       });
       responseText = response.text;
+      try {
+        const { usage, raw } = extractGeminiUsage(response);
+        recordGeminiCall({
+          context: { phase: 'CV_ENRICHMENT', model },
+          usage,
+          usageRaw: raw,
+          status: 'SUCCESS',
+          durationMs: null,
+        });
+      } catch {
+        // ledger best-effort
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error Gemini enricher: ${message}`);
+      try {
+        recordGeminiCall({
+          context: { phase: 'CV_ENRICHMENT', model },
+          usage: emptyGeminiUsage(),
+          usageRaw: null,
+          status: 'FAILED',
+          durationMs: null,
+          errorCode: message.slice(0, 180),
+        });
+      } catch {
+        // ledger best-effort
+      }
       throw new EnrichmentGeminiError(
         `Fallo al llamar a Gemini (enricher): ${message}`,
       );

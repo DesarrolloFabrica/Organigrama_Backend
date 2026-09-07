@@ -1,0 +1,35 @@
+# Cloud Build upload ignore. Profile photos are untracked on purpose
+# (not in git) but MUST be baked into the Cloud Run image.
+.git
+.gitignore
+.gcloudignore
+node_modules
+dist
+coverage
+.env
+.env.*
+!.env.example
+secrets/
+*.token.json
+google-drive-token.json
+google-drive-oauth-client.json
+/tmp/
+/tools/
+cloud-sql-proxy.exe
+baselines/
+*.dump
+mc1-mde/
+/test
+/scripts
+**/*.spec.ts
+**/*.test.ts
+.vscode
+.idea
+npm-debug.log*
+docker-compose*.yml
+*.md
+
+# Always include local profile photos in the image context.
+!public/
+!public/profile-photos/
+!public/profile-photos/**

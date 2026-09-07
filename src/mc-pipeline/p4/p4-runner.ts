@@ -1,6 +1,8 @@
 import { callP1GeminiJson } from '../p1/p1-gemini-client';
 import { SPECIALTY_CATALOG_VERSION } from '../catalog/specialties-visual-education';
 import type { DataSource } from 'typeorm';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   fingerprintP4Config,
   loadP4Context,
@@ -23,12 +25,26 @@ import {
   type P4ContractEnvelope,
   type P4ModelRawOutput,
 } from './p4.types';
+import {
+  computeP4ReuseFingerprint,
+  findReusableP4Pack,
+  p4SpecialtiesKey,
+  readManifestReuseFingerprint,
+  recordGeminiReuse,
+  resolveForceRecompute,
+  serializeThinkingConfig,
+} from '../gemini';
+
+export type P4PhaseStatus = 'EXECUTED' | 'REUSED';
 
 export type P4RunResult = {
   envelope: P4ContractEnvelope;
   outDir: string;
   loaded: P4LoadedContext;
   geminiInvoked: boolean;
+  executionStatus: P4PhaseStatus;
+  reuseFingerprint: string;
+  sourceArtifactId: string | null;
 };
 
 function parseModelJson(text: string): P4ModelRawOutput {
@@ -57,6 +73,10 @@ export async function runP4ArtifactOnly(args: {
   p3PackDir?: string;
   campaignId?: string;
   pipelineRunId?: string;
+  personId?: string;
+  forceRecompute?: boolean;
+  fingerprintOverrides?: Record<string, string>;
+  thinkingConfig?: import('../gemini/gemini-thinking-config').Mc1ThinkingConfig;
 }): Promise<P4RunResult> {
   const loaded = await loadP4Context({
     backendRoot: args.backendRoot,
@@ -66,12 +86,64 @@ export async function runP4ArtifactOnly(args: {
     p3PackDir: args.p3PackDir,
   });
 
+  const specialtiesEvaluated = loaded.specialtiesEvaluated;
+  const forceRecompute = resolveForceRecompute(args.forceRecompute);
+  const p3ResultIdentity = readManifestReuseFingerprint(loaded.p3PackDir);
+  const reuseFingerprint = computeP4ReuseFingerprint({
+    p1ArtifactDigest: loaded.evidence.p1ArtifactDigest,
+    p3ResultIdentity,
+    specialtiesKey: p4SpecialtiesKey(specialtiesEvaluated),
+    promptVersion: P4_PROMPT_VERSION,
+    contractVersion: P4_CONTRACT_VERSION,
+    specialtyCatalogVersion: SPECIALTY_CATALOG_VERSION,
+    routingPolicyVersion: P4_ROUTING_POLICY_VERSION,
+    reasoningPolicyVersion: P4_REASONING_POLICY_VERSION,
+    generationPolicyVersion: P4_GENERATION_POLICY_VERSION,
+    model: args.model,
+    overrides: args.fingerprintOverrides,
+  });
+
+  if (!forceRecompute) {
+    const hit = findReusableP4Pack({
+      searchRoot: args.outRoot,
+      snapshotId: args.snapshotId,
+      reuseFingerprint,
+    });
+    if (hit) {
+      const envelope = JSON.parse(
+        readFileSync(join(hit.dir, 'p4-contract.json'), 'utf8'),
+      ) as P4ContractEnvelope;
+      recordGeminiReuse({
+        context: {
+          phase: 'P4',
+          snapshotId: args.snapshotId,
+          personId: args.personId,
+          runId: args.pipelineRunId,
+          model: args.model,
+          promptVersion: P4_PROMPT_VERSION,
+          contractVersion: P4_CONTRACT_VERSION,
+          catalogVersion: SPECIALTY_CATALOG_VERSION,
+          reuseFingerprint,
+        },
+        sourceArtifactId: hit.artifactId,
+        backendRoot: args.backendRoot,
+      });
+      return {
+        envelope,
+        outDir: hit.dir,
+        loaded,
+        geminiInvoked: false,
+        executionStatus: 'REUSED',
+        reuseFingerprint,
+        sourceArtifactId: hit.artifactId,
+      };
+    }
+  }
+
   const executionId = newP4ExecutionId();
   const campaignId = args.campaignId ?? 'MC1-P4-8D-FUNCTIONAL';
   const pipelineRunId =
     args.pipelineRunId ?? `p4-8d-${args.snapshotId}-${Date.now()}`;
-
-  const specialtiesEvaluated = loaded.specialtiesEvaluated;
 
   const configFingerprint = fingerprintP4Config({
     contractVersion: P4_CONTRACT_VERSION,
@@ -145,6 +217,21 @@ export async function runP4ArtifactOnly(args: {
       model: args.model,
       systemPrompt,
       userPayload,
+      backendRoot: args.backendRoot,
+      ledger: {
+        phase: 'P4',
+        snapshotId: args.snapshotId,
+        personId: args.personId,
+        runId: pipelineRunId,
+        promptVersion: P4_PROMPT_VERSION,
+        contractVersion: P4_CONTRACT_VERSION,
+        catalogVersion: SPECIALTY_CATALOG_VERSION,
+        configFingerprint,
+        reuseFingerprint,
+        forceRecompute,
+        inputFingerprint: serializeThinkingConfig(args.thinkingConfig),
+      },
+      thinkingConfig: args.thinkingConfig,
     });
     geminiInvoked = true;
     raw = parseModelJson(gem.text);
@@ -191,8 +278,17 @@ export async function runP4ArtifactOnly(args: {
       specialtyCatalogVersion: SPECIALTY_CATALOG_VERSION,
       eligibleUnitCount: loaded.evidence.units.length,
       geminiInvoked,
+      reuseFingerprint,
     },
   });
 
-  return { envelope, outDir, loaded, geminiInvoked };
+  return {
+    envelope,
+    outDir,
+    loaded,
+    geminiInvoked,
+    executionStatus: 'EXECUTED',
+    reuseFingerprint,
+    sourceArtifactId: null,
+  };
 }

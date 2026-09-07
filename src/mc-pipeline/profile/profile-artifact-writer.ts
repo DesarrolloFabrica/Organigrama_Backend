@@ -1,6 +1,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ProfilePilotEnvelope } from './profile.types';
+import {
+  calibrateDimensionCoverage,
+  RADAR_CALIBRATION_METADATA,
+} from './profile-radar-calibration';
 
 export function writeProfilePilotPack(args: {
   outDir: string;
@@ -27,6 +31,7 @@ export function writeProfilePilotPack(args: {
         r1FieldResolutionStatus: p.r1FieldResolutionStatus,
         fieldCount: p.fields.length,
         formulaVersion: p.presentationNotes.formulaVersion,
+        calibration: RADAR_CALIBRATION_METADATA,
         producedAt: args.envelope.producedAt,
         provenance: p.provenance,
       },
@@ -56,6 +61,8 @@ export function writeProfilePilotPack(args: {
             .map((a) => ({
               dimension: a.label,
               relativeCoverage: a.relativeCoverage,
+              displayCoverage:
+                a.displayCoverage ?? calibrateDimensionCoverage(a),
               rawScore: a.rawScore,
             })),
         })),

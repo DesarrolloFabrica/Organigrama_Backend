@@ -84,6 +84,13 @@ describe('mc1 person profile reader 9F', () => {
     });
 
     expect(presentation.status).toBe('AVAILABLE');
+    expect(presentation.calibration).toEqual({
+      policy: 'MC1.PROFILE.RADAR_CALIBRATION',
+      version: '1.1.0',
+    });
+    expect(
+      presentation.fields[0].competencyMap.dimensions[0].displayCoverage,
+    ).toBe(100);
     expect(presentation.fields[0].specialties[0].code).toBe(
       'FRONTEND_ENGINEERING',
     );
@@ -256,6 +263,7 @@ describe('mc1 person profile reader 9F', () => {
       expect(r.status).toBe('AVAILABLE');
       if (r.status === 'AVAILABLE') {
         expect(r.presentation.fields[0].code).toBe('SOFTWARE_ENGINEERING');
+        expect(r.presentation.calibration?.version).toBe('1.1.0');
         expect(r.presentation.fields[0].specialties.map((s) => s.code)).toEqual([
           'FRONTEND_ENGINEERING',
         ]);

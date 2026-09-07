@@ -25,6 +25,8 @@ export type RadarSkillContribution = {
   explicitnessBoost: number;
 };
 
+export type RadarEvidenceState = 'NO_EVIDENCE' | 'WEAK_EVIDENCE' | 'OBSERVED';
+
 export type RadarAxisResult = {
   dimensionCode: string;
   label: string;
@@ -32,6 +34,8 @@ export type RadarAxisResult = {
   relativeCoverage: number;
   contributingSkillCodes: string[];
   supportingEvidenceUnitIds: string[];
+  /** Presentation-only. Absent on packs assembled before WEAK radar semantics. */
+  evidenceState?: RadarEvidenceState;
 };
 
 export function explicitnessBoostFor(

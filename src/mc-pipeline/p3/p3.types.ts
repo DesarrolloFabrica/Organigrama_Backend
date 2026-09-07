@@ -3,8 +3,8 @@
  */
 export const P3_CONTRACT_CODE = 'MC1.P3.SPECIALTY_DISCOVERY' as const;
 export const P3_CONTRACT_VERSION = '1.0.0' as const;
-export const P3_PROMPT_VERSION = 'MC1.P3.PROMPT.FUNCTIONAL.1.0.0' as const;
-export const P3_REASONING_POLICY_VERSION = '8B.1' as const;
+export const P3_PROMPT_VERSION = 'MC1.P3.PROMPT.FUNCTIONAL.1.1.0' as const;
+export const P3_REASONING_POLICY_VERSION = '12K.1' as const;
 export const P3_GENERATION_POLICY_VERSION = '8B.1' as const;
 
 export type P3OutcomeStatus =

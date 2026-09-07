@@ -1,6 +1,8 @@
 import { callP1GeminiJson } from '../p1/p1-gemini-client';
 import { SPECIALTY_CATALOG_VERSION } from '../catalog/specialties-visual-education';
 import type { DataSource } from 'typeorm';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   fingerprintP3Config,
   loadP3Context,
@@ -21,12 +23,25 @@ import {
   type P3ContractEnvelope,
   type P3ModelRawOutput,
 } from './p3.types';
+import {
+  computeP3ReuseFingerprint,
+  findReusableP3Pack,
+  recordGeminiReuse,
+  resolveForceRecompute,
+  serializeThinkingConfig,
+} from '../gemini';
+import { observeMc1ShadowFromP3 } from '../shadow-resolver/hook';
+
+export type P3PhaseStatus = 'EXECUTED' | 'REUSED';
 
 export type P3RunResult = {
   envelope: P3ContractEnvelope;
   outDir: string;
   loaded: P3LoadedContext;
   geminiInvoked: boolean;
+  executionStatus: P3PhaseStatus;
+  reuseFingerprint: string;
+  sourceArtifactId: string | null;
 };
 
 function parseModelJson(text: string): P3ModelRawOutput {
@@ -54,6 +69,10 @@ export async function runP3ArtifactOnly(args: {
   r1PackDir?: string;
   campaignId?: string;
   pipelineRunId?: string;
+  personId?: string;
+  forceRecompute?: boolean;
+  fingerprintOverrides?: Record<string, string>;
+  thinkingConfig?: import('../gemini/gemini-thinking-config').Mc1ThinkingConfig;
 }): Promise<P3RunResult> {
   const loaded = await loadP3Context({
     backendRoot: args.backendRoot,
@@ -62,12 +81,69 @@ export async function runP3ArtifactOnly(args: {
     r1PackDir: args.r1PackDir,
   });
 
+  observeMc1ShadowFromP3({
+    backendRoot: args.backendRoot,
+    snapshotId: args.snapshotId,
+    personId: args.personId,
+    units: loaded.evidence.units,
+  });
+
+  const fieldsEvaluated = loaded.fieldsToEvaluate.map((f) => f.fieldCode);
+  const forceRecompute = resolveForceRecompute(args.forceRecompute);
+  const reuseFingerprint = computeP3ReuseFingerprint({
+    p1ArtifactDigest: loaded.evidence.p1ArtifactDigest,
+    r1FieldResolutionStatus: loaded.r1.payload.fieldResolutionStatus,
+    fieldsEvaluated,
+    promptVersion: P3_PROMPT_VERSION,
+    contractVersion: P3_CONTRACT_VERSION,
+    specialtyCatalogVersion: SPECIALTY_CATALOG_VERSION,
+    reasoningPolicyVersion: P3_REASONING_POLICY_VERSION,
+    generationPolicyVersion: P3_GENERATION_POLICY_VERSION,
+    model: args.model,
+    overrides: args.fingerprintOverrides,
+  });
+
+  if (!forceRecompute) {
+    const hit = findReusableP3Pack({
+      searchRoot: args.outRoot,
+      snapshotId: args.snapshotId,
+      reuseFingerprint,
+    });
+    if (hit) {
+      const envelope = JSON.parse(
+        readFileSync(join(hit.dir, 'p3-contract.json'), 'utf8'),
+      ) as P3ContractEnvelope;
+      recordGeminiReuse({
+        context: {
+          phase: 'P3',
+          snapshotId: args.snapshotId,
+          personId: args.personId,
+          runId: args.pipelineRunId,
+          model: args.model,
+          promptVersion: P3_PROMPT_VERSION,
+          contractVersion: P3_CONTRACT_VERSION,
+          catalogVersion: SPECIALTY_CATALOG_VERSION,
+          reuseFingerprint,
+        },
+        sourceArtifactId: hit.artifactId,
+        backendRoot: args.backendRoot,
+      });
+      return {
+        envelope,
+        outDir: hit.dir,
+        loaded,
+        geminiInvoked: false,
+        executionStatus: 'REUSED',
+        reuseFingerprint,
+        sourceArtifactId: hit.artifactId,
+      };
+    }
+  }
+
   const executionId = newP3ExecutionId();
   const campaignId = args.campaignId ?? 'MC1-P3-8B2-FREEZE';
   const pipelineRunId =
     args.pipelineRunId ?? `p3-8b2-${args.snapshotId}-${Date.now()}`;
-
-  const fieldsEvaluated = loaded.fieldsToEvaluate.map((f) => f.fieldCode);
 
   const configFingerprint = fingerprintP3Config({
     contractVersion: P3_CONTRACT_VERSION,
@@ -129,6 +205,21 @@ export async function runP3ArtifactOnly(args: {
       model: args.model,
       systemPrompt,
       userPayload,
+      backendRoot: args.backendRoot,
+      ledger: {
+        phase: 'P3',
+        snapshotId: args.snapshotId,
+        personId: args.personId,
+        runId: pipelineRunId,
+        promptVersion: P3_PROMPT_VERSION,
+        contractVersion: P3_CONTRACT_VERSION,
+        catalogVersion: SPECIALTY_CATALOG_VERSION,
+        configFingerprint,
+        reuseFingerprint,
+        forceRecompute,
+        inputFingerprint: serializeThinkingConfig(args.thinkingConfig),
+      },
+      thinkingConfig: args.thinkingConfig,
     });
     geminiInvoked = true;
     raw = parseModelJson(gem.text);
@@ -173,8 +264,17 @@ export async function runP3ArtifactOnly(args: {
       specialtyCatalogVersion: SPECIALTY_CATALOG_VERSION,
       eligibleUnitCount: loaded.evidence.units.length,
       geminiInvoked,
+      reuseFingerprint,
     },
   });
 
-  return { envelope, outDir, loaded, geminiInvoked };
+  return {
+    envelope,
+    outDir,
+    loaded,
+    geminiInvoked,
+    executionStatus: 'EXECUTED',
+    reuseFingerprint,
+    sourceArtifactId: null,
+  };
 }

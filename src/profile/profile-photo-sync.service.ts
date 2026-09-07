@@ -2,8 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PhotoCacheService } from '../org-chart/photos/photo-cache.service';
+import { isBundledProfilePhotoPath } from '../org-chart/photos/profile-photo-url.util';
 import { PersonProfileState } from './entities/person-profile-state.entity';
-import { PROFILE_PHOTO_SOURCE_GOOGLE } from './profile-photo.constants';
+import {
+  PROFILE_PHOTO_SOURCE_GOOGLE,
+  PROFILE_PHOTO_SOURCE_UPLOAD,
+} from './profile-photo.constants';
 
 type PhotoSyncAction = 'created' | 'updated' | 'skipped';
 
@@ -26,7 +30,10 @@ export class ProfilePhotoSyncService {
    * Reglas:
    * - Si Google trae picture y profile_photo_url está vacío => completar (source=google).
    * - Si source ya es google y Google trae una URL nueva => actualizar.
-   * - Si la foto es manual o institucional => no sobrescribir sin decisión explícita.
+   * - Si la foto es un upload empaquetado (`/public/profile-photos/{id}.*`) =>
+   *   tratarla como vacía: esa ruta solo funciona con el archivo en disco, y
+   *   si falta produce imagen rota. El login de Google puede recuperarla.
+   * - Si la foto es manual o institucional (CDN, etc.) => no sobrescribir.
    * La sincronización nunca debe bloquear el login: cualquier error se loguea y se ignora.
    */
   async syncGooglePhotoOnLogin(
@@ -42,7 +49,10 @@ export class ProfilePhotoSyncService {
       });
 
       const existingSource = state?.profile_photo_source ?? null;
-      const existingUrl = state?.profile_photo_url?.trim() || null;
+      const existingUrl = this.effectiveExistingUrl(
+        existingSource,
+        state?.profile_photo_url,
+      );
       const action = this.decideAction(picture, existingSource, existingUrl);
 
       this.log.log(
@@ -95,5 +105,26 @@ export class ProfilePhotoSyncService {
     }
 
     return 'skipped';
+  }
+
+  /**
+   * Uploads empaquetados se consideran ausentes: el archivo puede no estar
+   * en el despliegue y Google no podía sobrescribir `source=upload`.
+   */
+  private effectiveExistingUrl(
+    existingSource: string | null,
+    rawUrl: string | null | undefined,
+  ): string | null {
+    const existingUrl = rawUrl?.trim() || null;
+    if (!existingUrl) {
+      return null;
+    }
+    if (
+      existingSource === PROFILE_PHOTO_SOURCE_UPLOAD &&
+      isBundledProfilePhotoPath(existingUrl)
+    ) {
+      return null;
+    }
+    return existingUrl;
   }
 }

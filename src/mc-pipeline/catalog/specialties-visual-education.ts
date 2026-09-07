@@ -6,19 +6,19 @@
  * - SOFTWARE_ENGINEERING: 1.0.0 ACTIVE (9C foundation)
  * - AUDIOVISUAL_PRODUCTION: 1.0.0 ACTIVE (10B foundation)
  * - COMMUNICATIONS: 1.0.0 ACTIVE (11B foundation)
- * - DATA_ANALYTICS: 1.0.0 ACTIVE (DA foundation)
+ * - DATA_ANALYTICS: 1.1.0 ACTIVE (DA foundation + governance dual-attribution)
  * - DIGITAL_MARKETING: 1.0.0 ACTIVE (DM foundation)
  * - CUSTOMER_SUCCESS: 1.0.0 ACTIVE (CS foundation)
  * - PEOPLE_HR: 1.0.0 ACTIVE (HR foundation)
  * - IT_SYSTEMS: 1.0.0 ACTIVE (IT ops foundation)
  * - LEGAL: 1.0.0 ACTIVE (LEGAL foundation)
- * Versión activa unificada para fingerprint P3: 1.12.0
+ * Versión activa unificada para fingerprint P3: 1.13.0
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 /** Versión activa del catálogo unificado consumido por P3/P4/profile. */
-export const SPECIALTY_CATALOG_VERSION = '1.12.0';
+export const SPECIALTY_CATALOG_VERSION = '1.13.0';
 export const SPECIALTY_CATALOG_STATUS = 'ACTIVE' as const;
 export const SPECIALTY_CATALOG_CODE = 'MC1.SPECIALTY_CATALOG' as const;
 
@@ -28,7 +28,7 @@ export const SPECIALTY_CATALOG_FA_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_SE_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_AV_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_COMM_VERSION = '1.0.0';
-export const SPECIALTY_CATALOG_DA_VERSION = '1.0.0';
+export const SPECIALTY_CATALOG_DA_VERSION = '1.1.0';
 export const SPECIALTY_CATALOG_DM_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_CS_VERSION = '1.0.0';
 export const SPECIALTY_CATALOG_HR_VERSION = '1.0.0';

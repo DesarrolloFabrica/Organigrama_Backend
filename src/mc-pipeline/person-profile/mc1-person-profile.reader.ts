@@ -15,6 +15,10 @@ import { resolveBackendRoot } from '../preview/mc1-preview-backend-root';
 import type { ProfilePilotEnvelope } from '../profile/profile.types';
 import { selectPublishableFields } from '../profile/profile-publication-gate';
 import {
+  calibrateDimensionCoverage,
+  RADAR_CALIBRATION_METADATA,
+} from '../profile/profile-radar-calibration';
+import {
   readActiveMc1PresentationFromStore,
   validateMc1PresentationPayload,
 } from './mc1-person-profile-store';
@@ -93,6 +97,7 @@ function toPresentation(
   return {
     status: 'AVAILABLE',
     source: 'ARTIFACT_ONLY_LOCAL',
+    calibration: RADAR_CALIBRATION_METADATA,
     fields: fields.map((f) => {
       const skillsBySpec = new Map<string, Array<{ code: string; name: string }>>();
       for (const sp of f.specialties ?? []) {
@@ -124,6 +129,8 @@ function toPresentation(
             code: a.dimensionCode,
             label: a.label,
             relativeCoverage: a.relativeCoverage,
+            displayCoverage: calibrateDimensionCoverage(a),
+            ...(a.evidenceState ? { evidenceState: a.evidenceState } : {}),
           })),
         },
         evidenceVolume: f.evidenceVolume,

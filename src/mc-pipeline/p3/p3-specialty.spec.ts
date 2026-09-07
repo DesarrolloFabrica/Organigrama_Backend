@@ -11,6 +11,7 @@ import {
   assertP3ReferentialIntegrity,
   normalizeP3ModelOutput,
 } from './p3-normalize';
+import { P3_PROMPT_VERSION } from './p3.types';
 import type { R1ContractEnvelope } from '../r1/r1.types';
 
 describe('P3 specialty catalog scope (IT + LEGAL: VE + PPM + FA + SE + AV + COMM + DA + DM + CS + HR + IT + LEGAL)', () => {
@@ -120,7 +121,8 @@ describe('P3 specialty catalog scope (IT + LEGAL: VE + PPM + FA + SE + AV + COMM
   });
 
   it('maps LEGAL specialty aliases', () => {
-    expect(SPECIALTY_CATALOG_VERSION).toBe('1.12.0');
+    expect(SPECIALTY_CATALOG_VERSION).toBe('1.13.0');
+    expect(P3_PROMPT_VERSION).toBe('MC1.P3.PROMPT.FUNCTIONAL.1.1.0');
     expect(resolveToKnownSpecialtyCode('UI_DESIGN')).toBe('UX_PRODUCT_DESIGN');
     expect(resolveToKnownSpecialtyCode('SOFTWARE_FRONTEND')).toBe(
       'FRONTEND_ENGINEERING',
@@ -513,7 +515,7 @@ describe('P3 field selection from R1', () => {
         .find((f) => f.fieldCode === 'EDUCATION')!
         .observedSpecialties.map((s) => s.specialtyCode),
     ).toEqual(['INSTRUCTIONAL_DESIGN']);
-    expect(envelope.payload.specialtyCatalogVersion).toBe('1.12.0');
+    expect(envelope.payload.specialtyCatalogVersion).toBe('1.13.0');
     expect(
       envelope.warnings.some((w) => w.code === 'LEGACY_SPECIALTY_ALIAS_MAPPED'),
     ).toBe(true);

@@ -271,6 +271,28 @@ function mapProjectProgramMgmt(s: SkillMappingInput): SkillDimensionMapping {
   };
 }
 
+/**
+ * FA_FINANCIAL_CONTROL — OPTION_A aliases inequívocos.
+ * No usa `control` genérico, `control de caja`, caja menor, conciliación ni facturación.
+ * `cash_control` / `cash control` es token contiguo; no coincide con control de caja.
+ */
+function matchesFinanceAdminFinancialControl(b: string): boolean {
+  if (
+    /control financiero|control presupuest|desviaci[oó]n|ejecuci[oó]n presupuest|aseguramiento de gasto|controller/.test(
+      b,
+    )
+  ) {
+    return true;
+  }
+  if (/financial[_ ]controls?/.test(b)) return true;
+  if (/internal[_ ]control|control interno/.test(b)) return true;
+  if (/financial[_ ]audit(?:ing)?|auditor[ií]a financiera/.test(b)) return true;
+  if (/external[_ ]audit(?:ing)?|auditor[ií]a externa/.test(b)) return true;
+  if (/financial[_ ]monitoring|seguimiento financiero/.test(b)) return true;
+  if (/cash_control(?![a-z])|\bcash control\b/.test(b)) return true;
+  return false;
+}
+
 function mapFinanceAdmin(s: SkillMappingInput): SkillDimensionMapping {
   const b = blobOf(s);
   const dims = new Set<string>();
@@ -284,11 +306,7 @@ function mapFinanceAdmin(s: SkillMappingInput): SkillDimensionMapping {
     dims.add('FA_FINANCIAL_PLANNING');
     reasons.push('señales de planeación financiera/presupuestal');
   }
-  if (
-    /control financiero|control presupuest|desviaci[oó]n|ejecuci[oó]n presupuest|aseguramiento de gasto|controller/.test(
-      b,
-    )
-  ) {
+  if (matchesFinanceAdminFinancialControl(b)) {
     dims.add('FA_FINANCIAL_CONTROL');
     reasons.push('señales de control financiero/presupuestal');
   }

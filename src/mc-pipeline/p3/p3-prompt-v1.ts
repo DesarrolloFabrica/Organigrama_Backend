@@ -1,6 +1,6 @@
 /**
- * Prompt P3 v1.0 — discovery de especialidades (VE / ED / PPM / FA).
- * Parametriza el catálogo activo; no cambia reglas de discovery.
+ * Prompt P3 v1.1 — discovery de especialidades + dual-attribution DATA_GOVERNANCE.
+ * Parametriza el catálogo activo; no cambia el contrato de salida.
  */
 import {
   forbiddenSpecialtyCodesForPrompt,
@@ -21,7 +21,7 @@ export function buildP3SystemPrompt(fieldCodes: string[]): string {
     `Prompt version: ${P3_PROMPT_VERSION}`,
     `Reasoning policy: ${P3_REASONING_POLICY_VERSION}`,
     `Generation policy: ${P3_GENERATION_POLICY_VERSION}`,
-    `Specialty catalog version: ${SPECIALTY_CATALOG_VERSION} (ACTIVE; VE/ED 1.1.0 frozen + PPM 1.0.0 + FA 1.0.0 + SE 1.0.0 + AV 1.0.0 + COMM 1.0.0 + DA 1.0.0 + DM 1.0.0 + CS 1.0.0 + HR 1.0.0 + IT 1.0.0 + LEGAL 1.0.0)`,
+    `Specialty catalog version: ${SPECIALTY_CATALOG_VERSION} (ACTIVE; VE/ED 1.1.0 frozen + PPM 1.0.0 + FA 1.0.0 + SE 1.0.0 + AV 1.0.0 + COMM 1.0.0 + DA 1.1.0 + DM 1.0.0 + CS 1.0.0 + HR 1.0.0 + IT 1.0.0 + LEGAL 1.0.0)`,
     ``,
     `MISSION: Observe 0..N specialties INSIDE each evaluated professional field, using Evidence Units only.`,
     `You do NOT change R1 field resolution. You do NOT invent skills. You do NOT invent map dimensions.`,
@@ -38,7 +38,7 @@ export function buildP3SystemPrompt(fieldCodes: string[]): string {
     `2) Require coherent, traceable practice (cluster of evidence), not one flashy unit.`,
     `3) Do NOT force coverage of the whole catalog; empty is valid.`,
     `4) Do NOT turn every Evidence Unit into a specialty.`,
-    `5) One unit MAY support multiple specialties when legitimate.`,
+    `5) One unit MAY support multiple specialties when it demonstrates distinct practices. Dual attribution is allowed: do NOT pick a single identity when both are evidenced. Sharing units with a sibling specialty is NOT a reason to mark the other WEAK.`,
     `6) Every specialty MUST belong to the field being evaluated (parentFieldCode must match).`,
     `7) Never modify or restate R1 resolution as a new field choice.`,
     `8) Never use job title, org chart, hierarchy, school name, area, or raw CV text.`,
@@ -50,6 +50,7 @@ export function buildP3SystemPrompt(fieldCodes: string[]): string {
     `14) For FINANCE_ADMIN: budget elaboration/tracking, reconciliation, billing, purchasing, payments, and document filing are NOT specialties. Use FINANCIAL_MANAGEMENT / BUDGET_FINANCIAL_CONTROL / ACCOUNTING_OPERATIONS / ADMINISTRATIVE_MANAGEMENT only for identity-level practice. Do not place academic program admin under FINANCE_ADMIN (use EDUCATION).`,
     `15) For IT_SYSTEMS: titles/education (ingeniero en telecomunicaciones, tecnólogo en sistemas, diplomado SQL/seguridad) are NOT specialties. Git/M365/Power BI/Azure Data/GLPI/IAM knowledge alone are NOT specialties. SOFTWARE_ENGINEERING = build software. DATA_ANALYTICS = analyze data. Tool usage ≠ IT practice. Use NETWORK_INFRASTRUCTURE / IT_SERVICE_DESK / SYSTEMS_ADMINISTRATION / IT_SECURITY_OPERATIONS only for identity-level IT operations practice.`,
     `16) For LEGAL: lawyer title, professional card, law degree, courses/diplomas, law names (Ley 80/1150), SECOP, Colombia Compra Eficiente, generic "jurídico", belonging to a legal team, teaching law, Moodle, generic admin/contract management, procurement/compras, customer service are NOT specialties. SECOP and Ley 80/1150 are TOOL/KNOWLEDGE context only. FINANCE_ADMIN = procurement/compras operations. PROJECT_PROGRAM_MGMT = coordinate projects. EDUCATION = teach law. PEOPLE_HR = workforce admin (labor demands are LITIGATION_DISPUTES not HR). CUSTOMER_SUCCESS = client care not legal counsel. Use LEGAL_ADVISORY / LEGAL_DOCUMENT_DRAFTING / PUBLIC_SECTOR_CONTRACTING / ADMINISTRATIVE_LAW / LITIGATION_DISPUTES only for identity-level legal practice with ACTION/RESPONSIBILITY-level evidence.`,
+    `17) For DATA_ANALYTICS / DATA_GOVERNANCE: OBSERVED requires professional practice (ACTION/RESPONSIBILITY or equivalent) PLUS a governance-relevant responsibility or outcome (gobierno, integridad, calidad del dato, trazabilidad, disponibilidad del activo, controles/políticas de gobierno). A technical data action (administrar esquema, gestionar repositorio, construir pipeline) MAY also support DATA_ENGINEERING; if its result/responsibility states such an outcome, the SAME unit MAY support DATA_GOVERNANCE as OBSERVED — dual attribution, not thinning. SQL, ETL, pipelines, cloud, repositories, architecture, or Power BI/dashboards WITHOUT that outcome are NOT DATA_GOVERNANCE (use DATA_ENGINEERING / BUSINESS_INTELLIGENCE). A KNOWLEDGE_STATEMENT such as "Gobierno de datos" may reinforce an OBSERVED cluster but MUST NOT be the sole basis for OBSERVED. Do not infer governance from working intensely with data.`,
     ``,
     `KNOWN SPECIALTIES FOR THIS RUN (catalog ${SPECIALTY_CATALOG_VERSION}):`,
     ...specs.map(

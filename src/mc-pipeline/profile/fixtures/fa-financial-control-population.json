@@ -1,0 +1,1358 @@
+{
+  "generatedFrom": "tmp/mc1-finance-admin-dimension-mapping-audit/results.json",
+  "profiles": [
+    {
+      "personId": "1081",
+      "fullName": "TANIA LIZETH ROCHA CONTRERAS",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT",
+        "ACCOUNTING_OPERATIONS"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_process_coordination",
+          "name": "Coordinación y seguimiento de operaciones administrativas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "asset_and_logistics_management",
+          "name": "Gestión logística de activos y plataformas administrativas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "invoice_causation_and_accounting_entries",
+          "name": "Causación de facturas y soporte contable",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1084",
+      "fullName": "JIMMY CIFUENTES SANCHEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "operational_process_optimization",
+          "name": "Optimización de Procesos Operacionales y Mejora Continua",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "procurement_inventory_management",
+          "name": "Gestión de Compras, Abastecimiento e Inventarios",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_PROCUREMENT"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1085",
+      "fullName": "PEDRO NILSON FLOREZ LOPEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "vendor_management_procurement",
+          "name": "Gestión y Negociación de Proveedores",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_PROCUREMENT"
+          ]
+        },
+        {
+          "code": "operational_infrastructure_management",
+          "name": "Gestión Operativa y de Infraestructura",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1086",
+      "fullName": "BRAYAN ALEXANDER ARIAS SANCHEZ",
+      "specialties": [
+        "ACCOUNTING_OPERATIONS"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "financial_statement_preparation_ifrs",
+          "name": "Preparación de Estados Financieros bajo NIIF",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "tax_management_and_compliance",
+          "name": "Gestión y Liquidación de Impuestos",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "account_reconciliation_and_audit_support",
+          "name": "Conciliación Contable y Soporte a Auditorías",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1092",
+      "fullName": "MARLEN MORA CRISTANCHO",
+      "specialties": [
+        "ACCOUNTING_OPERATIONS",
+        "BUDGET_FINANCIAL_CONTROL"
+      ],
+      "controlRelative": 39.4,
+      "skills": [
+        {
+          "code": "financial_statement_analysis",
+          "name": "Análisis de Estados Financieros",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "account_reconciliation",
+          "name": "Conciliaciones Contables y Registro de Transacciones",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "internal_control_evaluation",
+          "name": "Evaluación y Pruebas de Control Interno",
+          "specialty": "BUDGET_FINANCIAL_CONTROL",
+          "dims": [
+            "FA_FINANCIAL_CONTROL"
+          ]
+        },
+        {
+          "code": "financial_auditing",
+          "name": "Auditoría Financiera",
+          "specialty": "BUDGET_FINANCIAL_CONTROL",
+          "dims": [
+            "FA_FINANCIAL_CONTROL"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1096",
+      "fullName": "MARIA FERNANDA VERGARA ROZO",
+      "specialties": [
+        "FINANCIAL_MANAGEMENT",
+        "BUDGET_FINANCIAL_CONTROL",
+        "ACCOUNTING_OPERATIONS"
+      ],
+      "controlRelative": 59.7,
+      "skills": [
+        {
+          "code": "cash_flow_management",
+          "name": "Gestión de Flujo de Caja y Tesorería",
+          "specialty": "FINANCIAL_MANAGEMENT",
+          "dims": [
+            "FA_FINANCIAL_PLANNING"
+          ]
+        },
+        {
+          "code": "budget_management_and_control",
+          "name": "Gestión y Control Presupuestal",
+          "specialty": "BUDGET_FINANCIAL_CONTROL",
+          "dims": [
+            "FA_FINANCIAL_PLANNING",
+            "FA_FINANCIAL_CONTROL"
+          ]
+        },
+        {
+          "code": "credit_and_collections_management",
+          "name": "Gestión de Crédito y Cobranza",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "financial_reconciliation",
+          "name": "Conciliación Financiera y de Pagos",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1132",
+      "fullName": "YURI ASTRID MAECHA GARZON",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "physical_resources_and_facilities_management",
+          "name": "Gestión de Recursos Físicos e Instalaciones",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "organizational_change_management",
+          "name": "Gestión del Cambio Organizacional",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1133",
+      "fullName": "FREDY YESID VELANDIA OTALORA",
+      "specialties": [
+        "FINANCIAL_MANAGEMENT",
+        "BUDGET_FINANCIAL_CONTROL",
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 45.5,
+      "skills": [
+        {
+          "code": "financial_modeling_forecasting",
+          "name": "Modelado y proyección financiera",
+          "specialty": "FINANCIAL_MANAGEMENT",
+          "dims": [
+            "FA_FINANCIAL_PLANNING"
+          ]
+        },
+        {
+          "code": "cash_flow_management",
+          "name": "Gestión y optimización de flujo de caja",
+          "specialty": "FINANCIAL_MANAGEMENT",
+          "dims": [
+            "FA_FINANCIAL_PLANNING"
+          ]
+        },
+        {
+          "code": "profitability_pricing_analysis",
+          "name": "Análisis de rentabilidad y precios",
+          "specialty": "FINANCIAL_MANAGEMENT",
+          "dims": [
+            "FA_FINANCIAL_PLANNING"
+          ]
+        },
+        {
+          "code": "budget_control_cost_optimization",
+          "name": "Control presupuestal y optimización de costos",
+          "specialty": "BUDGET_FINANCIAL_CONTROL",
+          "dims": [
+            "FA_FINANCIAL_PLANNING",
+            "FA_FINANCIAL_CONTROL"
+          ]
+        },
+        {
+          "code": "portfolio_collection_management",
+          "name": "Gestión de cartera y recaudo",
+          "specialty": "BUDGET_FINANCIAL_CONTROL",
+          "dims": [
+            "FA_FINANCIAL_CONTROL"
+          ]
+        },
+        {
+          "code": "administrative_process_management",
+          "name": "Planeación y gestión de procesos administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1138",
+      "fullName": "OSCAR DANIEL RIVERA PEREZ",
+      "specialties": [
+        "ACCOUNTING_OPERATIONS",
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "external_auditing",
+          "name": "Auditoría externa y financiera",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "accounting_reconciliation_and_account_management",
+          "name": "Conciliaciones contables y seguimiento de cuentas",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING",
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "tax_review_and_compliance",
+          "name": "Revisión de impuestos y cumplimiento tributario",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "management_reporting_and_team_tracking",
+          "name": "Elaboración de informes de gestión y seguimiento operativo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "payroll_and_petty_cash_management",
+          "name": "Gestión de nómina y caja menor",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "billing_and_expense_legalization",
+          "name": "Facturación, cobranza y legalización de gastos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1143",
+      "fullName": "GILLYAM GERMAN MARTINEZ BERNAL",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_reporting_control",
+          "name": "Elaboración de informes de gestión y seguimiento administrativo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "administrative_operations_coordination",
+          "name": "Coordinación logística y de operaciones administrativas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1145",
+      "fullName": "INGRID JULIANA VARGAS BELTRAN",
+      "specialties": [
+        "ACCOUNTING_OPERATIONS",
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "bookkeeping_and_accounting_records",
+          "name": "Gestión de registros y libros contables",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "cash_reconciliation_and_closure",
+          "name": "Cierres de caja y conciliación de pagos",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "operational_planning_and_control",
+          "name": "Planeación y control operativo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "academic_administrative_operations",
+          "name": "Gestión de operaciones administrativas y académicas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "management_reporting_and_case_traceability",
+          "name": "Generación de reportes de gestión y trazabilidad de casos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_REPORTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1150",
+      "fullName": "JUAN ESTEBAN PAMPLONA SANCHEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_control_and_administrative_tracking",
+          "name": "Control documental y seguimiento de procesos administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_DOCUMENT_MGMT",
+            "FA_REPORTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1152",
+      "fullName": "VALERIA MONTAÑEZ BUSTAMANTE",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management_and_archiving",
+          "name": "Document Management and Official Archival",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "administrative_support_and_procedures",
+          "name": "Administrative Operations Support",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1153",
+      "fullName": "ERIKA VANESA RAMIREZ MARTINEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Gestión Documental y Organización de Expedientes",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "database_administration",
+          "name": "Administración y Control de Bases de Datos Operativas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1155",
+      "fullName": "LORENA GOMEZ BAEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Gestión documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "committee_minutes_preparation",
+          "name": "Elaboración de actas de comité",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "administrative_procedure_management",
+          "name": "Gestión de trámites y solicitudes administrativas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "agenda_coordination",
+          "name": "Coordinación de agendas y reuniones",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1157",
+      "fullName": "JUAN NICOLAS DUARTE AVELLANEDA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_control_and_records_management",
+          "name": "Control Documental y Gestión de Registros",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_process_optimization",
+          "name": "Optimización y Gestión de Procesos Administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1158",
+      "fullName": "MARIA PAULA MONTES BARRIOS",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Document Management and Archiving",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "administrative_support_operations",
+          "name": "Administrative Support and Reporting",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_REPORTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1191",
+      "fullName": "JONH CESAR CUEVAS MUÑOZ",
+      "specialties": [
+        "ACCOUNTING_OPERATIONS"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "accounts_receivable_and_collections_management",
+          "name": "Gestión de cartera y recaudo de cartera morosa",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1198",
+      "fullName": "PAEZ CASTRO YENNY PAOLA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_process_optimization",
+          "name": "Administrative Process Optimization",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "public_and_private_bidding_management",
+          "name": "Public and Private Bidding Management",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1217",
+      "fullName": "JHONATAN DAVID MARQUEZ BETANCUR",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "public_procurement_and_contract_management",
+          "name": "Gestión de contratación estatal y procesos precontractuales",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_PROCUREMENT"
+          ]
+        },
+        {
+          "code": "administrative_process_management_and_billing",
+          "name": "Gestión de procesos administrativos y trámites de cobro",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "logistics_coordination_and_budget_tracking",
+          "name": "Coordinación logística y seguimiento presupuestal",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_FINANCIAL_PLANNING",
+            "FA_REPORTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1227",
+      "fullName": "LISNEIDY VARGAS SORACA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_process_coordination",
+          "name": "Coordinación y Gestión Administrativa",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "document_management",
+          "name": "Gestión Documental y Archivo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1263",
+      "fullName": "MARIA JOSE ALGARIN ALVAREZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT",
+        "ACCOUNTING_OPERATIONS"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management_and_archiving",
+          "name": "Gestión y Organización Documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_process_optimization",
+          "name": "Optimización y Gestión de Procesos Administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "inventory_control",
+          "name": "Control y Gestión de Inventarios",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "electronic_invoicing_management",
+          "name": "Gestión de Facturación Electrónica y Digital",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "payroll_and_social_security_processing",
+          "name": "Gestión y Liquidación de Nómina y Seguridad Social",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1264",
+      "fullName": "YARELIS ELENA AROCA ARIAS",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "management_reporting",
+          "name": "Consolidación de información y generación de informes de gestión",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "operational_planning_and_control",
+          "name": "Planificación y seguimiento de indicadores de gestión",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "document_management",
+          "name": "Gestión documental y elaboración de soportes administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "inventory_control",
+          "name": "Control y gestión de inventarios",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1265",
+      "fullName": "JOSE ALEJANDRO CRUZ NAVARRO",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Gestión y organización documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_reporting",
+          "name": "Elaboración de reportes de gestión",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_REPORTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1266",
+      "fullName": "KATIUSKA FUENTES IBAÑEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management_and_archiving",
+          "name": "Gestión documental y control de archivos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_support_and_coordination",
+          "name": "Soporte administrativo y trámite de requerimientos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1268",
+      "fullName": "SARA MURILLO FONSECA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Gestión Documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_support",
+          "name": "Soporte Administrativo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1270",
+      "fullName": "FRANCISCO JAVIER PEÑA URREA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT",
+        "BUDGET_FINANCIAL_CONTROL"
+      ],
+      "controlRelative": 79.2,
+      "skills": [
+        {
+          "code": "administrative_support_and_document_management",
+          "name": "Soporte administrativo y gestión documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "budget_planning_and_control",
+          "name": "Control y ejecución presupuestal",
+          "specialty": "BUDGET_FINANCIAL_CONTROL",
+          "dims": [
+            "FA_FINANCIAL_PLANNING",
+            "FA_FINANCIAL_CONTROL"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1271",
+      "fullName": "PAULA ANDREA TERREROS GRACIA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Gestión Documental y de Archivos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_support",
+          "name": "Soporte Operativo y Administrativo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1272",
+      "fullName": "NATALY VANESSA TORRES RODRIGUEZ",
+      "specialties": [
+        "FINANCIAL_MANAGEMENT",
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "profitability_and_financial_analysis",
+          "name": "Análisis de rentabilidad y resultados financieros",
+          "specialty": "FINANCIAL_MANAGEMENT",
+          "dims": [
+            "FA_FINANCIAL_PLANNING"
+          ]
+        },
+        {
+          "code": "inventory_and_supplier_management",
+          "name": "Gestión de inventarios y suministros con proveedores",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_PROCUREMENT"
+          ]
+        },
+        {
+          "code": "administrative_process_and_records_management",
+          "name": "Gestión de procesos y documentación administrativa",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1280",
+      "fullName": "JENNY PAOLA AGUILAR CONTRERAS",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_process_management",
+          "name": "Gestión y soporte a procesos administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "management_reporting",
+          "name": "Elaboración y presentación de informes de gestión",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "process_optimization_and_analysis",
+          "name": "Análisis y optimización de procesos operativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1281",
+      "fullName": "JUAN FELIPE GARCIA CASTILLO",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_validation_management",
+          "name": "Validación y gestión documental de procesos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_and_operational_support",
+          "name": "Gestión administrativa y soporte operativo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1297",
+      "fullName": "AURA MARCELA ROYERO VERGARA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_operations_management",
+          "name": "Gestión de Operaciones Administrativas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1311",
+      "fullName": "HARY JOHANA LOPEZ NEVA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Document and Record Management",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "administrative_process_optimization",
+          "name": "Administrative Process Optimization",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1312",
+      "fullName": "DANIELA ALEJANDRA AGUDELO CUBIDES",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Gestión y Control Documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "agenda_and_scheduling_management",
+          "name": "Gestión de Agenda y Programación de Citas",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "billing_and_cash_management",
+          "name": "Gestión de Facturación y Control de Caja",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1313",
+      "fullName": "VIVIANA JULIETH ROZO GOMEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_process_management",
+          "name": "Gestión de procesos administrativos y archivo documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "executive_agenda_and_meeting_management",
+          "name": "Gestión de agenda y coordinación de reuniones",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "supplier_management_and_procurement",
+          "name": "Gestión y negociación con proveedores",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_PROCUREMENT"
+          ]
+        },
+        {
+          "code": "financial_control_and_petty_cash",
+          "name": "Control de gastos y manejo de caja menor",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1315",
+      "fullName": "KAROLINA PAOLA HERRERA SANTANDER",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_and_archival_management",
+          "name": "Gestión documental y organización de archivos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "correspondence_management",
+          "name": "Gestión y distribución de correspondencia",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "data_entry_and_database_maintenance",
+          "name": "Registro de datos y actualización de bases de datos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1316",
+      "fullName": "CRISTIAN DAVID QUINTANA RODRIGUEZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "document_management",
+          "name": "Gestión Documental y Archivo Digital",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_database_management",
+          "name": "Gestión de Bases de Datos y Redacción Documental",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_DOCUMENT_MGMT"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1317",
+      "fullName": "ERIKA JULIETH SANCHEZ MUÑOZ",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "administrative_process_management",
+          "name": "Gestión de trámites y procesos administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "operational_documentation_and_standardization",
+          "name": "Redacción y estandarización de documentación operativa",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1341",
+      "fullName": "LEIDY LAURA DIAZ GRANADOS BLANCO",
+      "specialties": [
+        "ACCOUNTING_OPERATIONS",
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "invoice_and_expense_recording",
+          "name": "Registro y Causación de Facturas y Egresos",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "account_reconciliation",
+          "name": "Conciliación de Cuentas y Controles Contables",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "tax_withholding_verification",
+          "name": "Control y Verificación de Retenciones de Impuestos",
+          "specialty": "ACCOUNTING_OPERATIONS",
+          "dims": [
+            "FA_ACCOUNTING"
+          ]
+        },
+        {
+          "code": "document_and_archive_management",
+          "name": "Gestión Documental y de Archivo Administrativo",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS",
+            "FA_DOCUMENT_MGMT"
+          ]
+        },
+        {
+          "code": "administrative_process_coordination",
+          "name": "Coordinación y Soporte de Trámites Administrativos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1342",
+      "fullName": "MÓNICA ESPERANZA PACHÓN GORDILLO",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT",
+        "BUDGET_FINANCIAL_CONTROL"
+      ],
+      "controlRelative": 59.6,
+      "skills": [
+        {
+          "code": "administrative_process_and_audit_management",
+          "name": "Gestión de Procesos y Auditoría Administrativa",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "kpi_and_management_control",
+          "name": "Seguimiento y Control de Indicadores de Gestión",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_REPORTING"
+          ]
+        },
+        {
+          "code": "budget_control_and_financial_monitoring",
+          "name": "Control Presupuestal y Seguimiento Financiero",
+          "specialty": "BUDGET_FINANCIAL_CONTROL",
+          "dims": [
+            "FA_FINANCIAL_PLANNING",
+            "FA_FINANCIAL_CONTROL",
+            "FA_REPORTING"
+          ]
+        }
+      ]
+    },
+    {
+      "personId": "1344",
+      "fullName": "LIDY STEFANIA ALONSO MORA",
+      "specialties": [
+        "ADMINISTRATIVE_MANAGEMENT"
+      ],
+      "controlRelative": 0,
+      "skills": [
+        {
+          "code": "academic_administrative_management",
+          "name": "Gestión Administrativa Académica",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        },
+        {
+          "code": "database_and_records_management",
+          "name": "Administración y Actualización de Bases de Datos",
+          "specialty": "ADMINISTRATIVE_MANAGEMENT",
+          "dims": [
+            "FA_ADMIN_OPS"
+          ]
+        }
+      ]
+    }
+  ]
+}

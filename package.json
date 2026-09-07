@@ -91,7 +91,9 @@
     "mc:p3-specialty-discovery-8b": "npx ts-node --transpile-only scripts/mc1-p3-specialty-discovery-8b.ts",
     "mc:p4-skill-discovery-8d": "npx ts-node --transpile-only scripts/mc1-p4-skill-discovery-8d.ts",
     "mc:profile-pilot-8e": "npx ts-node --transpile-only scripts/mc1-profile-pilot-8e.ts",
-    "mc:profile-validation-8f": "npx ts-node --transpile-only scripts/mc1-profile-validation-8f.ts"
+    "mc:profile-validation-8f": "npx ts-node --transpile-only scripts/mc1-profile-validation-8f.ts",
+    "mc:gemini-usage-report": "npx ts-node --transpile-only scripts/mc1-gemini-usage-report.ts",
+    "mc:gemini-usage-reuse-validate": "npx ts-node --transpile-only scripts/mc1-gemini-usage-reuse-validate.ts"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",

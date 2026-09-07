@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PROFILE_PHOTO_SOURCE_GOOGLE } from '../../../profile/profile-photo.constants';
 import { getPublicAssetBaseUrl, isOrgChartPhotosEnabled } from '../photo.config';
-import { resolvePublicPhotoUrl } from '../profile-photo-url.util';
+import {
+  isBundledProfilePhotoPath,
+  resolvePublicPhotoUrl,
+} from '../profile-photo-url.util';
 import type {
   PhotoPayload,
   PhotoResolveContext,
@@ -69,6 +72,9 @@ export class PersistedUploadProfilePhotoProvider implements PhotoSourceProvider 
       return null;
     }
     if (!context.profilePhotoUrl?.trim()) {
+      return null;
+    }
+    if (isBundledProfilePhotoPath(context.profilePhotoUrl)) {
       return null;
     }
 

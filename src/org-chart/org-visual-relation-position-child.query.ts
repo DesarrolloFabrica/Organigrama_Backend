@@ -13,9 +13,9 @@ export async function findActivePositionChildrenByParentRelationId(
   parentRelationId: string,
   versionId: string,
 ): Promise<OrgVisualRelationPositionChild[]> {
+  void versionId;
   return positionChildren.find({
     where: {
-      version_id: versionId,
       parent_relation_id: parentRelationId,
       is_active: true,
     },

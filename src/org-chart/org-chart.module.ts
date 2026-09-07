@@ -32,7 +32,11 @@ import { OrgChartVisibilityService } from './org-chart-visibility.service';
 
 import { OrgChartVersionService } from './org-chart-version.service';
 
+import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
+
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
+
+import { OrgChartWorkforceEventsService } from './workforce-events/org-chart-workforce-events.service';
 
 import { Vacancy } from './vacancies/entities/vacancy.entity';
 
@@ -133,6 +137,10 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartVersionService,
 
     OrgChartVacancyService,
+
+    OrgChartWorkforceEventsService,
+
+    OrgChartVersionReadPlanInterceptor,
   ],
 
   exports: [OrgChartService, OrgChartVisibilityService, OrgChartVersionService],

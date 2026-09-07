@@ -21,12 +21,27 @@ import {
 } from './p2.types';
 import { PROFESSIONAL_FIELD_CATALOG_VERSION } from '../catalog/professional-fields';
 import type { DataSource } from 'typeorm';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  computeP2ReuseFingerprint,
+  findReusableP2Pack,
+  recordGeminiReuse,
+  resolveForceRecompute,
+  serializeThinkingConfig,
+} from '../gemini';
+import { observeMc1ShadowFromP2, observeMc1DeterministicAuthorityFromP2 } from '../shadow-resolver/hook';
+
+export type P2PhaseStatus = 'EXECUTED' | 'REUSED';
 
 export type P2RunResult = {
   envelope: P2ContractEnvelope;
   outDir: string;
   loaded: P2LoadedEvidence;
   geminiInvoked: boolean;
+  executionStatus: P2PhaseStatus;
+  reuseFingerprint: string;
+  sourceArtifactId: string | null;
   activities: unknown[];
   capabilities: unknown[];
 };
@@ -54,6 +69,10 @@ export async function runP2ArtifactOnly(args: {
   outRoot: string;
   campaignId?: string;
   pipelineRunId?: string;
+  personId?: string;
+  forceRecompute?: boolean;
+  fingerprintOverrides?: Record<string, string>;
+  thinkingConfig?: import('../gemini/gemini-thinking-config').Mc1ThinkingConfig;
 }): Promise<P2RunResult> {
   const loaded = await loadP2EvidenceFromP1Pack({
     backendRoot: args.backendRoot,
@@ -63,6 +82,85 @@ export async function runP2ArtifactOnly(args: {
 
   // Guard de entrada: unicidad 1:1 antes de Gemini
   assertP2EvidenceIdentityIntegrity(loaded.units);
+
+  observeMc1ShadowFromP2({
+    backendRoot: args.backendRoot,
+    snapshotId: args.snapshotId,
+    personId: args.personId,
+    units: loaded.units,
+  });
+  observeMc1DeterministicAuthorityFromP2({
+    backendRoot: args.backendRoot,
+    snapshotId: args.snapshotId,
+    personId: args.personId,
+    units: loaded.units,
+    artifactIdentity: loaded.p1ArtifactDigest,
+  });
+
+  const forceRecompute = resolveForceRecompute(args.forceRecompute);
+  const reuseFingerprint = computeP2ReuseFingerprint({
+    p1ArtifactDigest: loaded.p1ArtifactDigest,
+    promptVersion: P2_PROMPT_VERSION,
+    contractVersion: P2_CONTRACT_VERSION,
+    catalogPolicyVersion: P2_CATALOG_POLICY_VERSION,
+    professionalFieldCatalogVersion: PROFESSIONAL_FIELD_CATALOG_VERSION,
+    reasoningPolicyVersion: P2_REASONING_POLICY_VERSION,
+    generationPolicyVersion: P2_GENERATION_POLICY_VERSION,
+    model: args.model,
+    overrides: args.fingerprintOverrides,
+  });
+
+  if (!forceRecompute) {
+    const hit = findReusableP2Pack({
+      searchRoot: args.outRoot,
+      snapshotId: args.snapshotId,
+      reuseFingerprint,
+    });
+    if (hit) {
+      const envelope = JSON.parse(
+        readFileSync(join(hit.dir, 'p2-contract.json'), 'utf8'),
+      ) as P2ContractEnvelope;
+      let activities: unknown[] = [];
+      let capabilities: unknown[] = [];
+      const provPath = join(hit.dir, 'provenance.json');
+      if (existsSync(provPath)) {
+        const prov = JSON.parse(readFileSync(provPath, 'utf8')) as {
+          reasoningTrace?: {
+            professionalActivities?: unknown[];
+            capabilityAreas?: unknown[];
+          };
+        };
+        activities = prov.reasoningTrace?.professionalActivities ?? [];
+        capabilities = prov.reasoningTrace?.capabilityAreas ?? [];
+      }
+      recordGeminiReuse({
+        context: {
+          phase: 'P2',
+          snapshotId: args.snapshotId,
+          personId: args.personId,
+          runId: args.pipelineRunId,
+          model: args.model,
+          promptVersion: P2_PROMPT_VERSION,
+          contractVersion: P2_CONTRACT_VERSION,
+          catalogVersion: PROFESSIONAL_FIELD_CATALOG_VERSION,
+          reuseFingerprint,
+        },
+        sourceArtifactId: hit.artifactId,
+        backendRoot: args.backendRoot,
+      });
+      return {
+        envelope,
+        outDir: hit.dir,
+        loaded,
+        geminiInvoked: false,
+        executionStatus: 'REUSED',
+        reuseFingerprint,
+        sourceArtifactId: hit.artifactId,
+        activities,
+        capabilities,
+      };
+    }
+  }
 
   const executionId = newExecutionId();
   const campaignId = args.campaignId ?? 'MC1-P2-8A2-IDENTITY';
@@ -123,6 +221,21 @@ export async function runP2ArtifactOnly(args: {
       model: args.model,
       systemPrompt,
       userPayload,
+      backendRoot: args.backendRoot,
+      ledger: {
+        phase: 'P2',
+        snapshotId: args.snapshotId,
+        personId: args.personId,
+        runId: pipelineRunId,
+        promptVersion: P2_PROMPT_VERSION,
+        contractVersion: P2_CONTRACT_VERSION,
+        catalogVersion: PROFESSIONAL_FIELD_CATALOG_VERSION,
+        configFingerprint,
+        reuseFingerprint,
+        forceRecompute,
+        inputFingerprint: serializeThinkingConfig(args.thinkingConfig),
+      },
+      thinkingConfig: args.thinkingConfig,
     });
     geminiInvoked = true;
     raw = parseModelJson(gem.text);
@@ -168,6 +281,7 @@ export async function runP2ArtifactOnly(args: {
       professionalFieldCatalogVersion: PROFESSIONAL_FIELD_CATALOG_VERSION,
       eligibleUnitCount: loaded.units.length,
       geminiInvoked,
+      reuseFingerprint,
     },
   });
 
@@ -176,6 +290,9 @@ export async function runP2ArtifactOnly(args: {
     outDir,
     loaded,
     geminiInvoked,
+    executionStatus: 'EXECUTED',
+    reuseFingerprint,
+    sourceArtifactId: null,
     activities: normalized.activities,
     capabilities: normalized.capabilities,
   };

@@ -132,8 +132,114 @@ describe('mc1 presentation store + importer (deploy B)', () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.presentation.source).toBe(MC1_PRESENTATION_STORE_SOURCE);
+      expect(r.presentation.calibration).toEqual({
+        policy: 'MC1.PROFILE.RADAR_CALIBRATION',
+        version: '1.1.0',
+      });
       expect(r.presentation.fields).toHaveLength(1);
     }
+  });
+
+  it('old presentation without evidenceState remains readable', () => {
+    const r = validateMc1PresentationPayload(validPresentation());
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const dim = r.presentation.fields[0].competencyMap.dimensions[0];
+    expect(dim.relativeCoverage).toBe(100);
+    expect(dim.displayCoverage).toBe(100);
+    expect(dim.evidenceState).toBeUndefined();
+  });
+
+  it('accepts optional evidenceState on dimensions and rejects invalid values', () => {
+    const ok = validateMc1PresentationPayload(
+      validPresentation({
+        fields: [
+          {
+            code: 'DATA_ANALYTICS',
+            label: 'Datos y Analítica',
+            role: 'PRIMARY',
+            specialties: [
+              {
+                code: 'DATA_ENGINEERING',
+                label: 'Data Engineering',
+                skills: [{ code: 'etl', name: 'ETL' }],
+              },
+            ],
+            tools: [],
+            competencyMap: {
+              dimensions: [
+                {
+                  code: 'DA_GOVERNANCE_QUALITY',
+                  label: 'Gobernanza / calidad',
+                  relativeCoverage: 20,
+                  evidenceState: 'WEAK_EVIDENCE',
+                },
+              ],
+            },
+            evidenceVolume: 'LOW',
+          },
+        ],
+      }),
+    );
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(
+        ok.presentation.fields[0].competencyMap.dimensions[0].evidenceState,
+      ).toBe('WEAK_EVIDENCE');
+      expect(
+        ok.presentation.fields[0].competencyMap.dimensions[0].displayCoverage,
+      ).toBe(20);
+    }
+    const bad = validateMc1PresentationPayload(
+      validPresentation({
+        fields: [
+          {
+            code: 'DATA_ANALYTICS',
+            label: 'Datos y Analítica',
+            role: 'PRIMARY',
+            specialties: [
+              {
+                code: 'DATA_ENGINEERING',
+                label: 'Data Engineering',
+                skills: [{ code: 'etl', name: 'ETL' }],
+              },
+            ],
+            tools: [],
+            competencyMap: {
+              dimensions: [
+                {
+                  code: 'DA_GOVERNANCE_QUALITY',
+                  label: 'Gobernanza / calidad',
+                  relativeCoverage: 20,
+                  evidenceState: 'PROMOTED',
+                },
+              ],
+            },
+            evidenceVolume: 'LOW',
+          },
+        ],
+      }),
+    );
+    expect(bad.ok).toBe(false);
+  });
+
+  it('derives displayCoverage from relativeCoverage instead of a prior display value', () => {
+    const payload = validPresentation();
+    const dimension = payload.fields[0].competencyMap.dimensions[0] as Record<
+      string,
+      unknown
+    >;
+    dimension.relativeCoverage = 32.4;
+    dimension.displayCoverage = 99;
+    dimension.evidenceState = 'OBSERVED';
+
+    const r = validateMc1PresentationPayload(payload);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const normalized = r.presentation.fields[0].competencyMap.dimensions[0];
+    expect(normalized.relativeCoverage).toBe(32.4);
+    expect(normalized.displayCoverage).toBeCloseTo(53.2, 1);
+    expect(normalized.evidenceState).toBe('OBSERVED');
   });
 
   it('store hit → AVAILABLE via reader', async () => {
@@ -193,7 +299,21 @@ describe('mc1 presentation store + importer (deploy B)', () => {
   });
 
   it('importer insert then reimport same payload → idempotent UNCHANGED', async () => {
-    const ds = mockDataSource({ personExists: true, active: null });
+    let insertedPayload: Record<string, unknown> | null = null;
+    const ds = mockDataSource({
+      personExists: true,
+      active: null,
+      onQuery: (sql, params) => {
+        if (
+          /INSERT INTO organigrama\.mc1_person_profile_presentation/i.test(sql)
+        ) {
+          insertedPayload = JSON.parse(String(params?.[1])) as Record<
+            string,
+            unknown
+          >;
+        }
+      },
+    });
     const payload = validPresentation();
     const first = await importMc1PresentationRecord(ds, {
       personId: '1163',
@@ -202,6 +322,12 @@ describe('mc1 presentation store + importer (deploy B)', () => {
       producedAt: '2026-08-11T12:00:00.000Z',
     });
     expect(first.status).toBe('INSERTED');
+    expect(insertedPayload).toMatchObject({
+      calibration: {
+        policy: 'MC1.PROFILE.RADAR_CALIBRATION',
+        version: '1.1.0',
+      },
+    });
 
     const second = await importMc1PresentationRecord(ds, {
       personId: '1163',

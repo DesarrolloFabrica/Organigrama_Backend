@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { SPECIALTY_BY_CODE } from '../catalog/specialties-visual-education';
 import type { ProfilePilotEnvelope } from '../profile/profile.types';
+import { calibrateDimensionCoverage } from '../profile/profile-radar-calibration';
 import { resolveBackendRoot } from './mc1-preview-backend-root';
 
 const FIELD_LABELS: Record<string, string> = {
@@ -326,6 +327,7 @@ export type PreviewPresentation = {
         dimensionCode: string;
         label: string;
         relativeCoverage: number;
+        displayCoverage: number;
         rawScore: number;
         contributingSkillCodes: string[];
         supportingEvidenceUnitIds: string[];
@@ -412,9 +414,11 @@ function buildPresentation(args: {
             dimensionCode: a.dimensionCode,
             label: a.label,
             relativeCoverage: a.relativeCoverage,
+            displayCoverage: a.displayCoverage ?? calibrateDimensionCoverage(a),
             rawScore: a.rawScore,
             contributingSkillCodes: a.contributingSkillCodes ?? [],
             supportingEvidenceUnitIds: a.supportingEvidenceUnitIds ?? [],
+            ...(a.evidenceState ? { evidenceState: a.evidenceState } : {}),
           })),
         },
         skillDimensionMappings: (f.skillDimensionMappings ?? []).map((m) => ({

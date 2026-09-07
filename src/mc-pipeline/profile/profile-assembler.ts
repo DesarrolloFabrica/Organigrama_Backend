@@ -18,6 +18,16 @@ import {
 } from './profile-radar';
 import { mapSkillToDimensions } from './profile-skill-dimension-mapper';
 import {
+  applyWeakEvidenceRadarSemantics,
+  collectWeakRadarSignals,
+  PROFILE_RADAR_WEAK_SEMANTICS_VERSION,
+  WEAK_EVIDENCE_FLOOR,
+} from './profile-radar-weak-semantics';
+import {
+  applyRadarCalibrationToAxes,
+  RADAR_CALIBRATION_POLICY,
+} from './profile-radar-calibration';
+import {
   classifyFieldPublication,
   selectPublishableFields,
 } from './profile-publication-gate';
@@ -99,8 +109,8 @@ export function assembleProfilePilot(args: {
   const r1Fields = fieldsFromR1(packs);
   const p3Specs = listObservedP3Specialties(packs.p3);
   // 12I: filter at Profile Assembly via listObservedP4Skills(+ P3 OBSERVED keys).
-  // Skills under WEAK routing parents are excluded from public skills + radar.
-  // Mapper 12E semantic rules are unchanged.
+  // Skills under WEAK routing parents are excluded from public skills.
+  // Radar may still show a WEAK floor (presentation overlay) without promoting status.
   const p4Skills = listObservedP4Skills(packs.p4, p3Specs);
   const expIndex = args.explicitnessIndex ?? new Map<string, string>();
 
@@ -179,7 +189,20 @@ export function assembleProfilePilot(args: {
       };
     });
 
-    const axes = normalizeRadarAxes(axesRaw);
+    const axesObserved = normalizeRadarAxes(axesRaw);
+    const weakSignals = collectWeakRadarSignals({
+      fieldCode: rf.fieldCode,
+      p3: packs.p3,
+      p4: packs.p4,
+      observedRadarSkillCodes: new Set(skills.map((s) => s.skillCode)),
+    });
+    const weakOverlay = applyWeakEvidenceRadarSemantics({
+      axes: axesObserved,
+      weakSignals,
+      fieldCode: rf.fieldCode,
+    });
+    for (const w of weakOverlay.warnings) warnings.push(w);
+    const axes = applyRadarCalibrationToAxes(weakOverlay.axes);
     const allEu = [
       ...new Set(skills.flatMap((s) => s.supportingEvidenceUnitIds)),
     ];
@@ -281,6 +304,10 @@ export function assembleProfilePilot(args: {
         radarSemantics: 'RELATIVE_COVERAGE_WITHIN_FIELD_NOT_ABSOLUTE_MASTERY',
         formulaVersion: PROFILE_RADAR_FORMULA_VERSION,
         fieldPublicationGate: 'MC1.PROFILE.PUBLICATION_GATE.1.0.0',
+        radarWeakSemanticsVersion: PROFILE_RADAR_WEAK_SEMANTICS_VERSION,
+        radarWeakEvidenceFloor: WEAK_EVIDENCE_FLOOR,
+        radarCalibrationPolicy: RADAR_CALIBRATION_POLICY.policy,
+        radarCalibrationVersion: RADAR_CALIBRATION_POLICY.version,
       },
       provenance: {
         r1PackDir: packs.r1PackDir,

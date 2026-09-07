@@ -7,6 +7,7 @@
  *
  * --force-live-ai (validación local 11D.1): desactiva reuseProfileOnly y fuerza P1 LIVE
  * sin cambiar la semántica productiva por defecto.
+ * Gemini reuse gate: --force-live-ai no equivale a forceRecompute. Recalcular Gemini: --force
  *
  * Role/hierarchy used only to select candidates externally — never as pipeline evidence.
  * Reports use caseId only (no documents/PII).

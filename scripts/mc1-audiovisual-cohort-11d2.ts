@@ -3,7 +3,8 @@
  *
  *   npx ts-node --transpile-only scripts/mc1-audiovisual-cohort-11d2.ts --confirm --force-live-ai
  *
- * Full P0→P1→P2→R1→P3→P4→Profile LIVE. No historical pack reuse when --force-live-ai.
+ * Full P0→P1→P2→R1→P3→P4→Profile LIVE. --force-live-ai skips historical pack shortcuts.
+ * Gemini reuse gate: default reuses P1–P4 when fingerprint matches. Recalcular: --force
  * Role/hierarchy never enter Gemini payloads. Reports use caseId only (no documents/PII).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';

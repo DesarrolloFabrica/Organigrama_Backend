@@ -13,12 +13,28 @@ import type { CreateOrgChartSnapshotDto } from './dto/create-org-chart-snapshot.
 import type { OrgChartVersionCompareDto } from './dto/org-chart-version-compare.dto';
 import type { OrgChartVersionDto } from './dto/org-chart-version.dto';
 import { OrgChartVersion } from './entities/org-chart-version.entity';
+import {
+  FABRICA_CONTENIDOS_SCOPE,
+  ORG_CHART_SCOPE_COORDINATION,
+  ORG_CHART_SCOPE_GLOBAL,
+  ORG_CHART_SCOPE_VERSION_INHERIT,
+  type OrgChartVersionScopeType,
+} from './org-chart-version-scope.constants';
 import { isOrgChartVersionAdminEmail } from './org-chart-versioning.util';
 import type { OrgViewerContext } from './org-viewer-context';
+import {
+  buildOrgChartVersionReadPlanCacheKey,
+  type OrgChartVersionOverlay,
+  type OrgChartVersionReadPlan,
+} from './org-chart-version-read-plan';
 
 export type ResolveVersionParams = {
   versionId?: string;
   versionCode?: string;
+};
+
+export type ResolveReadPlanParams = ResolveVersionParams & {
+  scopeVersionId?: string;
 };
 
 @Injectable()
@@ -263,7 +279,7 @@ export class OrgChartVersionService {
 
   async getActiveVersion(): Promise<OrgChartVersion> {
     const active = await this.versions.findOne({
-      where: { is_active: true },
+      where: { is_active: true, scope_type: ORG_CHART_SCOPE_GLOBAL },
       order: { id: 'ASC' },
     });
 
@@ -338,10 +354,51 @@ export class OrgChartVersionService {
       version = await this.getVersionByCode(versionCodeParam!);
     }
 
+    if (this.scopeTypeOf(version) === ORG_CHART_SCOPE_COORDINATION) {
+      throw new BadRequestException(
+        'versionId/versionCode solo aceptan versiones globales. Use scopeVersionId para una coordinación.',
+      );
+    }
+
     this.log.log(
       `[OrgChartVersioning] resolved requested version id=${version.id} code=${version.code}`,
     );
     return String(version.id);
+  }
+
+  /**
+   * Versión global + overlays de coordinación para componer el mapa.
+   * Sin scopeVersionId: overlays activos (si los hay).
+   * scopeVersionId=none: sin overlays (el subárbol sale de la versión global).
+   */
+  async resolveReadPlan(
+    viewer: OrgViewerContext,
+    params: ResolveReadPlanParams,
+  ): Promise<OrgChartVersionReadPlan> {
+    const globalVersionId = await this.resolveVersionForRequest(viewer, {
+      versionId: params.versionId,
+      versionCode: params.versionCode,
+    });
+
+    const overlays = await this.resolveOverlaysForRequest(
+      viewer,
+      params.scopeVersionId,
+    );
+
+    const cacheKey = buildOrgChartVersionReadPlanCacheKey(
+      globalVersionId,
+      overlays.map((overlay) => overlay.versionId),
+    );
+
+    this.log.log(
+      `[OrgChartVersioning] read plan globalVersionId=${globalVersionId} overlays=${
+        overlays
+          .map((overlay) => `${overlay.scopeCode}:${overlay.versionId}`)
+          .join(',') || 'none'
+      }`,
+    );
+
+    return { globalVersionId, overlays, cacheKey };
   }
 
   async createSnapshot(
@@ -360,6 +417,7 @@ export class OrgChartVersionService {
     const sourceVersion = await this.getVersionById(
       String(dto.sourceVersionId),
     );
+    const scope = this.resolveSnapshotScope(dto);
     const code = dto.code.trim();
 
     const existingCode = await this.versions.findOne({ where: { code } });
@@ -382,6 +440,10 @@ export class OrgChartVersionService {
         period_label: dto.periodLabel?.trim() ?? null,
         is_active: false,
         is_locked: false,
+        scope_type: scope.scopeType,
+        scope_code: scope.scopeCode,
+        scope_label: scope.scopeLabel,
+        scope_root_person_id: scope.scopeRootPersonId,
         created_at: now,
         updated_at: now,
         created_by_person_id: viewer.personId,
@@ -393,32 +455,41 @@ export class OrgChartVersionService {
         throw new Error('No se pudo crear la versión del organigrama.');
       }
 
-      await queryRunner.manager.query(
-        `
-        INSERT INTO organigrama.org_visual_relation (
-          version_id,
-          parent_person_id,
-          child_person_id,
-          relation_type,
-          visual_level,
-          is_active,
-          created_at,
-          updated_at
-        )
-        SELECT
-          $1::bigint,
-          r.parent_person_id,
-          r.child_person_id,
-          r.relation_type,
-          r.visual_level,
-          r.is_active,
-          NOW(),
-          NOW()
-        FROM organigrama.org_visual_relation r
-        WHERE r.version_id = $2::bigint
-        `,
-        [newVersionId, sourceVersion.id],
-      );
+      if (scope.scopeType === ORG_CHART_SCOPE_COORDINATION) {
+        await this.copyCoordinationSubtree(
+          queryRunner.manager,
+          String(sourceVersion.id),
+          newVersionId,
+          scope.scopeRootPersonId!,
+        );
+      } else {
+        await queryRunner.manager.query(
+          `
+          INSERT INTO organigrama.org_visual_relation (
+            version_id,
+            parent_person_id,
+            child_person_id,
+            relation_type,
+            visual_level,
+            is_active,
+            created_at,
+            updated_at
+          )
+          SELECT
+            $1::bigint,
+            r.parent_person_id,
+            r.child_person_id,
+            r.relation_type,
+            r.visual_level,
+            r.is_active,
+            NOW(),
+            NOW()
+          FROM organigrama.org_visual_relation r
+          WHERE r.version_id = $2::bigint
+          `,
+          [newVersionId, sourceVersion.id],
+        );
+      }
 
       const countRows = await queryRunner.manager.query<{ cnt: string }[]>(
         `
@@ -433,7 +504,7 @@ export class OrgChartVersionService {
       await queryRunner.commitTransaction();
 
       this.log.log(
-        `[OrgChartVersioning] snapshot created sourceVersionId=${sourceVersion.id} targetVersionId=${newVersionId} relationsCopied=${copiedCount}`,
+        `[OrgChartVersioning] snapshot created sourceVersionId=${sourceVersion.id} targetVersionId=${newVersionId} scope=${scope.scopeType} relationsCopied=${copiedCount}`,
       );
 
       const created = await this.getVersionById(newVersionId);
@@ -473,6 +544,255 @@ export class OrgChartVersionService {
     return (email ?? '').trim().toLowerCase();
   }
 
+  private scopeTypeOf(version: OrgChartVersion): OrgChartVersionScopeType {
+    return version.scope_type === ORG_CHART_SCOPE_COORDINATION
+      ? ORG_CHART_SCOPE_COORDINATION
+      : ORG_CHART_SCOPE_GLOBAL;
+  }
+
+  private async resolveOverlaysForRequest(
+    viewer: OrgViewerContext,
+    scopeVersionId?: string,
+  ): Promise<OrgChartVersionOverlay[]> {
+    const scopeParam = scopeVersionId?.trim();
+    if (!scopeParam) {
+      return this.toOverlays(await this.getActiveCoordinationVersions());
+    }
+
+    if (scopeParam.toLowerCase() === ORG_CHART_SCOPE_VERSION_INHERIT) {
+      return [];
+    }
+
+    await this.ensureCanUseVersioning(viewer);
+
+    const selected = await this.getVersionById(scopeParam);
+    if (this.scopeTypeOf(selected) !== ORG_CHART_SCOPE_COORDINATION) {
+      throw new BadRequestException(
+        'scopeVersionId debe ser una versión de coordinación.',
+      );
+    }
+
+    const overlayByScope = new Map<string, OrgChartVersionOverlay>();
+    for (const active of await this.getActiveCoordinationVersions()) {
+      overlayByScope.set(String(active.scope_code), this.toOverlay(active));
+    }
+    overlayByScope.set(String(selected.scope_code), this.toOverlay(selected));
+    return [...overlayByScope.values()];
+  }
+
+  private async getActiveCoordinationVersions(): Promise<OrgChartVersion[]> {
+    return this.versions.find({
+      where: {
+        is_active: true,
+        scope_type: ORG_CHART_SCOPE_COORDINATION,
+      },
+      order: { id: 'ASC' },
+    });
+  }
+
+  private toOverlay(version: OrgChartVersion): OrgChartVersionOverlay {
+    return {
+      versionId: String(version.id),
+      scopeCode: String(version.scope_code ?? ''),
+      scopeLabel: version.scope_label ?? version.name,
+      rootPersonId: String(version.scope_root_person_id ?? ''),
+    };
+  }
+
+  private toOverlays(versions: OrgChartVersion[]): OrgChartVersionOverlay[] {
+    return versions
+      .map((version) => this.toOverlay(version))
+      .filter((overlay) => overlay.versionId && overlay.rootPersonId);
+  }
+
+  private resolveSnapshotScope(dto: CreateOrgChartSnapshotDto): {
+    scopeType: OrgChartVersionScopeType;
+    scopeCode: string | null;
+    scopeLabel: string | null;
+    scopeRootPersonId: string | null;
+  } {
+    const scopeType =
+      dto.scopeType === ORG_CHART_SCOPE_COORDINATION
+        ? ORG_CHART_SCOPE_COORDINATION
+        : ORG_CHART_SCOPE_GLOBAL;
+
+    if (scopeType === ORG_CHART_SCOPE_GLOBAL) {
+      return {
+        scopeType,
+        scopeCode: null,
+        scopeLabel: null,
+        scopeRootPersonId: null,
+      };
+    }
+
+    const scopeCode =
+      dto.scopeCode?.trim() || FABRICA_CONTENIDOS_SCOPE.code;
+    const scopeLabel =
+      dto.scopeLabel?.trim() ||
+      (scopeCode === FABRICA_CONTENIDOS_SCOPE.code
+        ? FABRICA_CONTENIDOS_SCOPE.label
+        : dto.name.trim());
+    const scopeRootPersonId = dto.scopeRootPersonId
+      ? String(dto.scopeRootPersonId)
+      : scopeCode === FABRICA_CONTENIDOS_SCOPE.code
+        ? FABRICA_CONTENIDOS_SCOPE.rootPersonId
+        : null;
+
+    if (!scopeRootPersonId) {
+      throw new BadRequestException(
+        'scopeRootPersonId es obligatorio para una versión de coordinación.',
+      );
+    }
+
+    return {
+      scopeType,
+      scopeCode,
+      scopeLabel,
+      scopeRootPersonId,
+    };
+  }
+
+  private async copyCoordinationSubtree(
+    manager: { query: (sql: string, params?: unknown[]) => Promise<unknown> },
+    sourceVersionId: string,
+    targetVersionId: string,
+    rootPersonId: string,
+  ): Promise<void> {
+    await manager.query(
+      `
+      WITH RECURSIVE subtree AS (
+        SELECT $3::bigint AS person_id
+        UNION
+        SELECT r.child_person_id
+        FROM organigrama.org_visual_relation r
+        INNER JOIN subtree s ON r.parent_person_id = s.person_id
+        WHERE r.version_id = $2::bigint
+          AND r.is_active = true
+      )
+      INSERT INTO organigrama.org_visual_relation (
+        version_id,
+        parent_person_id,
+        child_person_id,
+        relation_type,
+        visual_level,
+        is_active,
+        created_at,
+        updated_at
+      )
+      SELECT
+        $1::bigint,
+        r.parent_person_id,
+        r.child_person_id,
+        r.relation_type,
+        r.visual_level,
+        r.is_active,
+        NOW(),
+        NOW()
+      FROM organigrama.org_visual_relation r
+      WHERE r.version_id = $2::bigint
+        AND r.parent_person_id IN (SELECT person_id FROM subtree)
+      `,
+      [targetVersionId, sourceVersionId, rootPersonId],
+    );
+
+    await manager.query(
+      `
+      INSERT INTO organigrama.org_chart_person_override (
+        version_id,
+        person_id,
+        role_id_override,
+        created_by_person_id
+      )
+      SELECT
+        $1::bigint,
+        o.person_id,
+        o.role_id_override,
+        o.created_by_person_id
+      FROM organigrama.org_chart_person_override o
+      WHERE o.version_id = $2::bigint
+        AND o.person_id IN (
+          WITH RECURSIVE subtree AS (
+            SELECT $3::bigint AS person_id
+            UNION
+            SELECT r.child_person_id
+            FROM organigrama.org_visual_relation r
+            INNER JOIN subtree s ON r.parent_person_id = s.person_id
+            WHERE r.version_id = $1::bigint
+              AND r.is_active = true
+          )
+          SELECT person_id FROM subtree
+        )
+      ON CONFLICT (version_id, person_id) DO NOTHING
+      `,
+      [targetVersionId, sourceVersionId, rootPersonId],
+    );
+
+    await manager.query(
+      `
+      INSERT INTO organigrama.org_visual_relation_override (
+        version_id,
+        relation_id,
+        role_id_override,
+        assignment_status,
+        assignment_label,
+        is_active
+      )
+      SELECT
+        $1::bigint,
+        new_r.id,
+        o.role_id_override,
+        o.assignment_status,
+        o.assignment_label,
+        o.is_active
+      FROM organigrama.org_visual_relation_override o
+      INNER JOIN organigrama.org_visual_relation old_r
+        ON old_r.id = o.relation_id
+       AND old_r.version_id = $2::bigint
+      INNER JOIN organigrama.org_visual_relation new_r
+        ON new_r.version_id = $1::bigint
+       AND new_r.parent_person_id = old_r.parent_person_id
+       AND new_r.child_person_id = old_r.child_person_id
+      WHERE o.version_id = $2::bigint
+      `,
+      [targetVersionId, sourceVersionId],
+    );
+
+    await manager.query(
+      `
+      INSERT INTO organigrama.org_visual_relation_position_child (
+        version_id,
+        parent_relation_id,
+        child_person_id,
+        relation_type,
+        visual_level,
+        is_active,
+        created_at,
+        updated_at
+      )
+      SELECT
+        $1::bigint,
+        new_r.id,
+        pc.child_person_id,
+        pc.relation_type,
+        pc.visual_level,
+        pc.is_active,
+        NOW(),
+        NOW()
+      FROM organigrama.org_visual_relation_position_child pc
+      INNER JOIN organigrama.org_visual_relation old_r
+        ON old_r.id = pc.parent_relation_id
+       AND old_r.version_id = $2::bigint
+      INNER JOIN organigrama.org_visual_relation new_r
+        ON new_r.version_id = $1::bigint
+       AND new_r.parent_person_id = old_r.parent_person_id
+       AND new_r.child_person_id = old_r.child_person_id
+      WHERE pc.version_id = $2::bigint
+      ON CONFLICT (version_id, parent_relation_id, child_person_id) DO NOTHING
+      `,
+      [targetVersionId, sourceVersionId],
+    );
+  }
+
   private toRelationRef(row: {
     parent_person_id: string;
     child_person_id: string;
@@ -496,6 +816,12 @@ export class OrgChartVersionService {
       periodLabel: version.period_label,
       isActive: version.is_active,
       isLocked: version.is_locked,
+      scopeType: this.scopeTypeOf(version),
+      scopeCode: version.scope_code ?? null,
+      scopeLabel: version.scope_label ?? null,
+      scopeRootPersonId: version.scope_root_person_id
+        ? Number(version.scope_root_person_id)
+        : null,
       createdAt: version.created_at.toISOString(),
       updatedAt: version.updated_at.toISOString(),
     };

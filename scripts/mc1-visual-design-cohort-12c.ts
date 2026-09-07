@@ -4,6 +4,7 @@
  *   npx ts-node --transpile-only scripts/mc1-visual-design-cohort-12c.ts --confirm --force-live-ai
  *
  * P0→P1→P2→R1→P3→P4→Profile. Role never sent to Gemini.
+ * Gemini reuse gate activo. Recalcular Gemini: --force
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

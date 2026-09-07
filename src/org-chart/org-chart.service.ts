@@ -36,6 +36,14 @@ import {
 } from './org-chart-vacancy';
 import { findActivePeopleByRoleName } from './org-chart-person.query';
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
+import {
+  effectiveRelationsCte,
+  withOverlayQueryParams,
+} from './org-chart-effective-relation.sql';
+import {
+  getOrgChartOverlayVersionIds,
+  getOrgChartVersionReadPlanCacheKey,
+} from './org-chart-version-read-plan';
 import { PhotoUrlBuilder } from './photos/photo-url.builder';
 import { ProfilePhotoLookupService } from './photos/profile-photo-lookup.service';
 import {
@@ -43,7 +51,7 @@ import {
   getPublicAssetBaseUrl,
   isOrgChartPhotosEnabled,
 } from './photos/photo.config';
-import { resolvePublicPhotoUrl } from './photos/profile-photo-url.util';
+import { resolvePublicPhotoUrl, isBundledProfilePhotoPath } from './photos/profile-photo-url.util';
 import type { GeneralAreaSummaryDto } from './types/general-area-summary.dto';
 import type { OrgPersonDetailResponseDto } from './types/org-person-detail.response';
 import type { OrgPersonFullProfileDto } from './types/org-person-full-profile.dto';
@@ -53,6 +61,7 @@ import type {
 } from './types/org-summary.dto';
 import { ProfileService } from '../profile/profile.service';
 import { OrgChartVisibilityService } from './org-chart-visibility.service';
+import { OrgChartWorkforceEventsService } from './workforce-events/org-chart-workforce-events.service';
 import {
   redactOrgChartSearchHit,
   redactOrgNodeTreeForViewer,
@@ -188,6 +197,7 @@ export class OrgChartService {
     @Inject(forwardRef(() => ProfileService))
     private readonly profileService: ProfileService,
     private readonly visibility: OrgChartVisibilityService,
+    private readonly workforceEvents: OrgChartWorkforceEventsService,
   ) {}
 
   private nodeCacheKey(
@@ -195,11 +205,10 @@ export class OrgChartService {
     personId: string,
     relationId?: string | null,
   ): string {
-    // La posición (relationId) cambia el equipo del nodo, así que forma parte de
-    // la clave para no mezclar el equipo de dos posiciones de la misma persona.
+    const readKey = getOrgChartVersionReadPlanCacheKey(versionId);
     return relationId
-      ? `${versionId}:${personId}:rel:${relationId}`
-      : `${versionId}:${personId}`;
+      ? `${readKey}:${personId}:rel:${relationId}`
+      : `${readKey}:${personId}`;
   }
 
   private async applyTreeVisibility(
@@ -207,14 +216,14 @@ export class OrgChartService {
     viewer: OrgViewerContext,
     versionId: string,
   ): Promise<OrgNode> {
-    if (viewerHasGlobalReadAccess(viewer)) {
-      return node;
-    }
-    const descendants = await this.visibility.getVisibleDescendantIds(
-      viewer,
-      versionId,
-    );
-    return redactOrgNodeTreeForViewer(node, viewer.personId, descendants);
+    const visible = viewerHasGlobalReadAccess(viewer)
+      ? node
+      : redactOrgNodeTreeForViewer(
+          node,
+          viewer.personId,
+          await this.visibility.getVisibleDescendantIds(viewer, versionId),
+        );
+    return this.workforceEvents.attachCurrentToTree(visible);
   }
 
   private async applyChildrenVisibility(
@@ -222,16 +231,17 @@ export class OrgChartService {
     viewer: OrgViewerContext,
     versionId: string,
   ): Promise<OrgNode[]> {
-    if (viewerHasGlobalReadAccess(viewer)) {
-      return nodes;
+    let visible = nodes;
+    if (!viewerHasGlobalReadAccess(viewer)) {
+      const descendants = await this.visibility.getVisibleDescendantIds(
+        viewer,
+        versionId,
+      );
+      visible = nodes.map((node) =>
+        redactOrgNodeTreeForViewer(node, viewer.personId, descendants),
+      );
     }
-    const descendants = await this.visibility.getVisibleDescendantIds(
-      viewer,
-      versionId,
-    );
-    return nodes.map((node) =>
-      redactOrgNodeTreeForViewer(node, viewer.personId, descendants),
-    );
+    return this.workforceEvents.attachCurrentToNodes(visible);
   }
 
   private async canViewerSeeFullProfile(
@@ -563,6 +573,9 @@ export class OrgChartService {
         children,
         undefined,
         versionId,
+        relationId
+          ? ({ id: String(relationId) } as OrgVisualRelation)
+          : undefined,
       );
       // Conserva la identidad de la posición pedida para que el frontend siga
       // solicitando hijos de ESTA posición al expandir/refrescar el lienzo.
@@ -590,14 +603,15 @@ export class OrgChartService {
   /** Raíz del organigrama sin redacción (uso interno / agregados). */
   private async fetchOrgChartRootNode(versionId: string): Promise<OrgNode> {
     const now = Date.now();
+    const cacheKey = getOrgChartVersionReadPlanCacheKey(versionId);
 
-    const cachedRoot = this.orgChartRootCache.get(versionId);
+    const cachedRoot = this.orgChartRootCache.get(cacheKey);
     if (cachedRoot && cachedRoot.expiresAt > now) {
-      this.logOrgChartPerf(`[CacheRoot] version=${versionId} hit`);
+      this.logOrgChartPerf(`[CacheRoot] version=${cacheKey} hit`);
       return cachedRoot.value;
     }
 
-    this.logOrgChartPerf(`[CacheRoot] version=${versionId} miss`);
+    this.logOrgChartPerf(`[CacheRoot] version=${cacheKey} miss`);
 
     return this.withGooglePhotoContext(async () => {
       const perfTotalStart = Date.now();
@@ -660,7 +674,7 @@ export class OrgChartService {
         `[PerfRoot] total: ${Date.now() - perfTotalStart}ms`,
       );
 
-      this.orgChartRootCache.set(versionId, {
+      this.orgChartRootCache.set(cacheKey, {
         value: rootNode,
         expiresAt: now + this.orgChartResponseCacheTtlMs,
       });
@@ -782,17 +796,22 @@ export class OrgChartService {
     const role = await this.getEffectiveRole(person, catalogs, versionId);
     const viewerVisualLevel = resolveOrgLevelFromRoleName(role?.name);
     const includeSubtreeVacancies = viewerVisualLevel === 1;
+    const directChildrenCte = effectiveRelationsCte('$2', '$3');
 
     const [totalPeople, directChildRows, subtreeVacancyRows] =
       await Promise.all([
         this.countAllDescendants(personId, versionId),
         this.dataSource.query(
-          `SELECT child_person_id
-             FROM organigrama.org_visual_relation
-            WHERE version_id = $2
-              AND parent_person_id = $1
-              AND is_active = true`,
-          [personId, versionId],
+          `
+          WITH ${directChildrenCte.sql}
+          SELECT child_person_id
+          FROM effective
+          WHERE parent_person_id = $1
+          `,
+          withOverlayQueryParams(
+            [personId, versionId],
+            directChildrenCte.overlayIds,
+          ),
         ),
         includeSubtreeVacancies
           ? this.listVacanciesInSubtree(personId, versionId)
@@ -1157,22 +1176,31 @@ export class OrgChartService {
     versionId: string,
   ): Promise<Map<string, string>> {
     const now = Date.now();
-    const cached = this.roleOverrideCache.get(versionId);
+    const cacheKey = getOrgChartVersionReadPlanCacheKey(versionId);
+    const cached = this.roleOverrideCache.get(cacheKey);
     if (cached && cached.expiresAt > now) {
       return cached.value;
     }
 
+    const overlayIds = getOrgChartOverlayVersionIds();
+    const versionIds = [versionId, ...overlayIds];
     const rows = await this.personOverrides.find({
-      where: { version_id: versionId },
+      where: versionIds.map((id) => ({ version_id: id })),
     });
+    const overlayVersionSet = new Set(overlayIds);
     const value = new Map<string, string>();
     for (const row of rows) {
-      if (row.role_id_override) {
-        value.set(String(row.person_id), String(row.role_id_override));
-      }
+      if (!row.role_id_override) continue;
+      if (overlayVersionSet.has(String(row.version_id))) continue;
+      value.set(String(row.person_id), String(row.role_id_override));
+    }
+    for (const row of rows) {
+      if (!row.role_id_override) continue;
+      if (!overlayVersionSet.has(String(row.version_id))) continue;
+      value.set(String(row.person_id), String(row.role_id_override));
     }
 
-    this.roleOverrideCache.set(versionId, {
+    this.roleOverrideCache.set(cacheKey, {
       value,
       expiresAt: now + this.orgChartResponseCacheTtlMs,
     });
@@ -1195,13 +1223,16 @@ export class OrgChartService {
     versionId: string,
   ): Promise<Map<string, RelationOverrideData>> {
     const now = Date.now();
-    const cached = this.relationOverrideCache.get(versionId);
+    const cacheKey = getOrgChartVersionReadPlanCacheKey(versionId);
+    const cached = this.relationOverrideCache.get(cacheKey);
     if (cached && cached.expiresAt > now) {
       return cached.value;
     }
 
+    const overlayIds = getOrgChartOverlayVersionIds();
+    const versionIds = [versionId, ...overlayIds];
     const rows = await this.relationOverrides.find({
-      where: { version_id: versionId, is_active: true },
+      where: versionIds.map((id) => ({ version_id: id, is_active: true })),
     });
     const value = new Map<string, RelationOverrideData>();
     for (const row of rows) {
@@ -1214,7 +1245,7 @@ export class OrgChartService {
       });
     }
 
-    this.relationOverrideCache.set(versionId, {
+    this.relationOverrideCache.set(cacheKey, {
       value,
       expiresAt: now + this.orgChartResponseCacheTtlMs,
     });
@@ -1251,18 +1282,19 @@ export class OrgChartService {
     personId: string,
     versionId: string,
   ): Promise<number> {
+    const cte = effectiveRelationsCte('$2', '$3');
     const result = await this.dataSource.query(
       `
       SELECT COUNT(DISTINCT r.child_person_id)::int AS total
-      FROM organigrama.org_visual_relation r
+      FROM ${cte.overlayIds.length === 0 ? 'organigrama.org_visual_relation r' : `organigrama.org_chart_effective_relations($2, $3::bigint[]) r`}
       INNER JOIN core.person p
         ON p.id = r.child_person_id
         AND p.is_active = true
-      WHERE r.version_id = $2
-        AND r.parent_person_id = $1
+      WHERE ${cte.overlayIds.length === 0 ? 'r.version_id = $2 AND' : ''}
+        r.parent_person_id = $1
         AND r.is_active = true;
       `,
-      [personId, versionId],
+      withOverlayQueryParams([personId, versionId], cte.overlayIds),
     );
 
     return Number(result?.[0]?.total ?? 0);
@@ -1276,36 +1308,34 @@ export class OrgChartService {
     personId: string,
     versionId: string,
   ): Promise<number> {
+    const cte = effectiveRelationsCte('$2', '$3');
     const result = await this.dataSource.query(
       `
-      WITH RECURSIVE descendants AS (
+      WITH RECURSIVE ${cte.sql},
+      descendants AS (
         SELECT
           r.child_person_id AS person_id
-        FROM organigrama.org_visual_relation r
+        FROM effective r
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.version_id = $2
-          AND r.parent_person_id = $1
-          AND r.is_active = true
+        WHERE r.parent_person_id = $1
 
         UNION
 
         SELECT
           r.child_person_id AS person_id
-        FROM organigrama.org_visual_relation r
+        FROM effective r
         INNER JOIN descendants d
           ON r.parent_person_id = d.person_id
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.version_id = $2
-          AND r.is_active = true
       )
       SELECT COUNT(*)::int AS total
       FROM descendants;
       `,
-      [personId, versionId],
+      withOverlayQueryParams([personId, versionId], cte.overlayIds),
     );
 
     return Number(result?.[0]?.total ?? 0);
@@ -1330,24 +1360,24 @@ export class OrgChartService {
     includeRoot: boolean,
     versionId: string,
   ): Promise<number> {
+    const cte = effectiveRelationsCte('$3', '$4');
     if (includeRoot) {
       const result = await this.dataSource.query(
         `
-        WITH RECURSIVE subtree AS (
+        WITH RECURSIVE ${cte.sql},
+        subtree AS (
           SELECT $1::bigint AS person_id
 
           UNION
 
           SELECT
             r.child_person_id
-          FROM organigrama.org_visual_relation r
+          FROM effective r
           INNER JOIN subtree s
             ON r.parent_person_id = s.person_id
           INNER JOIN core.person p
             ON p.id = r.child_person_id
             AND p.is_active = true
-          WHERE r.version_id = $3
-            AND r.is_active = true
         )
         SELECT COUNT(DISTINCT s.person_id)::int AS total
         FROM subtree s
@@ -1358,36 +1388,36 @@ export class OrgChartService {
           ON ro.id = p.role_id
         WHERE ${VACANCY_PERSON_SQL_WHERE};
         `,
-        [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
+        withOverlayQueryParams(
+          [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
+          cte.overlayIds,
+        ),
       );
       return Number(result?.[0]?.total ?? 0);
     }
 
     const result = await this.dataSource.query(
       `
-      WITH RECURSIVE descendants AS (
+      WITH RECURSIVE ${cte.sql},
+      descendants AS (
         SELECT
           r.child_person_id AS person_id
-        FROM organigrama.org_visual_relation r
+        FROM effective r
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.version_id = $3
-          AND r.parent_person_id = $1
-          AND r.is_active = true
+        WHERE r.parent_person_id = $1
 
         UNION
 
         SELECT
           r.child_person_id AS person_id
-        FROM organigrama.org_visual_relation r
+        FROM effective r
         INNER JOIN descendants d
           ON r.parent_person_id = d.person_id
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.version_id = $3
-          AND r.is_active = true
       )
       SELECT COUNT(DISTINCT d.person_id)::int AS total
       FROM descendants d
@@ -1398,7 +1428,10 @@ export class OrgChartService {
         ON ro.id = p.role_id
       WHERE ${VACANCY_PERSON_SQL_WHERE};
       `,
-      [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
+      withOverlayQueryParams(
+        [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
+        cte.overlayIds,
+      ),
     );
 
     return Number(result?.[0]?.total ?? 0);
@@ -1411,33 +1444,31 @@ export class OrgChartService {
     rootPersonId: string,
     versionId: string,
   ): Promise<{ id: string; name: string; roleName: string | null }[]> {
+    const cte = effectiveRelationsCte('$3', '$4');
     const result = await this.dataSource.query<
       { id: string; name: string; role_name: string | null }[]
     >(
       `
-      WITH RECURSIVE descendants AS (
+      WITH RECURSIVE ${cte.sql},
+      descendants AS (
         SELECT
           r.child_person_id AS person_id
-        FROM organigrama.org_visual_relation r
+        FROM effective r
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.version_id = $3
-          AND r.parent_person_id = $1
-          AND r.is_active = true
+        WHERE r.parent_person_id = $1
 
         UNION
 
         SELECT
           r.child_person_id AS person_id
-        FROM organigrama.org_visual_relation r
+        FROM effective r
         INNER JOIN descendants d
           ON r.parent_person_id = d.person_id
         INNER JOIN core.person p
           ON p.id = r.child_person_id
           AND p.is_active = true
-        WHERE r.version_id = $3
-          AND r.is_active = true
       )
       SELECT DISTINCT ON (p.id)
         p.id::text AS id,
@@ -1452,7 +1483,10 @@ export class OrgChartService {
       WHERE ${VACANCY_PERSON_SQL_WHERE}
       ORDER BY p.id, p.full_name ASC;
       `,
-      [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
+      withOverlayQueryParams(
+        [rootPersonId, VACANCY_ROLE_NAMES_NORMALIZED, versionId],
+        cte.overlayIds,
+      ),
     );
 
     return (result ?? []).map((row) => ({
@@ -1484,6 +1518,9 @@ export class OrgChartService {
     const directMap = new Map<string, string>();
     const publicBaseUrl = getPublicAssetBaseUrl();
     for (const state of directStates) {
+      if (isBundledProfilePhotoPath(state.url)) {
+        continue;
+      }
       const resolved = resolvePublicPhotoUrl(state.url, {
         personId: state.personId,
         source: state.source,
@@ -1643,6 +1680,8 @@ export class OrgChartService {
       parent_person_id: relation ? String(relation.parent_person_id) : null,
       assignment_status: assignmentStatus,
       assignment_label: assignmentLabel,
+      current_workforce_event: null,
+      current_workforce_event_count: 0,
       hierarchy_id: person.hierarchy_id,
       hierarchy: hierarchy
         ? {
@@ -1706,7 +1745,7 @@ export class OrgChartService {
   }
 
   /**
-   * URL de foto vía proxy cuando hay foto Google persistida, mock root o Workspace + edu_email.
+   * URL de foto: disco local vía proxy, upload público, o Google/Workspace vía proxy.
    */
   private async resolvePhotoUrl(person: Person): Promise<string | null> {
     if (!isOrgChartPhotosEnabled()) {
@@ -1715,8 +1754,17 @@ export class OrgChartService {
 
     const personId = String(person.id);
 
-    // 1) Foto directa (no-Google, p. ej. 'upload'): si hay URL pública
-    // absoluta resuelta, se devuelve tal cual sin pasar por el proxy.
+    // 1) Foto en disco (`public/profile-photos/{id}.*`): siempre proxy.
+    // Evita devolver URLs de localhost persistidas en BD, que en Cloud Run
+    // el navegador no puede cargar.
+    if (this.photoUrlBuilder.hasLocalDiskPhoto(personId)) {
+      return `${getApiPublicBaseUrl()}/api/org-chart/photos/${person.id}`;
+    }
+
+    // 2) Foto directa (no-Google, p. ej. 'upload' en CDN): URL pública absoluta
+    // resuelta (nunca loopback ni `public/profile-photos/{id}.*` empaquetado).
+    // Las rutas empaquetadas solo se exponen si el archivo existe (paso 1);
+    // si no, devolverlas provoca <img> rotos.
     const directUrl =
       this.directPhotoUrlByPersonId !== null
         ? (this.directPhotoUrlByPersonId.get(personId) ?? null)
@@ -1725,7 +1773,7 @@ export class OrgChartService {
       return directUrl;
     }
 
-    // 2) Foto Google persistida / mock root / Workspace: se expone vía proxy.
+    // 3) Foto Google persistida / mock root / Workspace: se expone vía proxy.
     const hasPersisted =
       this.googlePhotoPersonIds?.has(personId) ??
       (await this.profilePhotoLookup.hasPersistedGooglePhoto(personId));
@@ -1743,6 +1791,10 @@ export class OrgChartService {
   ): Promise<string | null> {
     const state = await this.profilePhotoLookup.findDirectPhotoState(personId);
     if (!state) {
+      return null;
+    }
+
+    if (isBundledProfilePhotoPath(state.profile_photo_url)) {
       return null;
     }
 

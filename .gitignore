@@ -18,3 +18,9 @@ cloud-sql-proxy.exe
 baselines/
 *.dump
 mc1-mde/
+
+# Fotos de perfil locales: se manejan como release assets externos, fuera de Git.
+# Copia verificada por SHA256 en organigrama-release-backup/20260907/release-assets/.
+# No se versionan porque son imagenes de personas reales.
+public/profile-photos/*
+!public/profile-photos/.gitkeep

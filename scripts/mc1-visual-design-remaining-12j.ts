@@ -4,6 +4,7 @@
  *
  *   npx ts-node --transpile-only scripts/mc1-visual-design-remaining-12j.ts --discover
  *   npx ts-node --transpile-only scripts/mc1-visual-design-remaining-12j.ts --confirm
+ *   Recalcular Gemini (opt-in): añadir --force
  *
  * Congela configFingerprint (P4 1.1.0 / routing 12H.1 / mapper 12E).
  * P0→P1→P2→R1→P3→P4→Profile. No modifica prompts/catálogo/R1/gate/mapper/routing.

@@ -11,6 +11,11 @@ import {
   CvSkillsValidationError,
   validateExtractedCvSkills,
 } from './cv-skills.validation';
+import {
+  emptyGeminiUsage,
+  extractGeminiUsage,
+  recordGeminiCall,
+} from '../mc-pipeline/gemini';
 
 /**
  * Extracción de skills profesionales desde un PDF (Buffer) vía Gemini.
@@ -72,9 +77,33 @@ export class CvSkillsExtractionService {
         },
       });
       responseText = response.text;
+      try {
+        const { usage, raw } = extractGeminiUsage(response);
+        recordGeminiCall({
+          context: { phase: 'CV_SKILLS', model },
+          usage,
+          usageRaw: raw,
+          status: 'SUCCESS',
+          durationMs: null,
+        });
+      } catch {
+        // ledger best-effort
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error llamando a Gemini: ${message}`);
+      try {
+        recordGeminiCall({
+          context: { phase: 'CV_SKILLS', model },
+          usage: emptyGeminiUsage(),
+          usageRaw: null,
+          status: 'FAILED',
+          durationMs: null,
+          errorCode: message.slice(0, 180),
+        });
+      } catch {
+        // ledger best-effort
+      }
       throw new Error(`Fallo al llamar a Gemini para extracción de skills: ${message}`);
     }
 

@@ -18,6 +18,10 @@ import { OrgVisualRelation } from './entities/org-visual-relation.entity';
 import { OrgVisualRelationPositionChild } from './entities/org-visual-relation-position-child.entity';
 import { findActiveVisualRelationsByParentId } from './org-visual-relation.query';
 import { findActivePositionChildrenByParentRelationId } from './org-visual-relation-position-child.query';
+import {
+  getOrgChartOverlayVersionIds,
+  getOrgChartVersionReadPlan,
+} from './org-chart-version-read-plan';
 
 /**
  * Mapas de catálogo Core necesarios para enriquecer nodos (misma forma que en el servicio).
@@ -365,19 +369,39 @@ export class OrgChartTreeEngine {
     }
 
     const uniqueIds = [...new Set(parentIds)];
-    const rows = await this.visualRelations
-      .createQueryBuilder('r')
-      .innerJoin(Person, 'p', 'p.id = r.child_person_id')
-      .select('r.parent_person_id', 'parentId')
-      .addSelect('COUNT(DISTINCT r.child_person_id)', 'cnt')
-      .where('r.version_id = :versionId', { versionId })
-      .andWhere('r.parent_person_id IN (:...parentIds)', {
-        parentIds: uniqueIds,
-      })
-      .andWhere('r.is_active = :relActive', { relActive: true })
-      .andWhere('p.is_active = :personActive', { personActive: true })
-      .groupBy('r.parent_person_id')
-      .getRawMany<{ parentId: string; cnt: string }>();
+    const overlayIds = getOrgChartOverlayVersionIds();
+    const rows =
+      overlayIds.length === 0
+        ? await this.visualRelations
+            .createQueryBuilder('r')
+            .innerJoin(Person, 'p', 'p.id = r.child_person_id')
+            .select('r.parent_person_id', 'parentId')
+            .addSelect('COUNT(DISTINCT r.child_person_id)', 'cnt')
+            .where('r.version_id = :versionId', { versionId })
+            .andWhere('r.parent_person_id IN (:...parentIds)', {
+              parentIds: uniqueIds,
+            })
+            .andWhere('r.is_active = :relActive', { relActive: true })
+            .andWhere('p.is_active = :personActive', { personActive: true })
+            .groupBy('r.parent_person_id')
+            .getRawMany<{ parentId: string; cnt: string }>()
+        : await this.visualRelations.query(
+            `
+            SELECT r.parent_person_id AS "parentId",
+                   COUNT(DISTINCT r.child_person_id)::text AS cnt
+            FROM organigrama.org_chart_effective_relations($1, $2::bigint[]) r
+            INNER JOIN core.person p ON p.id = r.child_person_id
+            WHERE r.parent_person_id = ANY($3::bigint[])
+              AND r.is_active = true
+              AND p.is_active = true
+            GROUP BY r.parent_person_id
+            `,
+            [
+              getOrgChartVersionReadPlan()?.globalVersionId ?? versionId,
+              overlayIds,
+              uniqueIds,
+            ],
+          );
 
     for (const row of rows) {
       map.set(String(row.parentId), Number(row.cnt));
@@ -394,6 +418,7 @@ export class OrgChartTreeEngine {
     parentRelationIds: string[],
     versionId: string,
   ): Promise<Map<string, number>> {
+    void versionId;
     const map = new Map<string, number>();
     if (parentRelationIds.length === 0) {
       return map;
@@ -405,8 +430,7 @@ export class OrgChartTreeEngine {
       .innerJoin(Person, 'p', 'p.id = pc.child_person_id')
       .select('pc.parent_relation_id', 'relationId')
       .addSelect('COUNT(DISTINCT pc.child_person_id)', 'cnt')
-      .where('pc.version_id = :versionId', { versionId })
-      .andWhere('pc.parent_relation_id IN (:...relationIds)', {
+      .where('pc.parent_relation_id IN (:...relationIds)', {
         relationIds: uniqueIds,
       })
       .andWhere('pc.is_active = :pcActive', { pcActive: true })

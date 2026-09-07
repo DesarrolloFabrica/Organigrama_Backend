@@ -52,7 +52,7 @@ export class PhotoUrlBuilder {
       return true;
     }
 
-    if (this.localPhotos.has(String(person.id))) {
+    if (this.hasLocalDiskPhoto(person.id)) {
       return true;
     }
 
@@ -61,5 +61,9 @@ export class PhotoUrlBuilder {
     }
 
     return false;
+  }
+
+  hasLocalDiskPhoto(personId: string | number): boolean {
+    return this.localPhotos.has(String(personId));
   }
 }

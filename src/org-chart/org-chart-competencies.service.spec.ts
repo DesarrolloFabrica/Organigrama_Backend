@@ -733,6 +733,10 @@ describe('OrgChartCompetenciesService', () => {
       presentation: {
         status: 'AVAILABLE',
         source: 'ARTIFACT_ONLY_LOCAL',
+        calibration: {
+          policy: 'MC1.PROFILE.RADAR_CALIBRATION',
+          version: '1.1.0',
+        },
         fields: [
           {
             code: 'SOFTWARE_ENGINEERING',
@@ -748,7 +752,12 @@ describe('OrgChartCompetenciesService', () => {
             tools: ['React'],
             competencyMap: {
               dimensions: [
-                { code: 'SE_FRONTEND', label: 'Frontend', relativeCoverage: 100 },
+                {
+                  code: 'SE_FRONTEND',
+                  label: 'Frontend',
+                  relativeCoverage: 82.3,
+                  displayCoverage: 89.0,
+                },
               ],
             },
             evidenceVolume: 'MEDIUM',
@@ -763,6 +772,10 @@ describe('OrgChartCompetenciesService', () => {
       'v1',
     );
     expect(profile.mc1Profile?.status).toBe('AVAILABLE');
+    expect(profile.mc1Profile?.calibration?.version).toBe('1.1.0');
+    expect(
+      profile.mc1Profile?.fields[0].competencyMap.dimensions[0].displayCoverage,
+    ).toBe(89.0);
     expect(profile.mvpCapabilities).toBeNull();
     expect(profile.evaluatedDomains).toEqual([]);
     expect(profile.warnings).toContain('MC1_ARTIFACT_ONLY_LOCAL');

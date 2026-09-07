@@ -7,6 +7,11 @@ import { DataSource } from 'typeorm';
 import type { OrgViewerContext } from './org-viewer-context';
 
 import { viewerHasGlobalReadAccess } from './org-viewer-context';
+import {
+  effectiveRelationsCte,
+  withOverlayQueryParams,
+} from './org-chart-effective-relation.sql';
+import { getOrgChartVersionReadPlanCacheKey } from './org-chart-version-read-plan';
 
 type DescendantCacheEntry = {
   ids: Set<string>;
@@ -42,7 +47,7 @@ export class OrgChartVisibilityService {
   ) {}
 
   private cacheKey(versionId: string, viewerPersonId: string): string {
-    return `${versionId}:${viewerPersonId}`;
+    return `${getOrgChartVersionReadPlanCacheKey(versionId)}:${viewerPersonId}`;
   }
 
   /**
@@ -112,16 +117,18 @@ export class OrgChartVisibilityService {
       return cached.ids;
     }
 
+    const cte = effectiveRelationsCte('$2', '$3');
     const rows = await this.dataSource.query<{ person_id: string }[]>(
       `
 
-      WITH RECURSIVE descendants AS (
+      WITH RECURSIVE ${cte.sql},
+      descendants AS (
 
         SELECT
 
           r.child_person_id AS person_id
 
-        FROM organigrama.org_visual_relation r
+        FROM effective r
 
         INNER JOIN core.person p
 
@@ -129,11 +136,7 @@ export class OrgChartVisibilityService {
 
           AND p.is_active = true
 
-        WHERE r.version_id = $2
-
-          AND r.parent_person_id = $1
-
-          AND r.is_active = true
+        WHERE r.parent_person_id = $1
 
 
 
@@ -145,7 +148,7 @@ export class OrgChartVisibilityService {
 
           r.child_person_id
 
-        FROM organigrama.org_visual_relation r
+        FROM effective r
 
         INNER JOIN descendants d
 
@@ -157,10 +160,6 @@ export class OrgChartVisibilityService {
 
           AND p.is_active = true
 
-        WHERE r.version_id = $2
-
-          AND r.is_active = true
-
       )
 
       SELECT person_id::text AS person_id
@@ -169,7 +168,7 @@ export class OrgChartVisibilityService {
 
       `,
 
-      [viewerId, versionId],
+      withOverlayQueryParams([viewerId, versionId], cte.overlayIds),
     );
 
     const ids = new Set((rows ?? []).map((row) => String(row.person_id)));

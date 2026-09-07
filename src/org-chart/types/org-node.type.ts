@@ -95,6 +95,15 @@ export type OrgAssignmentStatus =
   | 'TEMPORAL'
   | 'MATERNITY_LEAVE';
 
+/** Novedad vigente de `workforce_events` (solo lectura, schema Orbit). */
+export type OrgNodeWorkforceEvent = {
+  id: string;
+  eventTypeName: string;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+};
+
 export type OrgNode = {
   id: string;
   document: string;
@@ -119,6 +128,13 @@ export type OrgNode = {
    * `null` cuando no hay override.
    */
   assignment_label: string | null;
+  /**
+   * Novedad vigente hoy (licencia, incapacidad, permiso, etc.).
+   * `null` si la persona no tiene eventos activos en `workforce_events`.
+   */
+  current_workforce_event: OrgNodeWorkforceEvent | null;
+  /** Cantidad de novedades vigentes (si > 1, el badge muestra +N). */
+  current_workforce_event_count: number;
   hierarchy_id: string | null;
   area_id: string | null;
   school_id: string | null;

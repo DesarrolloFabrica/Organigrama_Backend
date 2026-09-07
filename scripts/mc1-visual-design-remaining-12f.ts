@@ -5,6 +5,7 @@
  *   npx ts-node --transpile-only scripts/mc1-visual-design-remaining-12f.ts --confirm --force-live-ai
  *
  * Congela configFingerprint; P0→P1→P2→R1→P3→P4→Profile.
+ * Gemini reuse gate activo (no forceRecompute). Recalcular Gemini: --force
  * No modifica prompts/catálogo/R1/gate/mapper.
  */
 import {

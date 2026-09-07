@@ -11,6 +11,11 @@ export type Mc1PersonProfileReadStatus =
 export type Mc1PersonCompetenciesPresentationDto = {
   status: 'AVAILABLE';
   source: 'ARTIFACT_ONLY_LOCAL' | 'CLOUD_PRESENTATION_STORE';
+  /** Additive provenance for consumers that need to audit radar geometry. */
+  calibration?: {
+    policy: string;
+    version: string;
+  };
   fields: Array<{
     code: string;
     label: string;
@@ -32,6 +37,9 @@ export type Mc1PersonCompetenciesPresentationDto = {
         code: string;
         label: string;
         relativeCoverage: number;
+        /** Present on current responses; optional in historical stored JSON. */
+        displayCoverage?: number;
+        evidenceState?: 'NO_EVIDENCE' | 'WEAK_EVIDENCE' | 'OBSERVED';
       }>;
     };
     evidenceVolume: 'LOW' | 'MEDIUM' | 'HIGH';

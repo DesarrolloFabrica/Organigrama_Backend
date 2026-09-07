@@ -4,6 +4,10 @@
  */
 import type { DataSource } from 'typeorm';
 import type { Mc1PersonCompetenciesPresentationDto } from './mc1-person-profile.types';
+import {
+  calibrateDimensionCoverage,
+  RADAR_CALIBRATION_METADATA,
+} from '../profile/profile-radar-calibration';
 
 export const MC1_PRESENTATION_STORE_SOURCE = 'CLOUD_PRESENTATION_STORE' as const;
 
@@ -115,7 +119,14 @@ export function validateMc1PresentationPayload(
       code: string;
       label: string;
       relativeCoverage: number;
+      displayCoverage: number;
+      evidenceState?: 'NO_EVIDENCE' | 'WEAK_EVIDENCE' | 'OBSERVED';
     }> = [];
+    const EVIDENCE_STATES = new Set([
+      'NO_EVIDENCE',
+      'WEAK_EVIDENCE',
+      'OBSERVED',
+    ]);
     for (const [d, dRaw] of dimensions.entries()) {
       if (dRaw == null || typeof dRaw !== 'object' || Array.isArray(dRaw)) {
         return { ok: false, reason: `FIELD_${i}_DIM_${d}_NOT_OBJECT` };
@@ -127,7 +138,26 @@ export function validateMc1PresentationPayload(
       if (!dc || !dl || !Number.isFinite(cov)) {
         return { ok: false, reason: `FIELD_${i}_DIM_${d}_INCOMPLETE` };
       }
-      dims.push({ code: dc, label: dl, relativeCoverage: cov });
+      const stateRaw =
+        typeof dim.evidenceState === 'string' ? dim.evidenceState : undefined;
+      if (stateRaw && !EVIDENCE_STATES.has(stateRaw)) {
+        return { ok: false, reason: `FIELD_${i}_DIM_${d}_EVIDENCE_STATE_INVALID` };
+      }
+      const evidenceState = stateRaw as
+        | 'NO_EVIDENCE'
+        | 'WEAK_EVIDENCE'
+        | 'OBSERVED'
+        | undefined;
+      dims.push({
+        code: dc,
+        label: dl,
+        relativeCoverage: cov,
+        displayCoverage: calibrateDimensionCoverage({
+          relativeCoverage: cov,
+          evidenceState,
+        }),
+        ...(evidenceState ? { evidenceState } : {}),
+      });
     }
 
     fields.push({
@@ -158,6 +188,7 @@ export function validateMc1PresentationPayload(
     presentation: {
       status: 'AVAILABLE',
       source: MC1_PRESENTATION_STORE_SOURCE,
+      calibration: RADAR_CALIBRATION_METADATA,
       fields,
     },
   };

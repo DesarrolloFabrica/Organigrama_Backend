@@ -8,6 +8,7 @@ import {
   Req,
   Res,
   HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
@@ -18,6 +19,7 @@ import { OrgChartService } from './org-chart.service';
 import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartCvService } from './org-chart-cv.service';
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
+import { OrgChartWorkforceEventsService } from './workforce-events/org-chart-workforce-events.service';
 import { OrgChartCompetenciesService } from './org-chart-competencies.service';
 import { CompetencyPeopleSearchService } from './competency-people-search.service';
 import { OrgChartVideoService } from './video/org-chart-video.service';
@@ -27,9 +29,11 @@ import {
 } from './video/org-chart-video-stream.service';
 import { PersonVideoStreamHttpError } from './video/org-chart-video-stream.types';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
+import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
 import type { PersonCvResponseDto } from './dto/person-cv.response.dto';
 import type { VacancyListResponseDto } from './vacancies/dto/vacancy.response.dto';
+import type { WorkforceEventListResponseDto } from './workforce-events/dto/workforce-event.response.dto';
 import type {
   CompetencyDomainDetailDto,
   CompetencyExplorerSummaryDto,
@@ -39,8 +43,10 @@ import type {
 import type { PersonVideoResponseDto } from './video/org-chart-video.types';
 import { Public } from '../auth/public.decorator';
 import type { CompetencyPeopleSearchResponseDto } from './dto/competency-people-search.response.dto';
+import { requireOrgChartIdParam } from './org-chart-id-param.util';
 
 @Controller('org-chart')
+@UseInterceptors(OrgChartVersionReadPlanInterceptor)
 export class OrgChartController {
   private readonly log = new Logger(OrgChartController.name);
 
@@ -49,6 +55,7 @@ export class OrgChartController {
     private readonly versionService: OrgChartVersionService,
     private readonly cvService: OrgChartCvService,
     private readonly vacancyService: OrgChartVacancyService,
+    private readonly workforceEventsService: OrgChartWorkforceEventsService,
     private readonly competenciesService: OrgChartCompetenciesService,
     private readonly competencyPeopleSearchService: CompetencyPeopleSearchService,
     private readonly videoService: OrgChartVideoService,
@@ -211,6 +218,31 @@ export class OrgChartController {
       versionCode,
     );
     return this.cvService.getPersonCv(viewer, personId, resolvedVersionId);
+  }
+
+  /**
+   * Historial de novedades (`workforce_events`) de una persona.
+   * Solo lectura: Organigrama no crea ni cambia estado (eso vive en Orbit).
+   * Misma visibilidad que la ficha completa; sin permiso → `{ items: [] }`.
+   */
+  @Get('person/:personId/workforce-events')
+  async getPersonWorkforceEvents(
+    @Param('personId') personId: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ): Promise<WorkforceEventListResponseDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.workforceEventsService.listByPersonId(
+      viewer,
+      personId,
+      resolvedVersionId,
+    );
   }
 
   /**
@@ -577,13 +609,14 @@ export class OrgChartController {
     @Query('versionId') versionId?: string,
     @Query('versionCode') versionCode?: string,
   ) {
+    const resolvedPersonId = requireOrgChartIdParam(personId, 'personId');
     const resolvedVersionId = await this.resolveVersion(
       req,
       versionId,
       versionCode,
     );
     return this.orgChartService.getNodeSummary(
-      personId,
+      resolvedPersonId,
       buildOrgViewerContext(req),
       resolvedVersionId,
     );
