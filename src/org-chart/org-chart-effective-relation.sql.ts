@@ -1,4 +1,8 @@
-import { getOrgChartOverlayVersionIds } from './org-chart-version-read-plan';
+import {
+  getOrgChartOverlayVersionIds,
+  isOrgChartHierarchyExceptionsApplied,
+  isOrgChartPlantaApplied,
+} from './org-chart-version-read-plan';
 
 export type VisualRelationSqlSource = {
   from: string;
@@ -6,17 +10,66 @@ export type VisualRelationSqlSource = {
   overlayIds: string[];
 };
 
+export type ComposedRelationsCall = {
+  /**
+   * Llamada a la función de composición (sin alias), o `null` cuando basta la
+   * tabla `organigrama.org_visual_relation` filtrada por versión.
+   */
+  call: string | null;
+  /** Overlays del plan. Solo si hay alguno se usa `overlayParam` en el SQL. */
+  overlayIds: string[];
+};
+
+/**
+ * Fuente de aristas del mapa según el plan de lectura:
+ * - sin overlays ni Planta → tabla original (`call = null`);
+ * - con overlays → `org_chart_effective_relations(global, overlays)`;
+ * - con Planta (versión vigente) → `org_chart_effective_relations_planta`,
+ *   que compone lo anterior y aplica los overrides de Planta Activa de Orbit
+ *   (`core.planta_org_override`): altas y cambios de jefe hechos en Orbit;
+ * - con excepciones instaladas → `org_chart_effective_relations_published`:
+ *   Planta + excepciones jerárquicas provisionales ACTIVE (ganan a Planta).
+ *
+ * Precedencia: versión global < overlays de coordinación < Planta < excepción.
+ *
+ * Sin overlays el array vacío va inline, así los llamadores siguen agregando
+ * `overlayParam` solo cuando `overlayIds` no está vacío (`withOverlayQueryParams`).
+ * Ambas funciones devuelven solo aristas activas.
+ */
+export function composedRelationsCall(
+  versionParam: string,
+  overlayParam: string,
+): ComposedRelationsCall {
+  const overlayIds = getOrgChartOverlayVersionIds();
+  const applyPlanta = isOrgChartPlantaApplied();
+  if (overlayIds.length === 0 && !applyPlanta) {
+    return { call: null, overlayIds };
+  }
+
+  const fn = !applyPlanta
+    ? 'organigrama.org_chart_effective_relations'
+    : isOrgChartHierarchyExceptionsApplied()
+      ? 'organigrama.org_chart_effective_relations_published'
+      : 'organigrama.org_chart_effective_relations_planta';
+  const overlays =
+    overlayIds.length > 0 ? `${overlayParam}::bigint[]` : 'ARRAY[]::bigint[]';
+  return { call: `${fn}(${versionParam}, ${overlays})`, overlayIds };
+}
+
 /**
  * FROM + predicado de versión para lecturas del mapa.
- * Sin overlays: tabla original. Con overlays: función de composición.
+ * Sin overlays ni Planta: tabla original. Si no: función de composición.
  */
 export function visualRelationSqlSource(
   alias: string,
   versionParam: string,
   overlayParam: string,
 ): VisualRelationSqlSource {
-  const overlayIds = getOrgChartOverlayVersionIds();
-  if (overlayIds.length === 0) {
+  const { call, overlayIds } = composedRelationsCall(
+    versionParam,
+    overlayParam,
+  );
+  if (!call) {
     return {
       from: `organigrama.org_visual_relation ${alias}`,
       versionPredicate: `${alias}.version_id = ${versionParam}`,
@@ -25,7 +78,7 @@ export function visualRelationSqlSource(
   }
 
   return {
-    from: `organigrama.org_chart_effective_relations(${versionParam}, ${overlayParam}::bigint[]) ${alias}`,
+    from: `${call} ${alias}`,
     versionPredicate: 'TRUE',
     overlayIds,
   };
@@ -39,8 +92,11 @@ export function effectiveRelationsCte(
   versionParam: string,
   overlayParam: string,
 ): { sql: string; overlayIds: string[] } {
-  const overlayIds = getOrgChartOverlayVersionIds();
-  if (overlayIds.length === 0) {
+  const { call, overlayIds } = composedRelationsCall(
+    versionParam,
+    overlayParam,
+  );
+  if (!call) {
     return {
       sql: `effective AS (
         SELECT *
@@ -55,7 +111,7 @@ export function effectiveRelationsCte(
   return {
     sql: `effective AS (
       SELECT *
-      FROM organigrama.org_chart_effective_relations(${versionParam}, ${overlayParam}::bigint[])
+      FROM ${call}
     )`,
     overlayIds,
   };

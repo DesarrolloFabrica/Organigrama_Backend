@@ -11,6 +11,7 @@ import { Person } from '../person/entities/person.entity';
 import { OrgChartVersion } from './entities/org-chart-version.entity';
 import { DEFAULT_ORG_CHART_VERSION_ADMIN_EMAILS } from './org-chart-versioning.constants';
 import { OrgChartVersionService } from './org-chart-version.service';
+import { OrgChartHierarchyExceptionService } from './org-chart-hierarchy-exception.service';
 import type { OrgViewerContext } from './org-viewer-context';
 
 function versionAdminViewer(
@@ -38,7 +39,12 @@ describe('OrgChartVersionService', () => {
     Pick<Repository<OrgChartVersion>, 'findOne' | 'find'>
   >;
 
+  let exceptionLayer: { isPublishedLayerAvailable: jest.Mock };
+
   beforeEach(async () => {
+    exceptionLayer = {
+      isPublishedLayerAvailable: jest.fn().mockResolvedValue(false),
+    };
     versionsRepo = {
       findOne: jest.fn(),
       find: jest.fn().mockResolvedValue([]),
@@ -58,6 +64,10 @@ describe('OrgChartVersionService', () => {
         {
           provide: DataSource,
           useValue: { createQueryRunner: jest.fn() },
+        },
+        {
+          provide: OrgChartHierarchyExceptionService,
+          useValue: exceptionLayer,
         },
       ],
     }).compile();
@@ -146,7 +156,9 @@ describe('OrgChartVersionService', () => {
       } as OrgChartVersion);
 
       await expect(
-        service.resolveVersionForRequest(versionAdminViewer(), { versionId: '2' }),
+        service.resolveVersionForRequest(versionAdminViewer(), {
+          versionId: '2',
+        }),
       ).resolves.toBe('2');
     });
 
@@ -216,7 +228,8 @@ describe('OrgChartVersionService', () => {
       ).resolves.toMatchObject({
         globalVersionId: '1',
         overlays: [],
-        cacheKey: 'g1|onone',
+        applyPlanta: true,
+        cacheKey: 'g1|onone|planta',
       });
     });
 
@@ -236,6 +249,104 @@ describe('OrgChartVersionService', () => {
         globalVersionId: '1',
         overlays: [],
       });
+    });
+  });
+
+  describe('resolveReadPlan — capa Planta (Orbit)', () => {
+    const activeGlobal = {
+      id: '4',
+      code: 'periodo-agosto-2026',
+      is_active: true,
+      scope_type: 'GLOBAL',
+    } as OrgChartVersion;
+    const historicalGlobal = {
+      id: '3',
+      code: 'historico-febrero-junio-2026',
+      is_active: false,
+      is_locked: true,
+      scope_type: 'GLOBAL',
+    } as OrgChartVersion;
+    const previousEnv = process.env.ORG_CHART_PLANTA_ENABLED;
+
+    afterEach(() => {
+      if (previousEnv === undefined)
+        delete process.env.ORG_CHART_PLANTA_ENABLED;
+      else process.env.ORG_CHART_PLANTA_ENABLED = previousEnv;
+    });
+
+    it('aplica Planta a la versión vigente por defecto, sin consulta extra', async () => {
+      versionsRepo.findOne.mockResolvedValueOnce(activeGlobal);
+
+      const plan = await service.resolveReadPlan(normalViewer(), {});
+
+      expect(plan).toMatchObject({ globalVersionId: '4', applyPlanta: true });
+      expect(plan.cacheKey).toBe('g4|onone|planta');
+      expect(versionsRepo.findOne).toHaveBeenCalledTimes(1);
+    });
+
+    it('no aplica Planta a una versión histórica pedida explícitamente', async () => {
+      versionsRepo.findOne
+        .mockResolvedValueOnce(historicalGlobal)
+        .mockResolvedValueOnce(activeGlobal);
+
+      const plan = await service.resolveReadPlan(versionAdminViewer(), {
+        versionId: '3',
+        scopeVersionId: 'none',
+      });
+
+      expect(plan).toMatchObject({ globalVersionId: '3', applyPlanta: false });
+      expect(plan.cacheKey).toBe('g3|onone');
+    });
+
+    it('aplica Planta si la versión pedida explícitamente es la vigente', async () => {
+      versionsRepo.findOne
+        .mockResolvedValueOnce(activeGlobal)
+        .mockResolvedValueOnce(activeGlobal);
+
+      const plan = await service.resolveReadPlan(versionAdminViewer(), {
+        versionCode: 'periodo-agosto-2026',
+        scopeVersionId: 'none',
+      });
+
+      expect(plan).toMatchObject({ globalVersionId: '4', applyPlanta: true });
+    });
+
+    it('con la capa de excepciones instalada, la versión vigente la aplica', async () => {
+      exceptionLayer.isPublishedLayerAvailable.mockResolvedValue(true);
+      versionsRepo.findOne.mockResolvedValueOnce(activeGlobal);
+
+      const plan = await service.resolveReadPlan(normalViewer(), {});
+
+      expect(plan).toMatchObject({ applyPlanta: true, applyExceptions: true });
+      expect(plan.cacheKey).toBe('g4|onone|planta|exc');
+    });
+
+    it('las excepciones nunca se aplican a una versión histórica', async () => {
+      exceptionLayer.isPublishedLayerAvailable.mockResolvedValue(true);
+      versionsRepo.findOne
+        .mockResolvedValueOnce(historicalGlobal)
+        .mockResolvedValueOnce(activeGlobal);
+
+      const plan = await service.resolveReadPlan(versionAdminViewer(), {
+        versionId: '3',
+        scopeVersionId: 'none',
+      });
+
+      expect(plan).toMatchObject({
+        applyPlanta: false,
+        applyExceptions: false,
+      });
+      expect(plan.cacheKey).toBe('g3|onone');
+    });
+
+    it('ORG_CHART_PLANTA_ENABLED=false desactiva la capa', async () => {
+      process.env.ORG_CHART_PLANTA_ENABLED = 'false';
+      versionsRepo.findOne.mockResolvedValueOnce(activeGlobal);
+
+      const plan = await service.resolveReadPlan(normalViewer(), {});
+
+      expect(plan.applyPlanta).toBe(false);
+      expect(plan.cacheKey).toBe('g4|onone');
     });
   });
 

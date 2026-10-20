@@ -18,10 +18,11 @@ import { OrgVisualRelation } from './entities/org-visual-relation.entity';
 import { OrgVisualRelationPositionChild } from './entities/org-visual-relation-position-child.entity';
 import { findActiveVisualRelationsByParentId } from './org-visual-relation.query';
 import { findActivePositionChildrenByParentRelationId } from './org-visual-relation-position-child.query';
+import { getOrgChartVersionReadPlan } from './org-chart-version-read-plan';
 import {
-  getOrgChartOverlayVersionIds,
-  getOrgChartVersionReadPlan,
-} from './org-chart-version-read-plan';
+  composedRelationsCall,
+  withOverlayQueryParams,
+} from './org-chart-effective-relation.sql';
 
 /**
  * Mapas de catálogo Core necesarios para enriquecer nodos (misma forma que en el servicio).
@@ -369,9 +370,9 @@ export class OrgChartTreeEngine {
     }
 
     const uniqueIds = [...new Set(parentIds)];
-    const overlayIds = getOrgChartOverlayVersionIds();
+    const { call, overlayIds } = composedRelationsCall('$1', '$3');
     const rows =
-      overlayIds.length === 0
+      call === null
         ? await this.visualRelations
             .createQueryBuilder('r')
             .innerJoin(Person, 'p', 'p.id = r.child_person_id')
@@ -389,18 +390,20 @@ export class OrgChartTreeEngine {
             `
             SELECT r.parent_person_id AS "parentId",
                    COUNT(DISTINCT r.child_person_id)::text AS cnt
-            FROM organigrama.org_chart_effective_relations($1, $2::bigint[]) r
+            FROM ${call} r
             INNER JOIN core.person p ON p.id = r.child_person_id
-            WHERE r.parent_person_id = ANY($3::bigint[])
+            WHERE r.parent_person_id = ANY($2::bigint[])
               AND r.is_active = true
               AND p.is_active = true
             GROUP BY r.parent_person_id
             `,
-            [
-              getOrgChartVersionReadPlan()?.globalVersionId ?? versionId,
+            withOverlayQueryParams(
+              [
+                getOrgChartVersionReadPlan()?.globalVersionId ?? versionId,
+                uniqueIds,
+              ],
               overlayIds,
-              uniqueIds,
-            ],
+            ),
           );
 
     for (const row of rows) {

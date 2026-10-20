@@ -24,7 +24,11 @@ export class OrgChartVersionReadPlanInterceptor implements NestInterceptor {
     }
 
     const path = `${req.baseUrl ?? ''}${req.path ?? ''}`;
-    if (path.includes('/vacancies') || path.includes('/video/stream')) {
+    if (
+      path.includes('/vacancies') ||
+      path.includes('/video/stream') ||
+      path.includes('/change-token')
+    ) {
       return next.handle();
     }
 

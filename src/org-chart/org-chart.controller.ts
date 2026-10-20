@@ -44,6 +44,10 @@ import type { PersonVideoResponseDto } from './video/org-chart-video.types';
 import { Public } from '../auth/public.decorator';
 import type { CompetencyPeopleSearchResponseDto } from './dto/competency-people-search.response.dto';
 import { requireOrgChartIdParam } from './org-chart-id-param.util';
+import {
+  OrgChartChangeTokenService,
+  type OrgChartChangeTokenDto,
+} from './org-chart-change-token.service';
 
 @Controller('org-chart')
 @UseInterceptors(OrgChartVersionReadPlanInterceptor)
@@ -60,6 +64,7 @@ export class OrgChartController {
     private readonly competencyPeopleSearchService: CompetencyPeopleSearchService,
     private readonly videoService: OrgChartVideoService,
     private readonly videoStreamService: OrgChartVideoStreamService,
+    private readonly changeTokenService: OrgChartChangeTokenService,
   ) {}
 
   private async resolveVersion(
@@ -167,6 +172,16 @@ export class OrgChartController {
   @Get('vacancies')
   async getVacancies(): Promise<VacancyListResponseDto> {
     return this.vacancyService.getVacancies();
+  }
+
+  /**
+   * Huella de los datos del mapa (personas, relaciones, Planta de Orbit,
+   * versiones, vacantes). El frontend la sondea y, si cambia, recarga el
+   * organigrama. `{ token: 'unavailable' }` si no se pudo calcular.
+   */
+  @Get('change-token')
+  async getChangeToken(): Promise<OrgChartChangeTokenDto> {
+    return this.changeTokenService.getChangeToken();
   }
 
   /** Detalle de persona con visibilidad jerárquica. */

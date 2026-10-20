@@ -140,7 +140,9 @@ export class OrgChartVisibilityService {
 
 
 
-        UNION ALL
+        -- UNION deduplica: termina aunque el grafo tenga ciclos, p. ej. la
+        -- segunda posición de Haider (49 → 49) en Fábrica 2.0.
+        UNION
 
 
 

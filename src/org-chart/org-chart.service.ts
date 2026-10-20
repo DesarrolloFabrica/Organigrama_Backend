@@ -38,6 +38,7 @@ import { findActivePeopleByRoleName } from './org-chart-person.query';
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
 import {
   effectiveRelationsCte,
+  visualRelationSqlSource,
   withOverlayQueryParams,
 } from './org-chart-effective-relation.sql';
 import {
@@ -1306,19 +1307,19 @@ export class OrgChartService {
     personId: string,
     versionId: string,
   ): Promise<number> {
-    const cte = effectiveRelationsCte('$2', '$3');
+    const source = visualRelationSqlSource('r', '$2', '$3');
     const result = await this.dataSource.query(
       `
       SELECT COUNT(DISTINCT r.child_person_id)::int AS total
-      FROM ${cte.overlayIds.length === 0 ? 'organigrama.org_visual_relation r' : `organigrama.org_chart_effective_relations($2, $3::bigint[]) r`}
+      FROM ${source.from}
       INNER JOIN core.person p
         ON p.id = r.child_person_id
         AND p.is_active = true
-      WHERE ${cte.overlayIds.length === 0 ? 'r.version_id = $2 AND' : ''}
-        r.parent_person_id = $1
+      WHERE ${source.versionPredicate}
+        AND r.parent_person_id = $1
         AND r.is_active = true;
       `,
-      withOverlayQueryParams([personId, versionId], cte.overlayIds),
+      withOverlayQueryParams([personId, versionId], source.overlayIds),
     );
 
     return Number(result?.[0]?.total ?? 0);

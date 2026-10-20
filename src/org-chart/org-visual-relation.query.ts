@@ -1,21 +1,23 @@
 import type { Repository } from 'typeorm';
 import { OrgVisualRelation } from './entities/org-visual-relation.entity';
 import {
-  getOrgChartOverlayVersionIds,
-  getOrgChartVersionReadPlan,
-} from './org-chart-version-read-plan';
+  composedRelationsCall,
+  withOverlayQueryParams,
+} from './org-chart-effective-relation.sql';
+import { getOrgChartVersionReadPlan } from './org-chart-version-read-plan';
 
 /**
  * Busca relaciones visuales activas donde la persona indicada es el padre.
- * Con overlays de coordinación usa el mapa compuesto.
+ * Con overlays de coordinación o capa Planta usa el mapa compuesto; las
+ * aristas nacidas en Planta llegan con id negativo y `visual_level` NULL.
  */
 export async function findActiveVisualRelationsByParentId(
   relations: Repository<OrgVisualRelation>,
   parentPersonId: string,
   versionId: string,
 ): Promise<OrgVisualRelation[]> {
-  const overlayIds = getOrgChartOverlayVersionIds();
-  if (overlayIds.length === 0) {
+  const { call, overlayIds } = composedRelationsCall('$1', '$3');
+  if (!call) {
     return relations.find({
       where: {
         version_id: versionId,
@@ -31,16 +33,16 @@ export async function findActiveVisualRelationsByParentId(
 
   const globalVersionId =
     getOrgChartVersionReadPlan()?.globalVersionId ?? versionId;
-  const rows = await relations.query(
+  const rows = await relations.query<OrgVisualRelation[] | null>(
     `
     SELECT *
-    FROM organigrama.org_chart_effective_relations($1, $2::bigint[])
-    WHERE parent_person_id = $3
+    FROM ${call}
+    WHERE parent_person_id = $2
       AND is_active = true
     ORDER BY visual_level ASC NULLS LAST, child_person_id ASC
     `,
-    [globalVersionId, overlayIds, parentPersonId],
+    withOverlayQueryParams([globalVersionId, parentPersonId], overlayIds),
   );
 
-  return (rows ?? []) as OrgVisualRelation[];
+  return rows ?? [];
 }

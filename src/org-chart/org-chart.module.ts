@@ -29,6 +29,8 @@ import { OrgChartVideoDriveStreamClient } from './video/org-chart-video-drive-st
 import { OrgChartTreeEngine } from './org-chart-tree.engine';
 
 import { OrgChartVisibilityService } from './org-chart-visibility.service';
+import { OrgChartChangeTokenService } from './org-chart-change-token.service';
+import { OrgChartHierarchyExceptionService } from './org-chart-hierarchy-exception.service';
 
 import { OrgChartVersionService } from './org-chart-version.service';
 
@@ -139,6 +141,10 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartVacancyService,
 
     OrgChartWorkforceEventsService,
+
+    OrgChartChangeTokenService,
+
+    OrgChartHierarchyExceptionService,
 
     OrgChartVersionReadPlanInterceptor,
   ],

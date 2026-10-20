@@ -21,9 +21,11 @@ import {
   type OrgChartVersionScopeType,
 } from './org-chart-version-scope.constants';
 import { isOrgChartVersionAdminEmail } from './org-chart-versioning.util';
+import { OrgChartHierarchyExceptionService } from './org-chart-hierarchy-exception.service';
 import type { OrgViewerContext } from './org-viewer-context';
 import {
   buildOrgChartVersionReadPlanCacheKey,
+  isOrgChartPlantaEnabled,
   type OrgChartVersionOverlay,
   type OrgChartVersionReadPlan,
 } from './org-chart-version-read-plan';
@@ -47,6 +49,7 @@ export class OrgChartVersionService {
     @InjectRepository(Person)
     private readonly persons: Repository<Person>,
     private readonly dataSource: DataSource,
+    private readonly hierarchyExceptions: OrgChartHierarchyExceptionService,
   ) {}
 
   /**
@@ -385,9 +388,18 @@ export class OrgChartVersionService {
       params.scopeVersionId,
     );
 
+    const applyPlanta = await this.shouldApplyPlanta(globalVersionId, params);
+    // Las excepciones provisionales viven sobre Planta: misma regla (solo
+    // versión vigente). Su estado DRAFT/ACTIVE/RETIRED lo filtra la función SQL.
+    const applyExceptions =
+      applyPlanta &&
+      (await this.hierarchyExceptions.isPublishedLayerAvailable());
+
     const cacheKey = buildOrgChartVersionReadPlanCacheKey(
       globalVersionId,
       overlays.map((overlay) => overlay.versionId),
+      applyPlanta,
+      applyExceptions,
     );
 
     this.log.log(
@@ -395,10 +407,35 @@ export class OrgChartVersionService {
         overlays
           .map((overlay) => `${overlay.scopeCode}:${overlay.versionId}`)
           .join(',') || 'none'
-      }`,
+      } planta=${applyPlanta} exceptions=${applyExceptions}`,
     );
 
-    return { globalVersionId, overlays, cacheKey };
+    return {
+      globalVersionId,
+      overlays,
+      applyPlanta,
+      applyExceptions,
+      cacheKey,
+    };
+  }
+
+  /**
+   * La capa Planta (Orbit) refleja la estructura vigente: solo se aplica a la
+   * versión global activa. Sin versionId/versionCode la versión resuelta ya es
+   * la activa; si se pidió una explícita, se comprueba.
+   */
+  private async shouldApplyPlanta(
+    globalVersionId: string,
+    params: ResolveVersionParams,
+  ): Promise<boolean> {
+    if (!isOrgChartPlantaEnabled()) return false;
+    if (!params.versionId?.trim() && !params.versionCode?.trim()) return true;
+
+    const active = await this.versions.findOne({
+      where: { is_active: true, scope_type: ORG_CHART_SCOPE_GLOBAL },
+      order: { id: 'ASC' },
+    });
+    return active != null && String(active.id) === globalVersionId;
   }
 
   async createSnapshot(
@@ -625,8 +662,7 @@ export class OrgChartVersionService {
       };
     }
 
-    const scopeCode =
-      dto.scopeCode?.trim() || FABRICA_CONTENIDOS_SCOPE.code;
+    const scopeCode = dto.scopeCode?.trim() || FABRICA_CONTENIDOS_SCOPE.code;
     const scopeLabel =
       dto.scopeLabel?.trim() ||
       (scopeCode === FABRICA_CONTENIDOS_SCOPE.code

@@ -82,4 +82,14 @@ describe('OrgChartVisibilityService', () => {
     expect(second.has('20')).toBe(true);
     expect(queryMock).toHaveBeenCalledTimes(1);
   });
+
+  it('getVisibleDescendantIds: el CTE recursivo deduplica (termina con ciclos 49 → 49)', async () => {
+    queryMock.mockResolvedValue([]);
+
+    await service.getVisibleDescendantIds(viewer('1082'), VERSION_ID);
+
+    const [[sql]] = queryMock.mock.calls as [[string, ...unknown[]]];
+    expect(sql).toMatch(/\bUNION\b/);
+    expect(sql).not.toMatch(/UNION\s+ALL/);
+  });
 });
