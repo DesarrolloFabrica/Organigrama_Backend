@@ -21,6 +21,7 @@ import { OrgChartVisibilityService } from './org-chart-visibility.service';
 import { OrgChartVersionService } from './org-chart-version.service';
 
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
+import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
 
 import { Vacancy } from './vacancies/entities/vacancy.entity';
 
@@ -109,6 +110,7 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartVersionService,
 
     OrgChartVacancyService,
+    OrgChartDirectoryExportService,
   ],
 
   exports: [OrgChartService, OrgChartVisibilityService, OrgChartVersionService],

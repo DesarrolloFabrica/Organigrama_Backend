@@ -2,12 +2,15 @@ import {
   Controller,
   Get,
   GoneException,
+  Header,
   Logger,
   Param,
   Query,
   Req,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import {
   isOrgChartLegacyEnabled,
   LEGACY_ORG_CHART_DISABLED_MESSAGE,
@@ -16,6 +19,7 @@ import { OrgChartService } from './org-chart.service';
 import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartCvService } from './org-chart-cv.service';
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
+import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
 import type { PersonCvResponseDto } from './dto/person-cv.response.dto';
@@ -30,6 +34,7 @@ export class OrgChartController {
     private readonly versionService: OrgChartVersionService,
     private readonly cvService: OrgChartCvService,
     private readonly vacancyService: OrgChartVacancyService,
+    private readonly directoryExportService: OrgChartDirectoryExportService,
   ) {}
 
   private async resolveVersion(
@@ -98,6 +103,26 @@ export class OrgChartController {
       buildOrgViewerContext(req),
       resolvedVersionId,
     );
+  }
+
+  /**
+   * Excel del organigrama **activo** (área, jefe, contacto y emergencia).
+   * Solo correos en ORG_CHART_DIRECTORY_EXPORT_EMAILS.
+   */
+  @Get('export/directory')
+  @Header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
+  async exportActiveDirectory(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.directoryExportService.exportActiveDirectory(
+      buildOrgViewerContext(req),
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    return new StreamableFile(file.buffer);
   }
 
   /**

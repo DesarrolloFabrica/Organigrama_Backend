@@ -85,6 +85,7 @@ function applyCorsMiddleware(
     'Access-Control-Allow-Headers',
     'Content-Type, Accept, Authorization',
   );
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 
   // Responde preflight OPTIONS sin llegar a Nest
   if (req.method === 'OPTIONS') {
@@ -185,6 +186,7 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOrigins,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    exposedHeaders: ['Content-Disposition'],
   });
 
   // Inicializa Nest sobre la misma instancia de Express
