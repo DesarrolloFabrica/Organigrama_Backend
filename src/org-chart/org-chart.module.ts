@@ -37,6 +37,7 @@ import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
+import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
 
 import { OrgChartWorkforceEventsService } from './workforce-events/org-chart-workforce-events.service';
 
@@ -147,6 +148,8 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartHierarchyExceptionService,
 
     OrgChartVersionReadPlanInterceptor,
+
+    OrgChartDirectoryExportService,
   ],
 
   exports: [OrgChartService, OrgChartVisibilityService, OrgChartVersionService],

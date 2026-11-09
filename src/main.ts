@@ -75,7 +75,7 @@ function applyCorsMiddleware(
     // Necesario para <video crossorigin> + Range en frontend/API separados (Cloud Run).
     res.setHeader(
       'Access-Control-Expose-Headers',
-      'Accept-Ranges, Content-Range, Content-Length, Content-Type',
+      'Accept-Ranges, Content-Range, Content-Length, Content-Type, Content-Disposition',
     );
   }
 
@@ -90,7 +90,6 @@ function applyCorsMiddleware(
     'Access-Control-Allow-Headers',
     'Content-Type, Accept, Authorization, Range',
   );
-
   // Responde preflight OPTIONS sin llegar a Nest
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
@@ -201,6 +200,7 @@ async function bootstrap() {
       'Content-Range',
       'Content-Length',
       'Content-Type',
+      'Content-Disposition',
     ],
   });
 

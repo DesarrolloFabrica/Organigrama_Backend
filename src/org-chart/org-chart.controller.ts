@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   GoneException,
+  Header,
   Logger,
   Param,
   Query,
@@ -9,6 +10,7 @@ import {
   Res,
   HttpException,
   UseInterceptors,
+  StreamableFile,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
@@ -28,6 +30,7 @@ import {
   applyPersonVideoStreamCors,
 } from './video/org-chart-video-stream.service';
 import { PersonVideoStreamHttpError } from './video/org-chart-video-stream.types';
+import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
@@ -65,6 +68,7 @@ export class OrgChartController {
     private readonly videoService: OrgChartVideoService,
     private readonly videoStreamService: OrgChartVideoStreamService,
     private readonly changeTokenService: OrgChartChangeTokenService,
+    private readonly directoryExportService: OrgChartDirectoryExportService,
   ) {}
 
   private async resolveVersion(
@@ -161,6 +165,26 @@ export class OrgChartController {
       resolvedVersionId,
       { domain, specialty, skills, page, pageSize },
     );
+  }
+
+  /**
+   * Excel del organigrama **activo** (área, jefe, contacto y emergencia).
+   * Solo correos en ORG_CHART_DIRECTORY_EXPORT_EMAILS.
+   */
+  @Get('export/directory')
+  @Header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
+  async exportActiveDirectory(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.directoryExportService.exportActiveDirectory(
+      buildOrgViewerContext(req),
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    return new StreamableFile(file.buffer);
   }
 
   /**
