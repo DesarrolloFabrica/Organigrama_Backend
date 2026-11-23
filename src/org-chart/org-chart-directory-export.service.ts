@@ -214,7 +214,7 @@ export class OrgChartDirectoryExportService {
     }
 
     this.log.warn(
-      `[OrgChartDirectoryExport] denied personId=${viewer.personId} email=${viewer.eduEmail ?? '(missing)'}`,
+      `[OrgChartDirectoryExport] denied personId=${viewer.personId} hasEmail=${viewer.eduEmail ? 'yes' : 'no'}`,
     );
     throw new ForbiddenException({
       message: 'No tienes permiso para descargar el directorio del organigrama',
