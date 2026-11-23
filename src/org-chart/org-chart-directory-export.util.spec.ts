@@ -94,19 +94,31 @@ describe('org-chart-directory-export.util', () => {
       [
         {
           fullName: 'Ana Pérez',
+          documentType: 'CC',
           document: '123',
           eduEmail: 'ana_perez@cun.edu.co',
+          personalEmail: 'ana@gmail.com',
           phone: '3001234567',
+          address: 'Calle 1',
           areaName: 'Operaciones',
           schoolName: '',
           programName: '',
           roleName: 'COORDINADOR',
           hierarchyName: 'Nivel 3',
+          contractTypeName: 'Indefinido',
           bossName: 'Raúl Valencia',
           bossEduEmail: 'raul_valencia@cun.edu.co',
+          regionName: 'Bogotá',
+          cityName: 'Bogotá',
+          campusName: 'Calle 12',
+          gender: 'F',
+          maritalStatus: 'Soltera',
+          bornDate: '1990-01-01',
+          bornCity: 'Bogotá',
           emergencyName: 'Luis Pérez',
           emergencyPhone: '3100000000',
           emergencyRelationship: 'Padre',
+          skills: 'Excel (Ofimática)',
         },
       ],
       'v-current (activa)',
@@ -116,5 +128,7 @@ describe('org-chart-directory-export.util', () => {
     expect(xml).toContain('Padre');
     expect(xml).toContain('Operaciones');
     expect(xml).toContain('Raúl Valencia');
+    expect(xml).toContain('Excel (Ofimática)');
+    expect(xml).toContain('ana@gmail.com');
   });
 });

@@ -27,6 +27,7 @@ describe('OrgChartDirectoryExportService', () => {
       getActiveVersion: jest.fn().mockResolvedValue({
         id: '7',
         code: 'current',
+        name: 'Versión actual',
         is_active: true,
       }),
     };
@@ -70,6 +71,7 @@ describe('OrgChartDirectoryExportService', () => {
         emergency_contact_name: 'Luis Pérez',
         emergency_contact_phone: '3100000000',
         emergency_contact_relationship: 'Padre',
+        skills: 'Excel (Ofimática)',
         role_name: 'COORDINADOR',
         area_name: 'Operaciones',
         hierarchy_name: 'Nivel 3',
@@ -104,6 +106,9 @@ describe('OrgChartDirectoryExportService', () => {
     );
 
     expect(versionService.getActiveVersion).toHaveBeenCalled();
+    expect(dataSource.query.mock.calls[0][0]).toContain(
+      'org_chart_effective_relations_planta',
+    );
     expect(dataSource.query.mock.calls[0][1]).toEqual(['7']);
     expect(file.rowCount).toBe(1);
     expect(file.filename).toMatch(/^organigrama-activo-\d{4}-\d{2}-\d{2}\.xls$/);
@@ -112,6 +117,7 @@ describe('OrgChartDirectoryExportService', () => {
     expect(xml).toContain('Operaciones');
     expect(xml).toContain('Raúl Valencia');
     expect(xml).toContain('Luis Pérez');
+    expect(xml).toContain('Excel (Ofimática)');
     expect(xml).not.toContain('Docente Ejemplo');
   });
 });

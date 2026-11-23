@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Logger,
+  Param,
   Patch,
   Post,
   Req,
@@ -22,6 +24,23 @@ export class ProfileController {
   getProfileMe(@Req() req: Request) {
     const session = getAuthSessionFromRequest(req)!;
     return this.profileService.getProfileMe(session.personId);
+  }
+
+  @Patch('person/:personId')
+  updatePersonContact(
+    @Req() req: Request,
+    @Param('personId') personId: string,
+    @Body() body: UpdateProfileDto,
+  ) {
+    const session = getAuthSessionFromRequest(req)!;
+    const isSelf = String(session.personId) === String(personId);
+    const isAdmin = session.permissions?.includes('ORG_ADMIN') === true;
+    if (!isSelf && !isAdmin) {
+      throw new ForbiddenException(
+        'No puedes actualizar los datos de esta persona',
+      );
+    }
+    return this.profileService.updateProfileMe(personId, body);
   }
 
   @Patch('me')

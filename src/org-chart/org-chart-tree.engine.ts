@@ -16,7 +16,8 @@ import { getEdgesForParentRole } from './org-chart.visual-map';
 import type { OrgNode } from './types/org-node.type';
 import { OrgVisualRelation } from './entities/org-visual-relation.entity';
 import { OrgVisualRelationPositionChild } from './entities/org-visual-relation-position-child.entity';
-import { findActiveVisualRelationsByParentId } from './org-visual-relation.query';
+import { findActiveVisualRelationsByParentId, plantaRelationsCall } from './org-visual-relation.query';
+import { selectForestRootIds } from './org-chart-forest-roots';
 import { findActivePositionChildrenByParentRelationId } from './org-visual-relation-position-child.query';
 
 /**
@@ -81,37 +82,42 @@ export class OrgChartTreeEngine {
      */
     parentRelationId?: string | null,
   ): Promise<OrgNode[]> {
-    // 1) Hijos por POSICIÓN: si el nodo viene de una arista concreta y esa
-    //    posición tiene hijos propios, tienen prioridad (compatibilidad: si no
-    //    hay, se cae al comportamiento por persona más abajo).
+    // 1) Hijos por POSICIÓN: solo si Planta no está activa. Con Planta, el
+    //    equipo vigente es el de Orbit (persona→persona), p. ej. Pauline bajo Alberto.
     if (parentRelationId) {
-      const positionChildren =
-        await findActivePositionChildrenByParentRelationId(
-          this.positionChildren,
-          String(parentRelationId),
-          versionId,
-        );
-
-      if (positionChildren.length > 0) {
-        const orderedChildren =
-          await this.loadActivePersonsOrderedByRelationIds(
-            positionChildren.map((c) => String(c.child_person_id)),
-          );
-
-        const nodes: OrgNode[] = [];
-        for (const child of orderedChildren) {
-          // Los hijos por posición no provienen de una arista
-          // `org_visual_relation`, así que sus propios hijos se resuelven por
-          // `parent_person_id` (sin relación, parentRelationId = undefined).
-          const nestedChildren = await this.buildChildrenForPerson(
-            child,
-            catalogs,
-            buildOrgNode,
+      const plantaCall = await plantaRelationsCall(
+        this.visualRelations,
+        versionId,
+      );
+      if (!plantaCall) {
+        const positionChildren =
+          await findActivePositionChildrenByParentRelationId(
+            this.positionChildren,
+            String(parentRelationId),
             versionId,
           );
-          nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
+
+        if (positionChildren.length > 0) {
+          const orderedChildren =
+            await this.loadActivePersonsOrderedByRelationIds(
+              positionChildren.map((c) => String(c.child_person_id)),
+            );
+
+          const nodes: OrgNode[] = [];
+          for (const child of orderedChildren) {
+            // Los hijos por posición no provienen de una arista
+            // `org_visual_relation`, así que sus propios hijos se resuelven por
+            // `parent_person_id` (sin relación, parentRelationId = undefined).
+            const nestedChildren = await this.buildChildrenForPerson(
+              child,
+              catalogs,
+              buildOrgNode,
+              versionId,
+            );
+            nodes.push(await buildOrgNode(child, catalogs, nestedChildren));
+          }
+          return nodes;
         }
-        return nodes;
       }
     }
 
@@ -149,6 +155,7 @@ export class OrgChartTreeEngine {
 
       return nodes;
     }
+
     const parentRoleName = parent.role_id
       ? (catalogs.roleById.get(String(parent.role_id))?.name ?? null)
       : null;
@@ -199,42 +206,49 @@ export class OrgChartTreeEngine {
      * actual (compatibilidad hacia atrás).
      */
     parentRelationId?: string | null,
+    options?: { allowRoleFallback?: boolean },
   ): Promise<OrgNode[]> {
-    // 1) Hijos por POSICIÓN específica (tienen prioridad sobre los de persona).
+    // 1) Hijos por POSICIÓN específica: solo sin Planta. Con Planta manda Orbit.
     if (parentRelationId) {
-      const positionChildren =
-        await findActivePositionChildrenByParentRelationId(
-          this.positionChildren,
-          String(parentRelationId),
-          versionId,
-        );
-
-      if (positionChildren.length > 0) {
-        const orderedChildren =
-          await this.loadActivePersonsOrderedByRelationIds(
-            positionChildren.map((c) => String(c.child_person_id)),
+      const plantaCall = await plantaRelationsCall(
+        this.visualRelations,
+        versionId,
+      );
+      if (!plantaCall) {
+        const positionChildren =
+          await findActivePositionChildrenByParentRelationId(
+            this.positionChildren,
+            String(parentRelationId),
+            versionId,
           );
 
-        // El conteo de reportes de cada hijo por posición se calcula por
-        // `parent_person_id` (sus propios hijos siguen el modelo actual).
-        const countMap = await this.countActiveDirectChildrenByParentIds(
-          orderedChildren.map((c) => String(c.id)),
-          versionId,
-        );
-
-        return Promise.all(
-          orderedChildren.map(async (child) => {
-            const directCount = await this.resolveDirectReportsCount(
-              child,
-              catalogs,
-              countMap,
-              versionId,
+        if (positionChildren.length > 0) {
+          const orderedChildren =
+            await this.loadActivePersonsOrderedByRelationIds(
+              positionChildren.map((c) => String(c.child_person_id)),
             );
-            // Sin arista `org_visual_relation`: el nodo no expone relation_id,
-            // por lo que su expansión usará el fallback por persona.
-            return await buildOrgNode(child, catalogs, [], directCount);
-          }),
-        );
+
+          // El conteo de reportes de cada hijo por posición se calcula por
+          // `parent_person_id` (sus propios hijos siguen el modelo actual).
+          const countMap = await this.countActiveDirectChildrenByParentIds(
+            orderedChildren.map((c) => String(c.id)),
+            versionId,
+          );
+
+          return Promise.all(
+            orderedChildren.map(async (child) => {
+              const directCount = await this.resolveDirectReportsCount(
+                child,
+                catalogs,
+                countMap,
+                versionId,
+              );
+              // Sin arista `org_visual_relation`: el nodo no expone relation_id,
+              // por lo que su expansión usará el fallback por persona.
+              return await buildOrgNode(child, catalogs, [], directCount);
+            }),
+          );
+        }
       }
     }
 
@@ -289,6 +303,10 @@ export class OrgChartTreeEngine {
       );
     }
 
+    if (options?.allowRoleFallback === false) {
+      return [];
+    }
+
     const parentRoleName = parent.role_id
       ? (catalogs.roleById.get(String(parent.role_id))?.name ?? null)
       : null;
@@ -333,6 +351,67 @@ export class OrgChartTreeEngine {
     );
   }
 
+  /**
+   * Raíces del bosque visual de la versión: personas con equipo que no cuelgan
+   * de nadie más. Sirve cuando el director fijo no tiene aristas en esa versión
+   * y, si no, el mapa cae al fallback por rol (un hijo sin equipo y sin Colapsar).
+   */
+  async buildUnattachedVersionRoots(
+    catalogs: OrgChartCatalogs,
+    buildOrgNode: BuildOrgNodeFn,
+    versionId: string,
+  ): Promise<OrgNode[]> {
+    const call = await plantaRelationsCall(this.visualRelations, versionId);
+    const edges = call
+      ? await this.visualRelations.query<
+          { parentId: string; childId: string }[]
+        >(
+          `
+          SELECT r.parent_person_id AS "parentId",
+                 r.child_person_id AS "childId"
+          FROM ${call} r
+          WHERE r.parent_person_id <> r.child_person_id
+            AND r.is_active = true
+          `,
+          [versionId],
+        )
+      : await this.visualRelations
+          .createQueryBuilder('r')
+          .select('r.parent_person_id', 'parentId')
+          .addSelect('r.child_person_id', 'childId')
+          .where('r.version_id = :versionId', { versionId })
+          .andWhere('r.is_active = :active', { active: true })
+          .andWhere('r.parent_person_id <> r.child_person_id')
+          .getRawMany<{ parentId: string; childId: string }>();
+
+    const rootIds = selectForestRootIds(edges);
+    if (rootIds.length === 0) {
+      return [];
+    }
+
+    const people = await this.loadActivePersonsOrderedByRelationIds(rootIds);
+    people.sort((a, b) =>
+      (a.full_name ?? '').localeCompare(b.full_name ?? '', 'es'),
+    );
+
+    const countMap = await this.countActiveDirectChildrenByParentIds(
+      people.map((person) => String(person.id)),
+      versionId,
+    );
+
+    return Promise.all(
+      people.map(async (person) => {
+        const directCount = await this.resolveDirectReportsCount(
+          person,
+          catalogs,
+          countMap,
+          versionId,
+        );
+        return await buildOrgNode(person, catalogs, [], directCount);
+      }),
+    );
+  }
+
   /** Carga personas activas por id preservando el orden de `orderedIds`. */
   private async loadActivePersonsOrderedByRelationIds(
     orderedIds: string[],
@@ -365,19 +444,38 @@ export class OrgChartTreeEngine {
     }
 
     const uniqueIds = [...new Set(parentIds)];
-    const rows = await this.visualRelations
-      .createQueryBuilder('r')
-      .innerJoin(Person, 'p', 'p.id = r.child_person_id')
-      .select('r.parent_person_id', 'parentId')
-      .addSelect('COUNT(DISTINCT r.child_person_id)', 'cnt')
-      .where('r.version_id = :versionId', { versionId })
-      .andWhere('r.parent_person_id IN (:...parentIds)', {
-        parentIds: uniqueIds,
-      })
-      .andWhere('r.is_active = :relActive', { relActive: true })
-      .andWhere('p.is_active = :personActive', { personActive: true })
-      .groupBy('r.parent_person_id')
-      .getRawMany<{ parentId: string; cnt: string }>();
+    const call = await plantaRelationsCall(this.visualRelations, versionId);
+    const rows = call
+      ? await this.visualRelations.query<
+          { parentId: string; cnt: string }[]
+        >(
+          `
+          SELECT r.parent_person_id AS "parentId",
+                 COUNT(DISTINCT r.child_person_id)::text AS cnt
+          FROM ${call} r
+          INNER JOIN core.person p ON p.id = r.child_person_id
+          WHERE r.parent_person_id = ANY($2::bigint[])
+            AND r.parent_person_id <> r.child_person_id
+            AND r.is_active = true
+            AND p.is_active = true
+          GROUP BY r.parent_person_id
+          `,
+          [versionId, uniqueIds],
+        )
+      : await this.visualRelations
+          .createQueryBuilder('r')
+          .innerJoin(Person, 'p', 'p.id = r.child_person_id')
+          .select('r.parent_person_id', 'parentId')
+          .addSelect('COUNT(DISTINCT r.child_person_id)', 'cnt')
+          .where('r.version_id = :versionId', { versionId })
+          .andWhere('r.parent_person_id IN (:...parentIds)', {
+            parentIds: uniqueIds,
+          })
+          .andWhere('r.is_active = :relActive', { relActive: true })
+          .andWhere('r.parent_person_id <> r.child_person_id')
+          .andWhere('p.is_active = :personActive', { personActive: true })
+          .groupBy('r.parent_person_id')
+          .getRawMany<{ parentId: string; cnt: string }>();
 
     for (const row of rows) {
       map.set(String(row.parentId), Number(row.cnt));

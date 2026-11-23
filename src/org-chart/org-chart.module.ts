@@ -19,9 +19,14 @@ import { OrgChartTreeEngine } from './org-chart-tree.engine';
 import { OrgChartVisibilityService } from './org-chart-visibility.service';
 
 import { OrgChartVersionService } from './org-chart-version.service';
+import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
 import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
+import { OrgChartVideoService } from './video/org-chart-video.service';
+import { OrgChartVideoTicketService } from './video/org-chart-video-ticket.service';
+import { OrgChartVideoStreamService } from './video/org-chart-video-stream.service';
+import { OrgChartVideoDriveStreamClient } from './video/org-chart-video-drive-stream.client';
 
 import { Vacancy } from './vacancies/entities/vacancy.entity';
 
@@ -108,9 +113,14 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartVisibilityService,
 
     OrgChartVersionService,
+    OrgChartVersionReadPlanInterceptor,
 
     OrgChartVacancyService,
     OrgChartDirectoryExportService,
+    OrgChartVideoService,
+    OrgChartVideoTicketService,
+    OrgChartVideoStreamService,
+    OrgChartVideoDriveStreamClient,
   ],
 
   exports: [OrgChartService, OrgChartVisibilityService, OrgChartVersionService],

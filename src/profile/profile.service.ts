@@ -15,6 +15,7 @@ import { Program } from '../catalogs/entities/program.entity';
 import { Role } from '../catalogs/entities/role.entity';
 import { School } from '../catalogs/entities/school.entity';
 import { normalizeInstitutionalEmail } from '../auth/auth-email.util';
+import { isBuiltInOrgAdminEmail } from '../permissions/org-admin-emails';
 import { Person } from '../person/entities/person.entity';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import { PersonProfileState } from './entities/person-profile-state.entity';
@@ -391,10 +392,14 @@ export class ProfileService {
         : null,
     ]);
 
-    const missingFields = this.completion.listMissingFields(person);
+    const technicalAdmin = isBuiltInOrgAdminEmail(person.edu_email);
+    const missingFields = technicalAdmin
+      ? []
+      : this.completion.listMissingFields(person);
     const profileCompleted =
-      this.completion.isProfileCompleted(state.profile_completed_at) &&
-      missingFields.length === 0;
+      technicalAdmin ||
+      (this.completion.isProfileCompleted(state.profile_completed_at) &&
+        missingFields.length === 0);
 
     return {
       personId: String(person.id),

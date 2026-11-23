@@ -76,36 +76,60 @@ export function xmlEscape(value: string): string {
 
 export const DIRECTORY_EXPORT_COLUMNS = [
   'Nombre',
+  'Tipo de documento',
   'Documento',
   'Correo institucional',
+  'Correo personal',
   'Teléfono',
+  'Dirección',
   'Área',
   'Escuela',
   'Programa',
   'Cargo',
   'Nivel',
+  'Tipo de contrato',
   'Jefe',
   'Correo del jefe',
+  'Región',
+  'Ciudad',
+  'Campus',
+  'Género',
+  'Estado civil',
+  'Fecha de nacimiento',
+  'Ciudad de nacimiento',
   'Contacto de emergencia',
   'Teléfono de emergencia',
   'Parentesco',
+  'Skills',
 ] as const;
 
 export type DirectoryExportRow = {
   fullName: string;
+  documentType: string;
   document: string;
   eduEmail: string;
+  personalEmail: string;
   phone: string;
+  address: string;
   areaName: string;
   schoolName: string;
   programName: string;
   roleName: string;
   hierarchyName: string;
+  contractTypeName: string;
   bossName: string;
   bossEduEmail: string;
+  regionName: string;
+  cityName: string;
+  campusName: string;
+  gender: string;
+  maritalStatus: string;
+  bornDate: string;
+  bornCity: string;
   emergencyName: string;
   emergencyPhone: string;
   emergencyRelationship: string;
+  skills: string;
 };
 
 function cell(value: string): string {
@@ -121,26 +145,38 @@ export function buildDirectoryExcelXml(
   versionLabel: string,
 ): string {
   const header = DIRECTORY_EXPORT_COLUMNS.map(headerCell).join('');
-  const meta = `<Row><Cell ss:MergeAcross="13"><Data ss:Type="String">${xmlEscape(
-    `Organigrama activo — ${versionLabel}`,
+  const meta = `<Row><Cell ss:MergeAcross="${DIRECTORY_EXPORT_COLUMNS.length - 1}"><Data ss:Type="String">${xmlEscape(
+    `Operaciones — ${versionLabel}`,
   )}</Data></Cell></Row>`;
   const body = rows
     .map((row) => {
       const values: string[] = [
         row.fullName,
+        row.documentType,
         row.document,
         row.eduEmail,
+        row.personalEmail,
         row.phone,
+        row.address,
         row.areaName,
         row.schoolName,
         row.programName,
         row.roleName,
         row.hierarchyName,
+        row.contractTypeName,
         row.bossName,
         row.bossEduEmail,
+        row.regionName,
+        row.cityName,
+        row.campusName,
+        row.gender,
+        row.maritalStatus,
+        row.bornDate,
+        row.bornCity,
         row.emergencyName,
         row.emergencyPhone,
         row.emergencyRelationship,
+        row.skills,
       ];
       return `<Row>${values.map(cell).join('')}</Row>`;
     })

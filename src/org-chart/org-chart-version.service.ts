@@ -262,21 +262,31 @@ export class OrgChartVersionService {
   }
 
   async getActiveVersion(): Promise<OrgChartVersion> {
-    const active = await this.versions.findOne({
+    const actives = await this.versions.find({
       where: { is_active: true },
       order: { id: 'ASC' },
     });
 
-    if (!active) {
+    const preferred =
+      actives.find((version) =>
+        version.name.trim().toLowerCase().includes('versión actual'),
+      ) ??
+      actives.find((version) =>
+        version.name.trim().toLowerCase().includes('version actual'),
+      ) ??
+      actives.find((version) => version.code === 'periodo-agosto-2026') ??
+      actives[0];
+
+    if (!preferred) {
       throw new NotFoundException(
         'No existe una versión activa del organigrama. Contacte al administrador.',
       );
     }
 
     this.log.log(
-      `[OrgChartVersioning] resolved active version id=${active.id}`,
+      `[OrgChartVersioning] resolved active version id=${preferred.id} code=${preferred.code}`,
     );
-    return active;
+    return preferred;
   }
 
   async getVersionById(id: string): Promise<OrgChartVersion> {

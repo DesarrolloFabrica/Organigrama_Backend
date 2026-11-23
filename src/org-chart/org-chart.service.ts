@@ -60,6 +60,7 @@ import {
 } from './org-chart-visibility.mapper';
 import type { OrgViewerContext } from './org-viewer-context';
 import { viewerHasGlobalReadAccess } from './org-viewer-context';
+import { getOrgChartVersionReadPlanCacheKey } from './org-chart-version-read-plan';
 
 // ─── Catalog maps helper ──────────────────────────────────────────────────────
 
@@ -141,7 +142,8 @@ export class OrgChartService {
     { value: Map<string, RelationOverrideData>; expiresAt: number }
   >();
 
-  private readonly orgChartResponseCacheTtlMs = 3 * 60 * 1000;
+  /** Cache corto para que planta/equipos se vean al día al refrescar. */
+  private readonly orgChartResponseCacheTtlMs = 30 * 1000;
 
   private readonly enableOrgChartPerfLogs =
     process.env.ORG_CHART_PERF_LOGS === 'true';
@@ -197,9 +199,10 @@ export class OrgChartService {
   ): string {
     // La posición (relationId) cambia el equipo del nodo, así que forma parte de
     // la clave para no mezclar el equipo de dos posiciones de la misma persona.
+    const readKey = getOrgChartVersionReadPlanCacheKey(versionId);
     return relationId
-      ? `${versionId}:${personId}:rel:${relationId}`
-      : `${versionId}:${personId}`;
+      ? `${readKey}:${personId}:rel:${relationId}`
+      : `${readKey}:${personId}`;
   }
 
   private async applyTreeVisibility(
@@ -591,7 +594,8 @@ export class OrgChartService {
   private async fetchOrgChartRootNode(versionId: string): Promise<OrgNode> {
     const now = Date.now();
 
-    const cachedRoot = this.orgChartRootCache.get(versionId);
+    const rootCacheKey = getOrgChartVersionReadPlanCacheKey(versionId);
+    const cachedRoot = this.orgChartRootCache.get(rootCacheKey);
     if (cachedRoot && cachedRoot.expiresAt > now) {
       this.logOrgChartPerf(`[CacheRoot] version=${versionId} hit`);
       return cachedRoot.value;
@@ -626,20 +630,44 @@ export class OrgChartService {
       );
 
       const perfBuildDirectChildrenStart = Date.now();
-      const children = await this.treeEngine.buildDirectChildrenForPerson(
+      const buildNode = (
+        nodePerson: Person,
+        nodeCatalogs: OrgCatalogs,
+        nodeChildren: OrgNode[],
+        directReportsCount?: number,
+        nodeRelation?: OrgVisualRelation,
+      ) =>
+        this.buildOrgNode(
+          nodePerson,
+          nodeCatalogs,
+          nodeChildren,
+          directReportsCount,
+          versionId,
+          nodeRelation,
+        );
+      let children = await this.treeEngine.buildDirectChildrenForPerson(
         root,
         catalogs,
-        (nodePerson, nodeCatalogs, nodeChildren, directReportsCount, nodeRelation) =>
-          this.buildOrgNode(
-            nodePerson,
-            nodeCatalogs,
-            nodeChildren,
-            directReportsCount,
-            versionId,
-            nodeRelation,
-          ),
+        buildNode,
         versionId,
+        null,
+        { allowRoleFallback: false },
       );
+      if (children.length === 0) {
+        children = await this.treeEngine.buildUnattachedVersionRoots(
+          catalogs,
+          buildNode,
+          versionId,
+        );
+      }
+      if (children.length === 0) {
+        children = await this.treeEngine.buildDirectChildrenForPerson(
+          root,
+          catalogs,
+          buildNode,
+          versionId,
+        );
+      }
       this.logOrgChartPerf(
         `[PerfRoot] buildDirectChildren: ${Date.now() - perfBuildDirectChildrenStart}ms`,
       );
@@ -660,7 +688,7 @@ export class OrgChartService {
         `[PerfRoot] total: ${Date.now() - perfTotalStart}ms`,
       );
 
-      this.orgChartRootCache.set(versionId, {
+      this.orgChartRootCache.set(rootCacheKey, {
         value: rootNode,
         expiresAt: now + this.orgChartResponseCacheTtlMs,
       });

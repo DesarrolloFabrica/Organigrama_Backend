@@ -3,12 +3,14 @@ import {
   Get,
   GoneException,
   Header,
+  HttpException,
   Logger,
   Param,
   Query,
   Req,
   Res,
   StreamableFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
@@ -20,12 +22,22 @@ import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartCvService } from './org-chart-cv.service';
 import { OrgChartVacancyService } from './vacancies/org-chart-vacancy.service';
 import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
+import { OrgChartVideoService } from './video/org-chart-video.service';
+import {
+  OrgChartVideoStreamService,
+  applyPersonVideoStreamCors,
+} from './video/org-chart-video-stream.service';
+import { PersonVideoStreamHttpError } from './video/org-chart-video-stream.types';
+import type { PersonVideoResponseDto } from './video/org-chart-video.types';
+import { Public } from '../auth/public.decorator';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
+import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 import type { PersonCvResponseDto } from './dto/person-cv.response.dto';
 import type { VacancyListResponseDto } from './vacancies/dto/vacancy.response.dto';
 
 @Controller('org-chart')
+@UseInterceptors(OrgChartVersionReadPlanInterceptor)
 export class OrgChartController {
   private readonly log = new Logger(OrgChartController.name);
 
@@ -35,6 +47,8 @@ export class OrgChartController {
     private readonly cvService: OrgChartCvService,
     private readonly vacancyService: OrgChartVacancyService,
     private readonly directoryExportService: OrgChartDirectoryExportService,
+    private readonly videoService: OrgChartVideoService,
+    private readonly videoStreamService: OrgChartVideoStreamService,
   ) {}
 
   private async resolveVersion(
@@ -111,11 +125,30 @@ export class OrgChartController {
    */
   @Get('export/directory')
   @Header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
   async exportActiveDirectory(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const file = await this.directoryExportService.exportActiveDirectory(
+      buildOrgViewerContext(req),
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    return new StreamableFile(file.buffer);
+  }
+
+  /** HTML autónomo del organigrama vigente (Versión actual), con el diseño y las fotos. */
+  @Get('export/html')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
+  async exportActiveHtml(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.directoryExportService.exportActiveHtml(
       buildOrgViewerContext(req),
     );
     res.setHeader(
@@ -185,6 +218,102 @@ export class OrgChartController {
       versionCode,
     );
     return this.cvService.getPersonCv(viewer, personId, resolvedVersionId);
+  }
+
+  /**
+   * Disponibilidad, metadatos, ticket y streamUrl del video de presentación.
+   * Cualquier usuario autenticado (no usa canViewFullProfile).
+   * Vacante o sin video → { hasVideo: false }. Persona inexistente → 404.
+   */
+  @Get('person/:personId/video')
+  async getPersonVideo(
+    @Param('personId') personId: string,
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ): Promise<PersonVideoResponseDto> {
+    const viewer = buildOrgViewerContext(req);
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.videoService.getPersonVideo(
+      viewer,
+      personId,
+      resolvedVersionId,
+    );
+  }
+
+  /**
+   * Streaming Range del video de presentación.
+   * Credencial: únicamente `ticket` (no Bearer).
+   */
+  @Public()
+  @Get('person/:personId/video/stream')
+  async streamPersonVideo(
+    @Param('personId') personId: string,
+    @Query('ticket') ticket: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    applyPersonVideoStreamCors(req, res);
+    try {
+      const rangeHeader =
+        typeof req.headers.range === 'string' ? req.headers.range : undefined;
+      await this.videoStreamService.streamToResponse({
+        personId,
+        ticket,
+        rangeHeader,
+        req,
+        res,
+        requestId: (req.headers['x-request-id'] as string) || undefined,
+      });
+    } catch (err) {
+      if (err instanceof PersonVideoStreamHttpError) {
+        if (!res.headersSent) {
+          applyPersonVideoStreamCors(req, res);
+          if (err.headers) {
+            for (const [k, v] of Object.entries(err.headers)) {
+              res.setHeader(k, v);
+            }
+          }
+          res.status(err.httpStatus).json({
+            statusCode: err.httpStatus,
+            message: err.message,
+            code: err.code,
+          });
+        }
+        return;
+      }
+      if (err instanceof HttpException) {
+        if (!res.headersSent) {
+          applyPersonVideoStreamCors(req, res);
+          const status = err.getStatus();
+          const body = err.getResponse();
+          res
+            .status(status)
+            .json(
+              typeof body === 'string'
+                ? { statusCode: status, message: body }
+                : body,
+            );
+        }
+        return;
+      }
+      this.log.error(
+        `streamPersonVideo unexpected error personId=${personId}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+      if (!res.headersSent) {
+        applyPersonVideoStreamCors(req, res);
+        res.status(500).json({
+          statusCode: 500,
+          message: 'Error al transmitir el video',
+          code: 'STREAM_PIPE_ERROR',
+        });
+      }
+    }
   }
 
   /**

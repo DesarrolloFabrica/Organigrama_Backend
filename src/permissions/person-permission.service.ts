@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PersonPermission } from './entities/person-permission.entity';
+import { isBuiltInOrgAdminEmail } from './org-admin-emails';
 
 /**
  * Carga y expone los permisos técnicos de aplicación de una persona.
@@ -60,14 +61,20 @@ export class PersonPermissionService {
     return permissions.includes(code);
   }
 
-  /** Devuelve los permisos concedidos vía ORG_ADMIN_EMAILS (fallback de arranque). */
+  /**
+   * Permisos de admin: cuenta técnica fija o correo listado en ORG_ADMIN_EMAILS.
+   */
   private getEnvPermissions(eduEmail: string): string[] {
+    const normalizedInput = eduEmail.trim().toLowerCase();
+    if (isBuiltInOrgAdminEmail(normalizedInput)) {
+      return ['ORG_READ_ALL', 'ORG_ADMIN'];
+    }
+
     const raw = this.config.get<string>('ORG_ADMIN_EMAILS', '');
     if (!raw?.trim()) {
       return [];
     }
 
-    const normalizedInput = eduEmail.trim().toLowerCase();
     const adminEmails = raw
       .split(',')
       .map((e) => e.trim().toLowerCase())
