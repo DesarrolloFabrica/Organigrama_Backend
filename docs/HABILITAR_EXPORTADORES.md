@@ -87,6 +87,10 @@ npm run org:grant-directory-export -- correo.autorizado@cun.edu.co --format=both
 Efecto inmediato en el backend (403). Si la página está abierta, el siguiente
 clic muestra «Acceso denegado» y retira el botón; al recargar ya no aparece.
 
+## Intervención en producción
+
+Procedimiento detallado, verificaciones SQL, respaldo y reversión: `docs/intervencion-exportadores/RUNBOOK.md`.
+
 ## Ensayo previo
 
 `test/qa/directory-export/README.md` reproduce todo el flujo en un PostgreSQL
