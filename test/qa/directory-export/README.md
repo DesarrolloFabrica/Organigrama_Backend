@@ -40,7 +40,7 @@ docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP
 ## 3. Datos sintéticos
 
 ```bash
-for f in 00_marcar_base_qa 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos 04_perfiles_desarrollo; do
+for f in 00_marcar_base_qa 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos 04_perfiles_desarrollo 05_presentaciones_mc1; do
   docker cp test/qa/directory-export/$f.sql organigrama-qa-exports:/tmp/$f.sql
   docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP=1 -f /tmp/$f.sql
 done
@@ -55,8 +55,19 @@ done
 - `03`: catálogos y skills sintéticos para que el Excel tenga las 26
   columnas con valor.
 - `04`: perfiles de desarrollo (usuario general y exportadores HTML/Excel/ambos) y videos ficticios.
+- `05`: perfiles MC1 **publicados** sintéticos (`organigrama.mc1_person_profile_presentation`)
+  para el **Explorador de Competencias**: Directora (Educación), Analista Uno
+  y Dos (Ingeniería de software), Exportador Ambos (Gestión de proyectos).
+  Se regenera con `node test/qa/directory-export/mc1/generar-presentaciones-mc1.js`
+  (valida cada payload con el validador real del backend; requiere `dist`).
+  Se niega a correr si la base no está marcada como QA.
 
-Competencias MC1 sintéticas (motor real, desde el directorio QA):
+> **No usar** `scripts/mc1-import-person-profile-presentation.ts` para QA:
+> ese script siempre lee el `.env` de la raíz del repositorio, que en el
+> worktree apunta a **producción**.
+
+Competencias MC1 sintéticas de la pestaña «Competencias» (motor real, desde
+el directorio QA):
 
 ```bash
 node <repo>/dist/database/scripts/mc-catalog-seed.js --seed --activate --i-confirm-seed
@@ -93,11 +104,23 @@ ORG_CHART_VERSION_ADMIN_EMAILS=qa_sintetico_directora@cun.edu.co
 ORG_ADMIN_EMAILS=
 ```
 
+En este equipo el directorio QA es `C:\dev\Organigrama\_integracion\qa-backend`
+y el arranque/parada lo hace el lanzador oficial (ver
+`C:\dev\Organigrama\_integracion\COMO-INICIAR.md`):
+
+```powershell
+cd C:\dev\Organigrama
+.\organigrama iniciar qa      # Docker (si está detenido) + backend :3002 + frontend :5175
+.\organigrama detener qa      # conserva el contenedor y sus datos
+```
+
+Equivalente manual (otro equipo):
+
 ```bash
 node <repo>/dist/main.js            # desde el directorio QA
 VITE_API_BASE_URL=http://localhost:3002 \
 VITE_ORG_CHART_VERSION_ADMIN_EMAILS=qa_sintetico_directora@cun.edu.co \
-  npx vite --port 5175              # frontend (modo dev: incluye el formulario de desarrollo)
+  npx vite --port 5175 --strictPort # frontend (modo dev: incluye el formulario de desarrollo)
 ```
 
 ## Ingreso manual

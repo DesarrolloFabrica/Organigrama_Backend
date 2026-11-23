@@ -28,13 +28,17 @@
    como una persona autorizada sin Google.
    - `:3001` (integrado): **ya** con `DEV_LOGIN_ENABLED=false`
      (`POST /api/auth/dev-login` → 404; verificado el 23-nov-2026).
-   - `:3000` (`main`, repo original): **sigue aceptando** el acceso de
-     desarrollo contra producción. **Detenerlo** antes de conceder permisos
-     (además, su código antiguo habilita el Excel a una lista fija de correos).
+   - `:3000` (`main`, repo original): acepta el acceso de desarrollo contra
+     producción y su código antiguo habilita el Excel a una lista fija de
+     correos. **No debe estar corriendo** al conceder permisos: comprobar con
+     `.\organigrama estado` (desde `C:\dev\Organigrama`) y, si aparece,
+     `.\organigrama detener-main`. `.\organigrama iniciar` ya lo detiene.
 3. **Respaldo `SUCCESSFUL`** de `core-database` (paso 3).
-4. Comprobar el ingreso con Google en `localhost:5174` con una de las cuentas
-   aprobadas antes de conceder (el origen `http://localhost:5174` debe estar
-   autorizado en el cliente OAuth).
+4. Comprobar el ingreso con Google en `http://localhost:5173` (versión robusta,
+   `.\organigrama iniciar robusto` desde `C:\dev\Organigrama`) con una de las
+   cuentas aprobadas antes de conceder. 5173 es el único origen local
+   autorizado hoy en el cliente OAuth; 5174 y 5175 responden `origin_mismatch`
+   (ver `_integracion\COMO-INICIAR.md`).
 5. Momento de baja carga.
 
 ## 1. Preparar el cliente `psql` (sin instalar nada)
@@ -161,7 +165,7 @@ Esperado: `PERMISOS FINALES` = los previos + `ORG_DIRECTORY_EXPORT_HTML`,
 `ORG_DIRECTORY_EXPORT_XLS`; ningún otro código cambia (si cambiara, el script
 revierte la transacción y termina con error).
 
-## 7. Validación funcional en `localhost:5174`
+## 7. Validación funcional en `localhost:5173`
 
 1. Cerrar sesión e ingresar **con Google** con la cuenta aprobada.
 2. Ver la barra «Directorio activo» con **Descargar Excel** y **Descargar HTML**.

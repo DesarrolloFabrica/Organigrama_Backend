@@ -9,7 +9,7 @@ permisos, fichas, competencias, presentación y exportadores sin Google.
 | Entorno | Backend | Acceso por correo | Ingreso |
 |---|---|---|---|
 | QA aislado | `:3002` → PostgreSQL Docker `127.0.0.1:5434` (base `organigrama_qa`, marcada `qa`) | **sí** | formulario dev o Google |
-| Local contra producción | `:3001` → Cloud SQL `core-database` | **no** (404) | solo Google |
+| Local contra producción | `:3001` → Cloud SQL `core-database` (frontend `http://localhost:5173`) | **no** (404) | solo Google |
 | Producción | Cloud Run | **no** (404; el build ni siquiera incluye el formulario) | solo Google |
 
 ## Por qué no puede usarse contra producción
@@ -31,7 +31,17 @@ o `[DevLogin] bloqueado: <motivo>`. El frontend solo muestra el formulario en
 
 ## Arrancar el entorno QA
 
-1. Base (una vez): seguir `README.md` (esquema + `00` … `04` + MC1). Para
+En este equipo basta con el lanzador oficial (detalles en
+`C:\dev\Organigrama\_integracion\COMO-INICIAR.md`):
+
+```powershell
+cd C:\dev\Organigrama
+.\organigrama iniciar qa
+```
+
+Pasos manuales (otro equipo):
+
+1. Base (una vez): seguir `README.md` (esquema + `00` … `05` + MC1). Para
    empezar de cero: `docker rm -f organigrama-qa-exports` y repetir.
 2. Backend QA (directorio propio con `.env` que apunta **solo** a
    `127.0.0.1:5434`, `DEV_LOGIN_ENABLED=true`, `PORT=3002`):
@@ -43,7 +53,7 @@ o `[DevLogin] bloqueado: <motivo>`. El frontend solo muestra el formulario en
    cd <repo-frontend>
    VITE_API_BASE_URL=http://localhost:3002 \
    VITE_ORG_CHART_VERSION_ADMIN_EMAILS=qa_sintetico_directora@cun.edu.co \
-     npx vite --port 5175
+     npx vite --port 5175 --strictPort
    ```
 4. Abrir http://localhost:5175
 
@@ -78,3 +88,8 @@ node <repo>/dist/database/scripts/grant-directory-export.js <correo> --format=ht
 - **Fotos**: no hay fotos reales en QA; se muestran iniciales.
 - Perfiles MC1: generados con el motor real a partir de perfiles curados
   sintéticos (`mc1/`); aparecen como especialidades emergentes.
+- Explorador de Competencias: lee los perfiles **publicados**
+  (`05_presentaciones_mc1.sql`): 4 personas (Directora, Analista Uno, Analista
+  Dos, Exportador Ambos). Sin ese archivo el explorador aparece vacío.
+- Google en 5175: hoy responde `origin_mismatch` (origen no autorizado en el
+  cliente OAuth); en QA se usa el formulario por correo.
