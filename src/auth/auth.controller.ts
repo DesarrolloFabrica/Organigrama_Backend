@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Logger,
+  NotFoundException,
   Post,
   Req,
   UseGuards,
@@ -15,6 +16,7 @@ import {
   getDevLoginAvailability,
 } from './auth.config';
 import { AuthDevGuard } from './auth-dev.guard';
+import { DevLoginSafetyService } from './dev-login-safety.service';
 import { getAuthSessionFromRequest } from './auth-request.util';
 import { Public } from './public.decorator';
 
@@ -30,7 +32,10 @@ type DevLoginBody = {
 export class AuthController {
   private readonly log = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly devLoginSafety: DevLoginSafetyService,
+  ) {}
 
   @Public()
   @Post('google')
@@ -41,11 +46,13 @@ export class AuthController {
   /**
    * ¿Acepta este backend el login dev? Solo informa: no autentica ni revela
    * datos. En producción responde 404 (como la propia ruta de login dev).
+   * `enabled` exige además que la base conectada sea no productiva.
    */
   @Public()
   @Get('dev-login/status')
   getDevLoginStatus(): { enabled: boolean } {
-    return getDevLoginAvailability();
+    const { enabled } = getDevLoginAvailability();
+    return { enabled: enabled && this.devLoginSafety.isAllowed() };
   }
 
   @Public()
@@ -54,6 +61,10 @@ export class AuthController {
   @Post('dev-login')
   loginWithDevEmail(@Req() req: Request, @Body() body: DevLoginBody) {
     assertDevLoginRouteEnabled();
+    // Defensa en profundidad (el guard ya lo exige).
+    if (!this.devLoginSafety.isAllowed()) {
+      throw new NotFoundException();
+    }
 
     const email = body.email?.trim() ?? '';
     const ip =

@@ -40,12 +40,13 @@ docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP
 ## 3. Datos sintéticos
 
 ```bash
-for f in 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos; do
+for f in 00_marcar_base_qa 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos 04_perfiles_desarrollo; do
   docker cp test/qa/directory-export/$f.sql organigrama-qa-exports:/tmp/$f.sql
   docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP=1 -f /tmp/$f.sql
 done
 ```
 
+- `00`: marca la base como no productiva (`organigrama.environment = qa`); requisito del acceso por correo. Reiniciar el backend QA después.
 - `01`: planta sintética. Se niega a correr si `core.person` contiene
   personas no sintéticas. Incluye la raíz `1144` porque el backend fija la
   raíz del mapa en `ORG_CHART_ROOT_PERSON_ID`.
@@ -53,6 +54,19 @@ done
   persona ficticia 900199, **sin** ORG_ADMIN ni permisos implícitos.
 - `03`: catálogos y skills sintéticos para que el Excel tenga las 26
   columnas con valor.
+- `04`: perfiles de desarrollo (usuario general y exportadores HTML/Excel/ambos) y videos ficticios.
+
+Competencias MC1 sintéticas (motor real, desde el directorio QA):
+
+```bash
+node <repo>/dist/database/scripts/mc-catalog-seed.js --seed --activate --i-confirm-seed
+node <repo>/dist/database/scripts/mc-mappings-seed.js --seed --i-confirm-seed
+for f in test/qa/directory-export/mc1/qa-mc1-*.json; do
+  node <repo>/dist/database/scripts/mc-import-curated-profile.js --file=$f --execute --confirm
+done
+```
+
+Guía de uso, perfiles y cambio de usuario: `DESARROLLO_LOCAL.md`.
 
 ## 4. Backend contra la base QA
 

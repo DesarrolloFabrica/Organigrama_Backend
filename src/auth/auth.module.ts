@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { AuthDevGuard } from './auth-dev.guard';
 import { getJwtExpiresIn, getJwtSecret } from './auth.config';
 import { CentralLoginLogService } from './central-login-log.service';
+import { DevLoginSafetyService } from './dev-login-safety.service';
 import { GoogleTokenService } from './google-token.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PermissionsModule } from '../permissions/permissions.module';
@@ -29,6 +30,7 @@ import { ProfileModule } from '../profile/profile.module';
   providers: [
     AuthService,
     AuthDevGuard,
+    DevLoginSafetyService,
     CentralLoginLogService,
     GoogleTokenService,
     {

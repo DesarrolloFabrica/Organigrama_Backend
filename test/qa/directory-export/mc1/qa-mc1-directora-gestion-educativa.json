@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "mc1-curated-profile-1.1.0",
+  "source": {
+    "type": "MANUAL_CURATED",
+    "method": "CHATGPT_HUMAN_REVIEW",
+    "reviewStatus": "REVIEWED",
+    "reviewedAt": "2026-11-23T00:00:00.000Z",
+    "notes": "Perfil SINTÉTICO para QA local. No corresponde a ninguna persona real."
+  },
+  "person": {
+    "document": "9000000100"
+  },
+  "profile": {
+    "primaryDomainCode": "EDUCATION_MANAGEMENT",
+    "summary": "Perfil sintético QA: dirección de programas académicos y calidad."
+  },
+  "domain": {
+    "code": "EDUCATION_MANAGEMENT",
+    "name": "Gestión Educativa",
+    "confidence": 0.9
+  },
+  "specialties": [
+    {
+      "code": "EM_ACADEMIC_PROGRAMS",
+      "name": "Gestión de Programas Académicos",
+      "confidence": 0.9,
+      "skills": [
+        {
+          "canonicalName": "Planeación académica QA",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.9,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Evidencia sintética QA: coordinó la planeación semestral de un programa ficticio.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Gestión de oferta académica QA",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.85,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Evidencia sintética QA: organizó la oferta de cursos de un programa ficticio.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_ACADEMIC_QUALITY",
+      "name": "Calidad Académica",
+      "confidence": 0.8,
+      "skills": [
+        {
+          "canonicalName": "Registro calificado QA",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.8,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Evidencia sintética QA: preparó documentación de calidad para un programa ficticio.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        },
+        {
+          "canonicalName": "Autoevaluación institucional QA",
+          "skillType": "METHODOLOGY",
+          "confidence": 0.75,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Evidencia sintética QA: condujo un ejercicio ficticio de autoevaluación.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EM_ACADEMIC_LEADERSHIP",
+      "name": "Liderazgo Académico",
+      "confidence": 0.85,
+      "skills": [
+        {
+          "canonicalName": "Liderazgo de equipos docentes QA",
+          "skillType": "PROFESSIONAL_KNOWLEDGE",
+          "confidence": 0.85,
+          "reviewDecision": "APPROVED_FOR_CREATION",
+          "evidence": [
+            {
+              "text": "Evidencia sintética QA: lideró un equipo docente ficticio de diez personas.",
+              "evidenceType": "EXPLICIT",
+              "sourceSection": "WORK_EXPERIENCE"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
