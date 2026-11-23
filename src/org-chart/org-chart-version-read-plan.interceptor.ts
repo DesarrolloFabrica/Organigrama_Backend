@@ -27,7 +27,10 @@ export class OrgChartVersionReadPlanInterceptor implements NestInterceptor {
     if (
       path.includes('/vacancies') ||
       path.includes('/video/stream') ||
-      path.includes('/change-token')
+      path.includes('/change-token') ||
+      // Exportadores: autorizan primero y resuelven su propio plan (siempre
+      // la versión vigente). Nada se consulta antes del permiso.
+      path.includes('/org-chart/export/')
     ) {
       return next.handle();
     }

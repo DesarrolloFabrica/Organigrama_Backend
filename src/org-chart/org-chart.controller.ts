@@ -31,6 +31,7 @@ import {
 } from './video/org-chart-video-stream.service';
 import { PersonVideoStreamHttpError } from './video/org-chart-video-stream.types';
 import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
+import type { DirectoryExportPermissionsDto } from './org-chart-directory-export.permissions';
 import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
@@ -168,45 +169,52 @@ export class OrgChartController {
   }
 
   /**
+   * Formatos de exportación que la sesión puede descargar AHORA, leídos de
+   * core.person_permission (no del JWT). El frontend lo usa para resincronizar
+   * los botones tras un 403 por permiso revocado.
+   */
+  @Get('export/permissions')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
+  async getDirectoryExportPermissions(
+    @Req() req: Request,
+  ): Promise<DirectoryExportPermissionsDto> {
+    return this.directoryExportService.getExportPermissions(
+      buildOrgViewerContext(req),
+    );
+  }
+
+  /**
    * Excel del organigrama **activo** (área, jefe, contacto y emergencia).
-   * Solo correos en ORG_CHART_DIRECTORY_EXPORT_EMAILS (sin la variable: nadie).
+   * Exige ORG_DIRECTORY_EXPORT_XLS vigente en core.person_permission.
    */
   @Get('export/directory')
-  @Header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
-  async exportActiveDirectory(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+  async exportActiveDirectory(@Req() req: Request): Promise<StreamableFile> {
     const file = await this.directoryExportService.exportActiveDirectory(
       buildOrgViewerContext(req),
     );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${file.filename}"`,
-    );
-    return new StreamableFile(file.buffer);
+    // Tipo y disposición solo en la respuesta exitosa: los 401/403/503 se
+    // sirven como JSON (antes heredaban el Content-Type del archivo).
+    return new StreamableFile(file.buffer, {
+      type: 'application/vnd.ms-excel; charset=utf-8',
+      disposition: `attachment; filename="${file.filename}"`,
+    });
   }
 
   /**
    * HTML autónomo del organigrama vigente (equipos por área, con fotos).
-   * Misma autorización que el Excel: ORG_CHART_DIRECTORY_EXPORT_EMAILS.
+   * Exige ORG_DIRECTORY_EXPORT_HTML vigente en core.person_permission.
    */
   @Get('export/html')
-  @Header('Content-Type', 'text/html; charset=utf-8')
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
-  async exportActiveHtml(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+  async exportActiveHtml(@Req() req: Request): Promise<StreamableFile> {
     const file = await this.directoryExportService.exportActiveHtml(
       buildOrgViewerContext(req),
     );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${file.filename}"`,
-    );
-    return new StreamableFile(file.buffer);
+    return new StreamableFile(file.buffer, {
+      type: 'text/html; charset=utf-8',
+      disposition: `attachment; filename="${file.filename}"`,
+    });
   }
 
   /**

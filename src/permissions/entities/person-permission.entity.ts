@@ -41,6 +41,17 @@ export const ORG_PERMISSION = {
   READ_ALL: 'ORG_READ_ALL',
   ADMIN: 'ORG_ADMIN',
   CONTACT_READ_ALL: 'ORG_CONTACT_READ_ALL',
+  /**
+   * Descarga del informe HTML del organigrama activo. Independiente de
+   * ORG_ADMIN / ORG_READ_ALL / ORG_CONTACT_READ_ALL: nunca se deriva de ellos.
+   * Se concede solo con `npm run org:grant-directory-export`.
+   */
+  DIRECTORY_EXPORT_HTML: 'ORG_DIRECTORY_EXPORT_HTML',
+  /**
+   * Descarga del Excel (directorio con datos personales) del organigrama
+   * activo. Mismas reglas que DIRECTORY_EXPORT_HTML.
+   */
+  DIRECTORY_EXPORT_XLS: 'ORG_DIRECTORY_EXPORT_XLS',
 } as const;
 
 export type OrgPermissionCode =

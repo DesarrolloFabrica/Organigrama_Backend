@@ -1,7 +1,24 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { PersonPermissionService } from '../permissions/person-permission.service';
 import type { OrgViewerContext } from './org-viewer-context';
+import {
+  OrgChartDirectoryExportAuditService,
+  errorName,
+} from './org-chart-directory-export-audit.service';
+import {
+  DIRECTORY_EXPORT_FORMATS,
+  DIRECTORY_EXPORT_PERMISSION,
+  type DirectoryExportFormat,
+  type DirectoryExportPermissionsDto,
+} from './org-chart-directory-export.permissions';
 import { OrgChartVersionService } from './org-chart-version.service';
 import { runWithOrgChartVersionReadPlan } from './org-chart-version-read-plan';
 import {
@@ -14,7 +31,6 @@ import {
 } from './org-chart-directory-presentation';
 import {
   buildDirectoryExcelXml,
-  isOrgChartDirectoryExportEmail,
   shouldIncludeDirectoryRow,
   type DirectoryExportRow,
 } from './org-chart-directory-export.util';
@@ -206,25 +222,169 @@ export class OrgChartDirectoryExportService {
     @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly versionService: OrgChartVersionService,
+    private readonly permissionService: PersonPermissionService,
+    private readonly audit: OrgChartDirectoryExportAuditService,
   ) {}
 
-  ensureCanExport(viewer: OrgViewerContext): void {
-    if (isOrgChartDirectoryExportEmail(viewer.eduEmail)) {
-      return;
+  /**
+   * Autoriza la descarga de `format` consultando los permisos VIGENTES en
+   * core.person_permission (no el JWT): una revocación aplica de inmediato.
+   *
+   * - Sin persona en la sesión → 401.
+   * - Fallo al consultar permisos → 503 (fail-closed), auditado como ERROR.
+   * - Sin el permiso del formato → 403, auditado como DENIED.
+   *
+   * ORG_ADMIN / ORG_READ_ALL / ORG_CONTACT_READ_ALL no autorizan nada aquí.
+   */
+  async ensureCanExport(
+    viewer: OrgViewerContext,
+    format: DirectoryExportFormat,
+  ): Promise<void> {
+    const personId = viewer.personId?.trim();
+    if (!personId) {
+      throw new UnauthorizedException('Sesión inválida');
     }
 
+    const required = DIRECTORY_EXPORT_PERMISSION[format];
+    let granted: string[];
+    try {
+      granted = await this.permissionService.getPersistedPermissionCodes(
+        personId,
+        [required],
+      );
+    } catch (error) {
+      this.log.error(
+        `[OrgChartDirectoryExport] permission check failed format=${format} personId=${personId} cause=${errorName(error)}`,
+      );
+      await this.audit.recordBestEffort({
+        personId,
+        format,
+        result: 'ERROR',
+        errorCode: 'PERMISSION_CHECK_FAILED',
+      });
+      throw new ServiceUnavailableException(
+        'No se pudo verificar el permiso de exportación. Intenta más tarde.',
+      );
+    }
+
+    if (granted.includes(required)) return;
+
     this.log.warn(
-      `[OrgChartDirectoryExport] denied personId=${viewer.personId} hasEmail=${viewer.eduEmail ? 'yes' : 'no'}`,
+      `[OrgChartDirectoryExport] denied format=${format} personId=${personId}`,
     );
-    throw new ForbiddenException({
-      message: 'No tienes permiso para descargar el directorio del organigrama',
+    await this.audit.recordBestEffort({
+      personId,
+      format,
+      result: 'DENIED',
+      errorCode: 'FORBIDDEN',
     });
+    throw new ForbiddenException({
+      message: 'No tienes permiso para descargar este informe del organigrama',
+      code: 'DIRECTORY_EXPORT_FORBIDDEN',
+      format,
+    });
+  }
+
+  /** Formatos que la persona puede descargar ahora mismo (leído de PostgreSQL). */
+  async getExportPermissions(
+    viewer: OrgViewerContext,
+  ): Promise<DirectoryExportPermissionsDto> {
+    const personId = viewer.personId?.trim();
+    if (!personId) {
+      throw new UnauthorizedException('Sesión inválida');
+    }
+    const granted = await this.permissionService.getPersistedPermissionCodes(
+      personId,
+      DIRECTORY_EXPORT_FORMATS.map((f) => DIRECTORY_EXPORT_PERMISSION[f]),
+    );
+    return {
+      html: granted.includes(DIRECTORY_EXPORT_PERMISSION.html),
+      xls: granted.includes(DIRECTORY_EXPORT_PERMISSION.xls),
+    };
   }
 
   async exportActiveDirectory(viewer: OrgViewerContext): Promise<{
     filename: string;
     buffer: Buffer;
     versionLabel: string;
+    versionId: string;
+    rowCount: number;
+  }> {
+    return this.runAuditedExport(viewer, 'xls', () =>
+      this.buildDirectoryFile(viewer),
+    );
+  }
+
+  async exportActiveHtml(viewer: OrgViewerContext): Promise<{
+    filename: string;
+    buffer: Buffer;
+    versionId: string;
+    rowCount: number;
+  }> {
+    return this.runAuditedExport(viewer, 'html', () =>
+      this.buildHtmlFile(viewer),
+    );
+  }
+
+  /**
+   * Autoriza → genera → audita. El archivo solo se entrega si el evento
+   * SUCCESS quedó registrado (fail-closed): una descarga de datos personales
+   * nunca sale sin traza.
+   */
+  private async runAuditedExport<
+    T extends { versionId: string; rowCount: number },
+  >(
+    viewer: OrgViewerContext,
+    format: DirectoryExportFormat,
+    build: () => Promise<T>,
+  ): Promise<T> {
+    await this.ensureCanExport(viewer, format);
+    const personId = viewer.personId.trim();
+
+    let file: T;
+    try {
+      file = await build();
+    } catch (error) {
+      this.log.error(
+        `[OrgChartDirectoryExport] generation failed format=${format} personId=${personId} cause=${errorName(error)}`,
+      );
+      await this.audit.recordBestEffort({
+        personId,
+        format,
+        result: 'ERROR',
+        errorCode: 'GENERATION_FAILED',
+      });
+      throw error;
+    }
+
+    try {
+      await this.audit.record({
+        personId,
+        format,
+        result: 'SUCCESS',
+        versionId: file.versionId,
+        rowCount: file.rowCount,
+      });
+    } catch (error) {
+      this.log.error(
+        `[OrgChartDirectoryExport] audit write failed; download cancelled format=${format} personId=${personId} cause=${errorName(error)}`,
+      );
+      throw new ServiceUnavailableException(
+        'No se pudo registrar la exportación; la descarga se canceló.',
+      );
+    }
+
+    this.log.log(
+      `[OrgChartDirectoryExport] exported format=${format} rows=${file.rowCount} version=${file.versionId} personId=${personId}`,
+    );
+    return file;
+  }
+
+  private async buildDirectoryFile(viewer: OrgViewerContext): Promise<{
+    filename: string;
+    buffer: Buffer;
+    versionLabel: string;
+    versionId: string;
     rowCount: number;
   }> {
     const { queryRows, versionLabel, versionId } =
@@ -278,21 +438,20 @@ export class OrgChartDirectoryExportService {
     const date = new Date().toISOString().slice(0, 10);
     const filename = `organigrama-activo-${date}.xls`;
 
-    this.log.log(
-      `[OrgChartDirectoryExport] exported rows=${rows.length} version=${versionId} personId=${viewer.personId}`,
-    );
-
     return {
       filename,
       buffer: Buffer.from(xml, 'utf8'),
       versionLabel,
+      versionId,
       rowCount: rows.length,
     };
   }
 
-  async exportActiveHtml(viewer: OrgViewerContext): Promise<{
+  private async buildHtmlFile(viewer: OrgViewerContext): Promise<{
     filename: string;
     buffer: Buffer;
+    versionId: string;
+    rowCount: number;
   }> {
     const { people, versionLabel, versionId } =
       await this.loadPresentation(viewer);
@@ -302,12 +461,11 @@ export class OrgChartDirectoryExportService {
       submarineUrl: `${base}/img/Submarino.png`,
     });
     const date = new Date().toISOString().slice(0, 10);
-    this.log.log(
-      `[OrgChartDirectoryExport] html people=${people.length} version=${versionId} personId=${viewer.personId}`,
-    );
     return {
       filename: `organigrama-${date}.html`,
       buffer: Buffer.from(html, 'utf8'),
+      versionId,
+      rowCount: people.length,
     };
   }
 
@@ -343,14 +501,14 @@ export class OrgChartDirectoryExportService {
    * El plan se resuelve sin parámetros de la petición: siempre la versión
    * activa publicada (con Planta/overlays/excepciones), aunque la URL traiga
    * versionId/versionCode.
+   *
+   * Solo se llama desde runAuditedExport, después de ensureCanExport.
    */
   private async loadActiveDirectoryRows(viewer: OrgViewerContext): Promise<{
     queryRows: DirectoryQueryRow[];
     versionLabel: string;
     versionId: string;
   }> {
-    this.ensureCanExport(viewer);
-
     const plan = await this.versionService.resolveReadPlan(viewer, {});
     const versionId = plan.globalVersionId;
     const version = await this.versionService.getVersionById(versionId);

@@ -111,7 +111,34 @@ Aplicado / verificado (2026-08-04):
 
 No requiere variable de entorno adicional. Reglas documentadas en `docs/organigrama-core.md` (sección «Visibilidad jerárquica de información»).
 
-## 6. Referencias
+## 6. Exportadores HTML / Excel (datos personales)
+
+Endpoints: `GET /api/org-chart/export/html`, `GET /api/org-chart/export/directory`
+y `GET /api/org-chart/export/permissions` (formatos permitidos, leídos de BD).
+
+| Formato | Permiso exigido |
+|---|---|
+| HTML | `ORG_DIRECTORY_EXPORT_HTML` |
+| Excel | `ORG_DIRECTORY_EXPORT_XLS` |
+
+- Se consultan en `core.person_permission` **en cada descarga** (no en el JWT):
+  revocar aplica de inmediato. `ORG_ADMIN`, `ORG_READ_ALL` y
+  `ORG_CONTACT_READ_ALL` **no** autorizan exportar.
+- Respuestas: 401 sin sesión válida; 403 sin el permiso del formato (antes de
+  consultar el informe); 503 si no se pudo verificar el permiso o registrar
+  la auditoría (el archivo no se entrega sin traza).
+- Requiere `migrations/040_org_chart_directory_export_audit.sql`. Sin esa
+  tabla, toda descarga autorizada responde 503.
+
+Orden para habilitar (primero en QA; en producción solo con aprobación):
+
+1. Aplicar la migración 040.
+2. `npm run org:grant-directory-export -- correo --format=html|xls|both --dry-run`
+3. Repetir sin `--dry-run`. Para retirar: `--revoke`.
+4. Verificar en `organigrama.org_chart_directory_export_audit` los eventos
+   SUCCESS / DENIED / ERROR (solo metadatos, sin datos personales).
+
+## 7. Referencias
 
 - Contrato API y organigrama visual: `docs/organigrama-core.md`
 - Streaming video: `docs/person-profile-video-streaming.md`

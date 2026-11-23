@@ -1,7 +1,13 @@
-import { ForbiddenException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { PersonPermissionService } from '../permissions/person-permission.service';
+import { OrgChartDirectoryExportAuditService } from './org-chart-directory-export-audit.service';
 import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
 import { OrgChartVersionService } from './org-chart-version.service';
 import {
@@ -12,12 +18,17 @@ import type { OrgViewerContext } from './org-viewer-context';
 
 /** Todos los datos son sintéticos: ningún nombre/correo/documento es real. */
 const AUTHORIZED = 'exportador.sintetico@example.test';
+const HTML = 'ORG_DIRECTORY_EXPORT_HTML';
+const XLS = 'ORG_DIRECTORY_EXPORT_XLS';
 
-function exportViewer(eduEmail: string | null): OrgViewerContext {
+function exportViewer(
+  eduEmail: string | null,
+  permissions: string[] = [],
+): OrgViewerContext {
   return {
     personId: '100',
     eduEmail,
-    permissions: [],
+    permissions,
   };
 }
 
@@ -90,11 +101,18 @@ describe('OrgChartDirectoryExportService', () => {
     resolveReadPlan: jest.Mock;
     getVersionById: jest.Mock;
   };
+  let permissionService: {
+    getPersistedPermissionCodes: jest.Mock<
+      Promise<string[]>,
+      [string, readonly string[]]
+    >;
+  };
+  let audit: { record: jest.Mock; recordBestEffort: jest.Mock };
+  let granted: string[];
   let planSeenByQuery: OrgChartVersionReadPlan | undefined;
-  const originalEnv = process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
 
   beforeEach(async () => {
-    process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS = AUTHORIZED;
+    granted = [HTML, XLS];
     planSeenByQuery = undefined;
     dataSource = {
       query: jest
@@ -113,11 +131,24 @@ describe('OrgChartDirectoryExportService', () => {
         is_active: true,
       }),
     };
+    permissionService = {
+      getPersistedPermissionCodes: jest
+        .fn<Promise<string[]>, [string, readonly string[]]>()
+        .mockImplementation((_personId, codes) =>
+          Promise.resolve(codes.filter((c) => granted.includes(c))),
+        ),
+    };
+    audit = {
+      record: jest.fn().mockResolvedValue(undefined),
+      recordBestEffort: jest.fn().mockResolvedValue(undefined),
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         OrgChartDirectoryExportService,
         { provide: OrgChartVersionService, useValue: versionService },
+        { provide: PersonPermissionService, useValue: permissionService },
+        { provide: OrgChartDirectoryExportAuditService, useValue: audit },
         { provide: getDataSourceToken(), useValue: dataSource },
         { provide: DataSource, useValue: dataSource },
       ],
@@ -126,45 +157,149 @@ describe('OrgChartDirectoryExportService', () => {
     service = moduleRef.get(OrgChartDirectoryExportService);
   });
 
-  afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-    } else {
-      process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS = originalEnv;
-    }
-  });
-
-  describe('autorización', () => {
-    it('rechaza un correo fuera de la lista', () => {
-      expect(() =>
-        service.ensureCanExport(exportViewer('otro_usuario@example.test')),
-      ).toThrow(ForbiddenException);
+  describe('autorización por permiso vigente en BD', () => {
+    it.each([
+      ['exportActiveHtml', HTML],
+      ['exportActiveDirectory', XLS],
+    ] as const)('%s consulta solo %s en PostgreSQL', async (method, code) => {
+      await service[method](exportViewer(AUTHORIZED));
+      expect(
+        permissionService.getPersistedPermissionCodes,
+      ).toHaveBeenCalledWith('100', [code]);
     });
 
-    it('rechaza una sesión sin correo', () => {
-      expect(() => service.ensureCanExport(exportViewer(null))).toThrow(
-        ForbiddenException,
+    it.each([
+      ['exportActiveHtml', [XLS], 'html'],
+      ['exportActiveDirectory', [HTML], 'xls'],
+      ['exportActiveHtml', [], 'html'],
+      ['exportActiveDirectory', [], 'xls'],
+    ] as const)(
+      '%s → 403 con permisos %j, auditado DENIED y sin consultar el informe',
+      async (method, perms, format) => {
+        granted = [...perms];
+        await expect(service[method](exportViewer(AUTHORIZED))).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(versionService.resolveReadPlan).not.toHaveBeenCalled();
+        expect(dataSource.query).not.toHaveBeenCalled();
+        expect(audit.record).not.toHaveBeenCalled();
+        expect(audit.recordBestEffort).toHaveBeenCalledWith({
+          personId: '100',
+          format,
+          result: 'DENIED',
+          errorCode: 'FORBIDDEN',
+        });
+      },
+    );
+
+    it('ignora los permisos del JWT: códigos en la sesión pero no en BD → 403', async () => {
+      granted = [];
+      await expect(
+        service.exportActiveHtml(exportViewer(AUTHORIZED, [HTML, XLS])),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ORG_ADMIN / ORG_READ_ALL / ORG_CONTACT_READ_ALL no autorizan', async () => {
+      const legacy = ['ORG_ADMIN', 'ORG_READ_ALL', 'ORG_CONTACT_READ_ALL'];
+      granted = legacy;
+      for (const method of [
+        'exportActiveHtml',
+        'exportActiveDirectory',
+      ] as const) {
+        await expect(
+          service[method](exportViewer(AUTHORIZED, legacy)),
+        ).rejects.toThrow(ForbiddenException);
+      }
+      expect(dataSource.query).not.toHaveBeenCalled();
+    });
+
+    it('sin personId en la sesión → 401 sin consultar nada', async () => {
+      await expect(
+        service.exportActiveHtml({
+          personId: '',
+          eduEmail: AUTHORIZED,
+          permissions: [],
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(
+        permissionService.getPersistedPermissionCodes,
+      ).not.toHaveBeenCalled();
+      expect(audit.recordBestEffort).not.toHaveBeenCalled();
+    });
+
+    it('si falla la consulta de permisos → 503 (fail-closed) y ERROR auditado', async () => {
+      permissionService.getPersistedPermissionCodes.mockRejectedValue(
+        new Error('connection refused'),
+      );
+      await expect(
+        service.exportActiveDirectory(exportViewer(AUTHORIZED)),
+      ).rejects.toThrow(ServiceUnavailableException);
+      expect(dataSource.query).not.toHaveBeenCalled();
+      expect(audit.recordBestEffort).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result: 'ERROR',
+          errorCode: 'PERMISSION_CHECK_FAILED',
+        }),
       );
     });
 
-    it.each(['exportActiveDirectory', 'exportActiveHtml'] as const)(
-      '%s está deshabilitado sin ORG_CHART_DIRECTORY_EXPORT_EMAILS y no consulta datos',
-      async (method) => {
-        delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-        // Ni siquiera las cuentas que antes eran el valor por defecto.
-        for (const email of [
+    it('getExportPermissions refleja la BD', async () => {
+      granted = [XLS];
+      await expect(
+        service.getExportPermissions(exportViewer(AUTHORIZED)),
+      ).resolves.toEqual({ html: false, xls: true });
+    });
+  });
+
+  describe('auditoría', () => {
+    it.each([
+      ['exportActiveHtml', 'html'],
+      ['exportActiveDirectory', 'xls'],
+    ] as const)(
+      '%s registra SUCCESS con versión y filas, sin datos personales',
+      async (method, format) => {
+        await service[method](exportViewer(AUTHORIZED));
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        expect(audit.record).toHaveBeenCalledWith({
+          personId: '100',
+          format,
+          result: 'SUCCESS',
+          versionId: '7',
+          rowCount: 1,
+        });
+        const serialized = JSON.stringify(audit.record.mock.calls);
+        for (const pii of [
+          'Persona Sintética',
+          '0000000001',
+          'uno@example.test',
           AUTHORIZED,
-          'desarrollofabrica@cun.edu.co',
-          'raul_valencia@cun.edu.co',
+          '3000000001',
         ]) {
-          await expect(service[method](exportViewer(email))).rejects.toThrow(
-            ForbiddenException,
-          );
+          expect(serialized).not.toContain(pii);
         }
-        expect(versionService.resolveReadPlan).not.toHaveBeenCalled();
-        expect(dataSource.query).not.toHaveBeenCalled();
       },
     );
+
+    it('si no se puede registrar SUCCESS, no entrega el archivo (503)', async () => {
+      audit.record.mockRejectedValue(new Error('relation does not exist'));
+      await expect(
+        service.exportActiveDirectory(exportViewer(AUTHORIZED)),
+      ).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('si falla la generación registra ERROR y propaga el error original', async () => {
+      dataSource.query.mockRejectedValue(new Error('timeout'));
+      await expect(
+        service.exportActiveHtml(exportViewer(AUTHORIZED)),
+      ).rejects.toThrow('timeout');
+      expect(audit.record).not.toHaveBeenCalled();
+      expect(audit.recordBestEffort).toHaveBeenCalledWith({
+        personId: '100',
+        format: 'html',
+        result: 'ERROR',
+        errorCode: 'GENERATION_FAILED',
+      });
+    });
   });
 
   describe('versión y plan de lectura', () => {

@@ -1,33 +1,7 @@
 import { isVacancyDisplayName, isVacancyRoleName } from './org-chart-vacancy';
 
-/**
- * Correos autorizados para descargar el directorio del organigrama activo
- * (Excel y HTML). Variable: ORG_CHART_DIRECTORY_EXPORT_EMAILS (coma, trim +
- * lowercase).
- *
- * Deshabilitado por defecto: sin la variable (o vacía) nadie puede exportar.
- * Los exportes contienen datos personales de toda la planta; habilitarlos
- * exige definir explícitamente la lista aprobada en el entorno.
- */
-export function getOrgChartDirectoryExportEmailsSet(): Set<string> {
-  const raw = process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS?.trim();
-  if (!raw) return new Set();
-
-  return new Set(
-    raw
-      .split(',')
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
-
-export function isOrgChartDirectoryExportEmail(
-  email: string | null | undefined,
-): boolean {
-  const normalized = (email ?? '').trim().toLowerCase();
-  if (!normalized) return false;
-  return getOrgChartDirectoryExportEmailsSet().has(normalized);
-}
+// La autorización de los exportadores vive en
+// org-chart-directory-export.permissions.ts (permisos en core.person_permission).
 
 function normalizeRoleName(roleName: string | null | undefined): string {
   return (roleName ?? '')

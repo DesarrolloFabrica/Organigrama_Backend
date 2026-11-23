@@ -1,67 +1,11 @@
 import {
   buildDirectoryExcelXml,
-  getOrgChartDirectoryExportEmailsSet,
-  isOrgChartDirectoryExportEmail,
   isRegularDocenteRole,
   shouldIncludeDirectoryRow,
   xmlEscape,
 } from './org-chart-directory-export.util';
 
 describe('org-chart-directory-export.util', () => {
-  const originalEnv = process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-
-  afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-    } else {
-      process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS = originalEnv;
-    }
-  });
-
-  it.each([undefined, '', '   ', ' , '])(
-    'deshabilitado por defecto: ORG_CHART_DIRECTORY_EXPORT_EMAILS=%p no autoriza a nadie',
-    (value) => {
-      if (value === undefined) {
-        delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-      } else {
-        process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS = value;
-      }
-      expect(getOrgChartDirectoryExportEmailsSet().size).toBe(0);
-      expect(
-        isOrgChartDirectoryExportEmail('desarrollofabrica@cun.edu.co'),
-      ).toBe(false);
-      expect(isOrgChartDirectoryExportEmail('raul_valencia@cun.edu.co')).toBe(
-        false,
-      );
-    },
-  );
-
-  it('lee correos desde ORG_CHART_DIRECTORY_EXPORT_EMAILS', () => {
-    process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS =
-      ' Uno@cun.edu.co , dos@cun.edu.co ';
-    expect(getOrgChartDirectoryExportEmailsSet()).toEqual(
-      new Set(['uno@cun.edu.co', 'dos@cun.edu.co']),
-    );
-  });
-
-  it('autoriza solo los correos listados, sin distinguir mayúsculas', () => {
-    process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS =
-      'autorizado.sintetico@example.test';
-    expect(
-      isOrgChartDirectoryExportEmail('  AUTORIZADO.SINTETICO@example.test '),
-    ).toBe(true);
-    expect(isOrgChartDirectoryExportEmail('otro@example.test')).toBe(false);
-    expect(isOrgChartDirectoryExportEmail(null)).toBe(false);
-  });
-
-  it('rechaza un correo no autorizado', () => {
-    process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS =
-      'autorizado.sintetico@example.test';
-    expect(isOrgChartDirectoryExportEmail('otro_usuario@cun.edu.co')).toBe(
-      false,
-    );
-  });
-
   it('excluye docentes de planta e incluye líderes docentes', () => {
     expect(isRegularDocenteRole('DOCENTE')).toBe(true);
     expect(isRegularDocenteRole('DOCENTE FACILITADOR')).toBe(true);

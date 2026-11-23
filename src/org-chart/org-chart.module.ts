@@ -72,10 +72,14 @@ import { OrgChartPersonOverride } from './entities/org-chart-person-override.ent
 import { OrgChartPhotosModule } from './photos/org-chart-photos.module';
 
 import { ProfileModule } from '../profile/profile.module';
+import { PermissionsModule } from '../permissions/permissions.module';
+import { OrgChartDirectoryExportAuditService } from './org-chart-directory-export-audit.service';
 
 @Module({
   imports: [
     forwardRef(() => ProfileModule),
+
+    PermissionsModule,
 
     TypeOrmModule.forFeature([
       Person,
@@ -150,6 +154,8 @@ import { ProfileModule } from '../profile/profile.module';
     OrgChartVersionReadPlanInterceptor,
 
     OrgChartDirectoryExportService,
+
+    OrgChartDirectoryExportAuditService,
   ],
 
   exports: [OrgChartService, OrgChartVisibilityService, OrgChartVersionService],

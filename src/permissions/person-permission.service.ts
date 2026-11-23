@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { PersonPermission } from './entities/person-permission.entity';
 
 /**
@@ -53,6 +53,27 @@ export class PersonPermissionService {
     }
 
     return merged;
+  }
+
+  /**
+   * Devuelve cuáles de los `codes` tiene la persona **ahora mismo** en
+   * core.person_permission (sin JWT ni fallback ORG_ADMIN_EMAILS).
+   *
+   * Para permisos sensibles que deben revocarse de inmediato aunque el JWT
+   * siga vigente. No registra información personal.
+   */
+  async getPersistedPermissionCodes(
+    personId: string,
+    codes: readonly string[],
+  ): Promise<string[]> {
+    if (!personId?.trim() || codes.length === 0) return [];
+    const rows = await this.repo.find({
+      where: { person_id: personId, permission_code: In([...codes]) },
+      select: ['permission_code'],
+    });
+    return codes.filter((code) =>
+      rows.some((row) => row.permission_code === code),
+    );
   }
 
   /** Comprueba si un array de permisos contiene el código dado. */

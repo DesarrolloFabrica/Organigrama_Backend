@@ -1,22 +1,35 @@
 /**
- * Prueba HTTP de los exportadores (Excel y HTML) con la pila real de
- * autenticación: JwtAuthGuard global + AuthService.verifyAccessToken + JWT
- * firmado, OrgChartController, OrgChartVersionReadPlanInterceptor y
- * OrgChartDirectoryExportService reales. Solo la base de datos y los servicios
- * ajenos a la exportación son dobles. Todos los datos son sintéticos.
+ * Prueba HTTP de los exportadores con la cadena real:
+ * JwtAuthGuard global + AuthService.verifyAccessToken (JWT firmado) →
+ * OrgChartController → OrgChartDirectoryExportService →
+ * PersonPermissionService (consulta a core.person_permission) →
+ * OrgChartDirectoryExportAuditService (INSERT de auditoría).
+ *
+ * La "base de datos" es un doble en memoria compartido con la lógica real del
+ * script org:grant-directory-export, para probar concesión y revocación de
+ * extremo a extremo. Todos los datos son sintéticos.
  */
 import { INestApplication, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import { getDataSourceToken } from '@nestjs/typeorm';
+import { getDataSourceToken, getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
+import { InMemoryPermissionDb } from '../../test/support/in-memory-permission-db';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { JwtPayload } from '../auth/auth.types';
+import {
+  runGrantDirectoryExport,
+  type GrantDirectoryExportArgs,
+} from '../database/scripts/utils/grant-directory-export.core';
+import { PersonPermission } from '../permissions/entities/person-permission.entity';
+import { PersonPermissionService } from '../permissions/person-permission.service';
 import { OrgChartController } from './org-chart.controller';
+import { OrgChartDirectoryExportAuditService } from './org-chart-directory-export-audit.service';
 import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
 import { OrgChartVersionService } from './org-chart-version.service';
 import { OrgChartService } from './org-chart.service';
@@ -31,21 +44,19 @@ import { OrgChartChangeTokenService } from './org-chart-change-token.service';
 import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 
 const JWT_SECRET = 'jwt-secreto-solo-para-pruebas';
-const AUTHORIZED = 'exportador.sintetico@example.test';
-const ENDPOINTS = [
-  {
-    path: '/api/org-chart/export/directory',
-    type: /application\/vnd\.ms-excel/,
-    file: /^attachment; filename="organigrama-activo-\d{4}-\d{2}-\d{2}\.xls"$/,
-  },
-  {
-    path: '/api/org-chart/export/html',
-    type: /text\/html/,
-    file: /^attachment; filename="organigrama-\d{4}-\d{2}-\d{2}\.html"$/,
-  },
-] as const;
+const HTML = 'ORG_DIRECTORY_EXPORT_HTML';
+const XLS = 'ORG_DIRECTORY_EXPORT_XLS';
+const LEGACY = ['ORG_ADMIN', 'ORG_READ_ALL', 'ORG_CONTACT_READ_ALL'];
 
-const SYNTHETIC_ROWS = [
+/** Persona sintética que usa la app (id de core.person). */
+const USER = { id: '500', email: 'usuario.sintetico@example.test' };
+
+const HTML_PATH = '/api/org-chart/export/html';
+const XLS_PATH = '/api/org-chart/export/directory';
+const PERMS_PATH = '/api/org-chart/export/permissions';
+
+/** Filas sintéticas del informe (lo que devolvería la consulta del directorio). */
+const REPORT_ROWS = [
   {
     person_id: '10',
     boss_id: null,
@@ -54,6 +65,7 @@ const SYNTHETIC_ROWS = [
     role_name: 'DIRECTOR SINTÉTICO',
     area_name: 'Área Sintética',
     edu_email: 'raiz@example.test',
+    phone: '3000000010',
   },
   {
     person_id: '11',
@@ -63,30 +75,71 @@ const SYNTHETIC_ROWS = [
     role_name: 'COORDINADOR',
     area_name: 'Área Sintética',
     edu_email: 'hija@example.test',
+    phone: '3000000011',
   },
 ];
+const PII = [
+  'Persona Sintética',
+  '0000000010',
+  '0000000011',
+  'raiz@example.test',
+  'hija@example.test',
+  '3000000010',
+  USER.email,
+];
 
-describe('Exportadores del organigrama (HTTP + autenticación real)', () => {
+describe('Exportadores del organigrama: permisos por formato (HTTP)', () => {
   let app: INestApplication<App>;
   let jwt: JwtService;
-  let dataSource: { query: jest.Mock<Promise<unknown>, [string, unknown[]]> };
-  let versionService: { resolveReadPlan: jest.Mock; getVersionById: jest.Mock };
-  const originalEnv = process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
+  let db: InMemoryPermissionDb;
+  let reportQueries: number;
+  let versionService: {
+    resolveReadPlan: jest.Mock;
+    getVersionById: jest.Mock;
+  };
+  let logged: string[];
 
-  const token = (session: Partial<JwtPayload>) =>
+  const token = (session: Partial<JwtPayload> = {}) =>
     jwt.sign({
-      personId: '500',
+      personId: USER.id,
       googleSubject: 'sub-sintetico',
-      googleEmail: 'google@example.test',
+      googleEmail: USER.email,
+      eduEmail: USER.email,
       permissions: [],
       ...session,
     });
+  const get = (path: string, bearer?: string) => {
+    const req = request(app.getHttpServer()).get(path);
+    return bearer ? req.set('Authorization', `Bearer ${bearer}`) : req;
+  };
+  const script = (args: Partial<GrantDirectoryExportArgs>) =>
+    runGrantDirectoryExport(
+      db,
+      {
+        email: USER.email,
+        format: 'both',
+        dryRun: false,
+        revoke: false,
+        ...args,
+      },
+      { info: () => undefined, error: () => undefined },
+    );
 
   beforeAll(async () => {
-    dataSource = { query: jest.fn<Promise<unknown>, [string, unknown[]]>() };
-    versionService = {
-      resolveReadPlan: jest.fn(),
-      getVersionById: jest.fn(),
+    db = new InMemoryPermissionDb([
+      { id: USER.id, eduEmail: USER.email, active: true },
+    ]);
+    versionService = { resolveReadPlan: jest.fn(), getVersionById: jest.fn() };
+    const dataSource = {
+      query: (sql: string, params?: unknown[]) => {
+        if (
+          /INSERT INTO organigrama\.org_chart_directory_export_audit/.test(sql)
+        ) {
+          return db.query(sql, params);
+        }
+        reportQueries++;
+        return Promise.resolve(REPORT_ROWS);
+      },
     };
     const unused = {};
 
@@ -111,6 +164,13 @@ describe('Exportadores del organigrama (HTTP + autenticación real)', () => {
         { provide: APP_GUARD, useClass: JwtAuthGuard },
         OrgChartVersionReadPlanInterceptor,
         OrgChartDirectoryExportService,
+        OrgChartDirectoryExportAuditService,
+        PersonPermissionService,
+        {
+          provide: getRepositoryToken(PersonPermission),
+          useFactory: () => db.permissionRepository(),
+        },
+        { provide: ConfigService, useValue: { get: () => '' } },
         { provide: OrgChartVersionService, useValue: versionService },
         { provide: getDataSourceToken(), useValue: dataSource },
         { provide: DataSource, useValue: dataSource },
@@ -137,8 +197,11 @@ describe('Exportadores del organigrama (HTTP + autenticación real)', () => {
   });
 
   beforeEach(() => {
-    process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS = AUTHORIZED;
-    dataSource.query.mockReset().mockResolvedValue(SYNTHETIC_ROWS);
+    db.permissions.clear();
+    db.audit.length = 0;
+    db.failAuditWrites = false;
+    db.failPermissionReads = false;
+    reportQueries = 0;
     versionService.resolveReadPlan.mockReset().mockResolvedValue({
       globalVersionId: '4',
       overlays: [],
@@ -152,115 +215,212 @@ describe('Exportadores del organigrama (HTTP + autenticación real)', () => {
       name: 'Versión sintética',
       is_active: true,
     });
+    logged = [];
+    for (const level of ['log', 'warn', 'error'] as const) {
+      jest
+        .spyOn(Logger.prototype, level)
+        .mockImplementation((message: unknown) => {
+          logged.push(String(message));
+        });
+    }
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    if (originalEnv === undefined) {
-      delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-    } else {
-      process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS = originalEnv;
-    }
   });
 
-  describe.each(ENDPOINTS)('$path', ({ path, type, file }) => {
-    it('401 sin token', async () => {
-      await request(app.getHttpServer()).get(path).expect(401);
-      expect(dataSource.query).not.toHaveBeenCalled();
+  const expectDownload = async (path: string, bearer: string) => {
+    const res = await get(path, bearer).expect(200);
+    expect(res.headers['content-disposition']).toMatch(
+      /^attachment; filename="/,
+    );
+    expect(res.headers['cache-control']).toContain('no-store');
+    return res;
+  };
+
+  it('anónimo → 401 en los tres endpoints, sin consultar permisos ni datos', async () => {
+    for (const path of [HTML_PATH, XLS_PATH, PERMS_PATH]) {
+      await get(path).expect(401);
+    }
+    const forged = new JwtService({ secret: 'otro-secreto' }).sign({
+      personId: USER.id,
+      permissions: [HTML, XLS],
     });
+    await get(HTML_PATH, forged).expect(401);
+    expect(reportQueries).toBe(0);
+    expect(db.audit).toHaveLength(0);
+  });
 
-    it('401 con token firmado con otro secreto', async () => {
-      const forged = new JwtService({ secret: 'otro-secreto' }).sign({
-        personId: '1',
-        eduEmail: AUTHORIZED,
-        permissions: ['ORG_ADMIN'],
-      });
-      await request(app.getHttpServer())
-        .get(path)
-        .set('Authorization', `Bearer ${forged}`)
-        .expect(401);
-      expect(dataSource.query).not.toHaveBeenCalled();
+  it('autenticado sin permisos → 403 en ambos, auditado DENIED, sin datos', async () => {
+    const res = await get(HTML_PATH, token()).expect(403);
+    // El error es JSON (no hereda el Content-Type del archivo).
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.headers['content-disposition']).toBeUndefined();
+    expect(res.body).toMatchObject({
+      code: 'DIRECTORY_EXPORT_FORBIDDEN',
+      format: 'html',
     });
+    const xls = await get(XLS_PATH, token()).expect(403);
+    expect(xls.headers['content-type']).toMatch(/application\/json/);
+    expect(xls.body).toMatchObject({ format: 'xls' });
+    expect(reportQueries).toBe(0);
+    expect(versionService.resolveReadPlan).not.toHaveBeenCalled();
+    expect(db.audit.map((a) => [a.export_format, a.result])).toEqual([
+      ['html', 'DENIED'],
+      ['xls', 'DENIED'],
+    ]);
+  });
 
-    it('403 con sesión válida fuera de la lista y no consulta datos', async () => {
-      const res = await request(app.getHttpServer())
-        .get(path)
-        .set(
-          'Authorization',
-          `Bearer ${token({ eduEmail: 'otro@example.test' })}`,
-        )
-        .expect(403);
-      expect(JSON.stringify(res.body)).not.toContain('Persona Sintética');
-      expect(dataSource.query).not.toHaveBeenCalled();
-    });
+  it('solo HTML → descarga HTML, Excel 403', async () => {
+    db.grant(USER.id, HTML);
+    const res = await expectDownload(HTML_PATH, token());
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    await get(XLS_PATH, token()).expect(403);
+  });
 
-    it('403 aunque tenga ORG_ADMIN y ORG_READ_ALL (no hay bypass por rol)', async () => {
-      await request(app.getHttpServer())
-        .get(path)
-        .set(
-          'Authorization',
-          `Bearer ${token({ eduEmail: 'admin@example.test', permissions: ['ORG_ADMIN', 'ORG_READ_ALL'] })}`,
-        )
-        .expect(403);
-      expect(dataSource.query).not.toHaveBeenCalled();
-    });
+  it('solo Excel → descarga Excel, HTML 403', async () => {
+    db.grant(USER.id, XLS);
+    const res = await expectDownload(XLS_PATH, token());
+    expect(res.headers['content-type']).toMatch(/application\/vnd\.ms-excel/);
+    await get(HTML_PATH, token()).expect(403);
+  });
 
-    it('403 sin la variable de entorno, incluso para las cuentas del antiguo valor por defecto', async () => {
-      delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-      for (const eduEmail of [AUTHORIZED, 'desarrollofabrica@cun.edu.co']) {
-        await request(app.getHttpServer())
-          .get(path)
-          .set('Authorization', `Bearer ${token({ eduEmail })}`)
-          .expect(403);
-      }
-      expect(dataSource.query).not.toHaveBeenCalled();
-    });
+  it('ambos permisos → ambas descargas, auditadas SUCCESS con versión y filas', async () => {
+    db.grant(USER.id, HTML, XLS);
+    await expectDownload(HTML_PATH, token());
+    await expectDownload(XLS_PATH, token());
+    expect(
+      db.audit.map(
+        ({ export_format, result, version_id, row_count, person_id }) => ({
+          export_format,
+          result,
+          version_id,
+          row_count,
+          person_id,
+        }),
+      ),
+    ).toEqual([
+      {
+        export_format: 'html',
+        result: 'SUCCESS',
+        version_id: '4',
+        row_count: 2,
+        person_id: USER.id,
+      },
+      {
+        export_format: 'xls',
+        result: 'SUCCESS',
+        version_id: '4',
+        row_count: 2,
+        person_id: USER.id,
+      },
+    ]);
+  });
 
-    it('el rechazo no escribe el correo en los logs', async () => {
-      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-      await request(app.getHttpServer())
-        .get(path)
-        .set(
-          'Authorization',
-          `Bearer ${token({ eduEmail: 'otro@example.test' })}`,
-        )
-        .expect(403);
-      const logged = warn.mock.calls.map((c) => String(c[0])).join('\n');
-      expect(logged).toContain('denied personId=500');
-      expect(logged).not.toContain('otro@example.test');
-    });
+  it('revocación con JWT vigente → 403 inmediato (el JWT conserva los códigos)', async () => {
+    db.grant(USER.id, HTML, XLS);
+    const stale = token({ permissions: [HTML, XLS] });
+    await expectDownload(HTML_PATH, stale);
 
-    it('200 para un correo autorizado: archivo descargable, sin caché', async () => {
-      const res = await request(app.getHttpServer())
-        .get(path)
-        .set(
-          'Authorization',
-          `Bearer ${token({ eduEmail: ' Exportador.Sintetico@example.test ' })}`,
-        )
-        .expect(200);
+    db.permissions.delete(`${USER.id}|${HTML}`);
+    await get(HTML_PATH, stale).expect(403);
+    await expectDownload(XLS_PATH, stale);
+    const perms = await get(PERMS_PATH, stale).expect(200);
+    expect(perms.body).toEqual({ html: false, xls: true });
+  });
 
-      expect(res.headers['content-type']).toMatch(type);
-      expect(res.headers['content-disposition']).toMatch(file);
-      expect(res.headers['cache-control']).toContain('no-store');
-      const body: string = Buffer.isBuffer(res.body)
-        ? res.body.toString('utf8')
-        : res.text;
-      expect(body).toContain('Persona Sintética Hija');
-      expect(dataSource.query).toHaveBeenCalledTimes(1);
-    });
+  it('códigos de exportación en el JWT sin respaldo en BD → 403', async () => {
+    await get(HTML_PATH, token({ permissions: [HTML, XLS] })).expect(403);
+    await get(XLS_PATH, token({ permissions: [HTML, XLS] })).expect(403);
+  });
 
-    it('ignora versionId de la URL: siempre exporta la versión vigente', async () => {
-      await request(app.getHttpServer())
-        .get(`${path}?versionId=1`)
-        .set('Authorization', `Bearer ${token({ eduEmail: AUTHORIZED })}`)
-        .expect(200);
+  it('administrador (ORG_ADMIN, ORG_READ_ALL, ORG_CONTACT_READ_ALL) sin permisos específicos → 403', async () => {
+    db.grant(USER.id, ...LEGACY);
+    const admin = token({ permissions: LEGACY });
+    await get(HTML_PATH, admin).expect(403);
+    await get(XLS_PATH, admin).expect(403);
+    const perms = await get(PERMS_PATH, admin).expect(200);
+    expect(perms.body).toEqual({ html: false, xls: false });
+  });
 
-      // El servicio resuelve su propio plan sin parámetros.
-      expect(versionService.resolveReadPlan).toHaveBeenLastCalledWith(
-        expect.objectContaining({ personId: '500' }),
-        {},
-      );
-      expect(dataSource.query.mock.calls[0][1]).toEqual(['4']);
-    });
+  it('permisos concedidos y revocados con la lógica del script', async () => {
+    const session = token();
+    await get(XLS_PATH, session).expect(403);
+
+    expect((await script({ format: 'xls' })).exitCode).toBe(0);
+    await expectDownload(XLS_PATH, session);
+    await get(HTML_PATH, session).expect(403);
+
+    expect((await script({ format: 'html' })).exitCode).toBe(0);
+    await expectDownload(HTML_PATH, session);
+
+    expect((await script({ format: 'both', revoke: true })).exitCode).toBe(0);
+    await get(HTML_PATH, session).expect(403);
+    await get(XLS_PATH, session).expect(403);
+  });
+
+  it('compatibilidad: los permisos anteriores siguen cargándose igual', async () => {
+    db.grant(USER.id, ...LEGACY, HTML);
+    const service = app.get(PersonPermissionService);
+    const all = await service.getPermissionsForPerson(USER.id, USER.email);
+    expect([...all].sort()).toEqual([...LEGACY, HTML].sort());
+    db.permissions.delete(`${USER.id}|${HTML}`);
+    const legacyOnly = await service.getPermissionsForPerson(
+      USER.id,
+      USER.email,
+    );
+    expect([...legacyOnly].sort()).toEqual([...LEGACY].sort());
+  });
+
+  it('si no se puede escribir la auditoría, la descarga se cancela (503) y no sale el archivo', async () => {
+    db.grant(USER.id, HTML, XLS);
+    db.failAuditWrites = true;
+    const res = await get(XLS_PATH, token()).expect(503);
+    expect(res.headers['content-disposition']).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain('Persona Sintética');
+  });
+
+  it('si falla la consulta de permisos → 503 sin generar el informe', async () => {
+    db.failPermissionReads = true;
+    await get(HTML_PATH, token()).expect(503);
+    expect(reportQueries).toBe(0);
+  });
+
+  it('ignora versionId de la URL: siempre la versión vigente', async () => {
+    db.grant(USER.id, XLS);
+    await expectDownload(`${XLS_PATH}?versionId=1`, token());
+    expect(versionService.resolveReadPlan).toHaveBeenCalledTimes(1);
+    expect(versionService.resolveReadPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ personId: USER.id }),
+      {},
+    );
+  });
+
+  it('trazabilidad sin datos personales: ni la auditoría ni los logs contienen campos del informe ni correos', async () => {
+    db.grant(USER.id, HTML, XLS);
+    await expectDownload(HTML_PATH, token());
+    await expectDownload(XLS_PATH, token());
+    db.permissions.clear();
+    await get(HTML_PATH, token()).expect(403);
+
+    const auditJson = JSON.stringify(db.audit);
+    const logs = logged.join('\n');
+    for (const value of PII) {
+      expect(auditJson).not.toContain(value);
+      expect(logs).not.toContain(value);
+    }
+    expect(Object.keys(db.audit[0]).sort()).toEqual([
+      'created_at',
+      'error_code',
+      'export_format',
+      'person_id',
+      'result',
+      'row_count',
+      'version_id',
+    ]);
+    expect(logs).toContain(
+      `exported format=html rows=2 version=4 personId=${USER.id}`,
+    );
+    expect(logs).toContain(`denied format=html personId=${USER.id}`);
   });
 });
