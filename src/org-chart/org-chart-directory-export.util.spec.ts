@@ -1,4 +1,3 @@
-import { DEFAULT_ORG_CHART_DIRECTORY_EXPORT_EMAILS } from './org-chart-directory-export.constants';
 import {
   buildDirectoryExcelXml,
   getOrgChartDirectoryExportEmailsSet,
@@ -19,12 +18,23 @@ describe('org-chart-directory-export.util', () => {
     }
   });
 
-  it('usa defaults cuando ORG_CHART_DIRECTORY_EXPORT_EMAILS está vacía', () => {
-    delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-    expect(getOrgChartDirectoryExportEmailsSet()).toEqual(
-      new Set(DEFAULT_ORG_CHART_DIRECTORY_EXPORT_EMAILS),
-    );
-  });
+  it.each([undefined, '', '   ', ' , '])(
+    'deshabilitado por defecto: ORG_CHART_DIRECTORY_EXPORT_EMAILS=%p no autoriza a nadie',
+    (value) => {
+      if (value === undefined) {
+        delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
+      } else {
+        process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS = value;
+      }
+      expect(getOrgChartDirectoryExportEmailsSet().size).toBe(0);
+      expect(
+        isOrgChartDirectoryExportEmail('desarrollofabrica@cun.edu.co'),
+      ).toBe(false);
+      expect(isOrgChartDirectoryExportEmail('raul_valencia@cun.edu.co')).toBe(
+        false,
+      );
+    },
+  );
 
   it('lee correos desde ORG_CHART_DIRECTORY_EXPORT_EMAILS', () => {
     process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS =
@@ -34,16 +44,19 @@ describe('org-chart-directory-export.util', () => {
     );
   });
 
-  it.each(DEFAULT_ORG_CHART_DIRECTORY_EXPORT_EMAILS)(
-    'autoriza %s',
-    (email) => {
-      delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
-      expect(isOrgChartDirectoryExportEmail(email.toUpperCase())).toBe(true);
-    },
-  );
+  it('autoriza solo los correos listados, sin distinguir mayúsculas', () => {
+    process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS =
+      'autorizado.sintetico@example.test';
+    expect(
+      isOrgChartDirectoryExportEmail('  AUTORIZADO.SINTETICO@example.test '),
+    ).toBe(true);
+    expect(isOrgChartDirectoryExportEmail('otro@example.test')).toBe(false);
+    expect(isOrgChartDirectoryExportEmail(null)).toBe(false);
+  });
 
   it('rechaza un correo no autorizado', () => {
-    delete process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS;
+    process.env.ORG_CHART_DIRECTORY_EXPORT_EMAILS =
+      'autorizado.sintetico@example.test';
     expect(isOrgChartDirectoryExportEmail('otro_usuario@cun.edu.co')).toBe(
       false,
     );
@@ -94,19 +107,31 @@ describe('org-chart-directory-export.util', () => {
       [
         {
           fullName: 'Ana Pérez',
+          documentType: 'CC',
           document: '123',
           eduEmail: 'ana_perez@cun.edu.co',
+          personalEmail: 'ana@gmail.com',
           phone: '3001234567',
+          address: 'Calle 1',
           areaName: 'Operaciones',
           schoolName: '',
           programName: '',
           roleName: 'COORDINADOR',
           hierarchyName: 'Nivel 3',
+          contractTypeName: 'Indefinido',
           bossName: 'Raúl Valencia',
           bossEduEmail: 'raul_valencia@cun.edu.co',
+          regionName: 'Bogotá',
+          cityName: 'Bogotá',
+          campusName: 'Calle 12',
+          gender: 'F',
+          maritalStatus: 'Soltera',
+          bornDate: '1990-01-01',
+          bornCity: 'Bogotá',
           emergencyName: 'Luis Pérez',
           emergencyPhone: '3100000000',
           emergencyRelationship: 'Padre',
+          skills: 'Excel (Ofimática)',
         },
       ],
       'v-current (activa)',
@@ -116,5 +141,7 @@ describe('org-chart-directory-export.util', () => {
     expect(xml).toContain('Padre');
     expect(xml).toContain('Operaciones');
     expect(xml).toContain('Raúl Valencia');
+    expect(xml).toContain('Excel (Ofimática)');
+    expect(xml).toContain('ana@gmail.com');
   });
 });

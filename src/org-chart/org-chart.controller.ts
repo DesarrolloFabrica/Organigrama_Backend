@@ -169,15 +169,37 @@ export class OrgChartController {
 
   /**
    * Excel del organigrama **activo** (área, jefe, contacto y emergencia).
-   * Solo correos en ORG_CHART_DIRECTORY_EXPORT_EMAILS.
+   * Solo correos en ORG_CHART_DIRECTORY_EXPORT_EMAILS (sin la variable: nadie).
    */
   @Get('export/directory')
   @Header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
   async exportActiveDirectory(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const file = await this.directoryExportService.exportActiveDirectory(
+      buildOrgViewerContext(req),
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    return new StreamableFile(file.buffer);
+  }
+
+  /**
+   * HTML autónomo del organigrama vigente (equipos por área, con fotos).
+   * Misma autorización que el Excel: ORG_CHART_DIRECTORY_EXPORT_EMAILS.
+   */
+  @Get('export/html')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
+  async exportActiveHtml(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.directoryExportService.exportActiveHtml(
       buildOrgViewerContext(req),
     );
     res.setHeader(
