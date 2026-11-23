@@ -7,8 +7,9 @@
 
 | Dato | Valor |
 |---|---|
-| Proyecto de Google Cloud | número `550902908078` (Cloud Run `organigrama-backend-550902908078`, `organigrama-frontend-550902908078` y cliente OAuth `550902908078-…`) |
-| Instancia Cloud SQL | IP pública `136.113.128.135`, puerto 5432 — **nombre de instancia: confirmarlo en la consola** (Cloud SQL → instancia con esa IP); `gcloud` local no funciona (falta Python) |
+| Proyecto de Google Cloud (Cloud SQL) | **`it-fab-contenido-edu-6`** (certificado TLS del servidor: `CN=it-fab-contenido-edu-6:core-database`, emisor `Cloud SQL Server CA`) |
+| Instancia Cloud SQL | **`core-database`**, IP pública `136.113.128.135`, puerto 5432 |
+| Cloud Run / OAuth | número de proyecto `550902908078` (`organigrama-backend-550902908078`, cliente OAuth `550902908078-…`); no confirmado que sea el mismo proyecto que Cloud SQL — no afecta a esta intervención |
 | Motor | PostgreSQL 18.6 |
 | Base / esquemas | `core`; el backend usa `core`, `organigrama` y `vacancies` |
 | Versión vigente | `id=4`, `periodo-agosto-2026`, «Versión actual»; sin overlays de coordinación; capa de excepciones disponible |
@@ -22,14 +23,19 @@
    `@cun.edu.co`. **No** usar la cuenta técnica compartida
    `desarrollofabrica@cun.edu.co`: la auditoría registraría las descargas a
    nombre de una cuenta que usan varias personas.
-2. **Ingreso con Google, no con el acceso de desarrollo.** El backend local
-   apunta a producción con `DEV_LOGIN_ENABLED=true`; con eso cualquiera que
-   tenga el `.env` puede entrar como la persona autorizada sin Google. Para
-   la prueba real, en `_integracion/backend/.env`:
-   `DEV_LOGIN_ENABLED=false` y reiniciar el backend `:3001`.
-3. **Liberar conexiones.** Cloud SQL tiene pocas conexiones disponibles; detener
-   los backends locales que no se usen (p. ej. el de `main` en `:3000`).
-4. Momento de baja carga.
+2. **Ingreso con Google, no con el acceso de desarrollo.** Con el acceso de
+   desarrollo activo contra producción, cualquiera con el `.env` puede entrar
+   como una persona autorizada sin Google.
+   - `:3001` (integrado): **ya** con `DEV_LOGIN_ENABLED=false`
+     (`POST /api/auth/dev-login` → 404; verificado el 23-nov-2026).
+   - `:3000` (`main`, repo original): **sigue aceptando** el acceso de
+     desarrollo contra producción. **Detenerlo** antes de conceder permisos
+     (además, su código antiguo habilita el Excel a una lista fija de correos).
+3. **Respaldo `SUCCESSFUL`** de `core-database` (paso 3).
+4. Comprobar el ingreso con Google en `localhost:5174` con una de las cuentas
+   aprobadas antes de conceder (el origen `http://localhost:5174` debe estar
+   autorizado en el cliente OAuth).
+5. Momento de baja carga.
 
 ## 1. Preparar el cliente `psql` (sin instalar nada)
 
@@ -64,15 +70,18 @@ Debe coincidir con los valores esperados del archivo. Si algo difiere, **parar**
 
 ## 3. ✍️ Respaldo
 
-Consola de Google Cloud → SQL → instancia `136.113.128.135` → **Backups** →
-**Create backup** (on-demand), descripción `antes-040-exportadores`.
+Consola: https://console.cloud.google.com/sql/instances/core-database/backups?project=it-fab-contenido-edu-6
+→ **Create backup** (on-demand), descripción `antes-040-exportadores`.
 Con `gcloud` operativo:
 
 ```bash
-gcloud sql backups create --instance=<INSTANCIA> --project=<PROYECTO> --description="antes-040-exportadores"
+gcloud sql backups create --instance=core-database --project=it-fab-contenido-edu-6 --description="antes-040-exportadores"
+gcloud sql backups list --instance=core-database --project=it-fab-contenido-edu-6 --limit=3   # estado SUCCESSFUL
 ```
 
-Anotar el ID del respaldo.
+Anotar el ID del respaldo y **no continuar** hasta verlo en estado
+`SUCCESSFUL`. Restauración (último recurso):
+`gcloud sql backups restore <ID> --restore-instance=core-database --project=it-fab-contenido-edu-6`.
 
 ## 4. ✍️ Aplicar la migración 040
 
@@ -97,7 +106,43 @@ $PSQL -v person_id=<PERSON_ID_APROBADO> -f /repo/docs/intervencion-exportadores/
 La parte B inserta una fila de prueba y la **revierte**; al final debe quedar
 `filas_tras_prueba = 0`.
 
-## 6. ✍️ Conceder ambos permisos a la cuenta aprobada
+## 6. ✍️ Conceder ambos permisos a las cuentas aprobadas
+
+Lista aprobada (fase 7) — verificada en solo lectura el 23-nov-2026: las seis
+existen, son únicas, están activas, están en el mapa vigente y no tienen
+permisos de exportación. Los seis `--dry-run` terminaron con exit 0.
+
+| Correo | person_id | Permisos previos |
+|---|---|---|
+| iron_fuentes@cun.edu.co | 1144 | (ninguno) |
+| raul_valencia@cun.edu.co | 1082 | (ninguno) |
+| sara_murillofo@cun.edu.co | 1268 | ORG_ADMIN, ORG_READ_ALL |
+| cindy_russi@cun.edu.co | 1631 | ORG_READ_ALL |
+| lorena_gomez@cun.edu.co | 1155 | ORG_ADMIN, ORG_READ_ALL |
+| maria_ballen@cun.edu.co | 1870 | (ninguno) |
+
+```bash
+APROBADAS="iron_fuentes@cun.edu.co raul_valencia@cun.edu.co sara_murillofo@cun.edu.co cindy_russi@cun.edu.co lorena_gomez@cun.edu.co maria_ballen@cun.edu.co"
+
+# a) Simulación (el servidor fuerza solo lectura)
+for e in $APROBADAS; do
+  PGOPTIONS="-c default_transaction_read_only=on" \
+    node dist/database/scripts/grant-directory-export.js "$e" --format=both --dry-run || { echo "DETENER: $e"; break; }
+done
+
+# b) Concesión real (se detiene en el primer error)
+for e in $APROBADAS; do
+  node dist/database/scripts/grant-directory-export.js "$e" --format=both || { echo "DETENER: $e"; break; }
+done
+
+# c) Verificación persistida (solo lectura): 6 filas con ambos códigos,
+#    0 concesiones fuera de la lista, total 12
+$PSQL -f /repo/docs/intervencion-exportadores/03_verificar_cuentas_autorizadas.sql
+```
+
+Reversión de las seis: mismo bucle con `--format=both --revoke`.
+
+### Cuenta individual (referencia)
 
 Desde `C:\dev\Organigrama\_integracion\backend` (usa su `.env`, que apunta a
 producción). Usar `node dist/...` directamente (no `npm run`, que recompila
