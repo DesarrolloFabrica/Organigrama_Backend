@@ -143,3 +143,4 @@ Orden para habilitar (primero en QA; en producción solo con aprobación):
 - Contrato API y organigrama visual: `docs/organigrama-core.md`
 - Streaming video: `docs/person-profile-video-streaming.md`
 - README del backend: `README.md` (tabla de rutas)
+- Habilitar exportadores a personas autorizadas: `docs/HABILITAR_EXPORTADORES.md`
