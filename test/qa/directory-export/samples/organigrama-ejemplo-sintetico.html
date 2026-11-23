@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Organigrama OP — Versión QA Sintética · qa-vigente (activa)</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(8,47,73,.9), transparent 42%),
+        radial-gradient(circle at 80% 10%, rgba(14,116,144,.35), transparent 35%),
+        #020617;
+      color: #e2e8f0;
+      font-family: "Segoe UI", sans-serif;
+    }
+    .layout { display: grid; grid-template-columns: 270px 1fr; min-height: 100vh; }
+    nav {
+      position: sticky; top: 0; align-self: start; max-height: 100vh; overflow: auto;
+      padding: 18px 12px; border-right: 1px solid rgba(34,211,238,.25); background: rgba(2,6,23,.92);
+    }
+    nav h1 { margin: 0 0 6px; font-size: 17px; }
+    nav .meta { margin: 0 0 12px; color: #94a3b8; font-size: 12px; }
+    nav a {
+      display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px;
+      padding: 8px 9px; border-radius: 10px; color: inherit; text-decoration: none;
+      border: 1px solid rgba(34,211,238,.22); background: rgba(8,47,73,.4); font-size: 12px;
+    }
+    nav a.nav-home { border-color: rgba(245,158,11,.55); background: rgba(120,53,15,.35); }
+    nav a:hover, nav a:focus { border-color: #22d3ee; outline: none; }
+    nav strong { color: #a5f3fc; }
+    .brand { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .logo { height: 36px; width: auto; }
+    .mascot { height: 44px; width: auto; }
+    main { padding: 22px 22px 64px; min-width: 0; }
+    #org-root, .area { scroll-margin-top: 16px; }
+    .hero, .area {
+      margin-bottom: 28px; padding: 16px; border-radius: 18px;
+      border: 1px solid rgba(34,211,238,.22); background: rgba(2,6,23,.5);
+    }
+    .kicker { margin: 0; color: #67e8f9; letter-spacing: .08em; text-transform: uppercase; font-size: 11px; }
+    h2 { margin: 4px 0; font-size: 22px; }
+    .lead { margin: 0 0 12px; color: #cbd5e1; font-size: 13px; }
+    .subhead { margin: 16px 0 10px; font-size: 13px; color: #a5f3fc; }
+    .team-count { margin: 4px 0 8px; color: #94a3b8; font-size: 11px; }
+    .empty { color: #94a3b8; font-size: 13px; }
+    .org-tree, .org-kids { list-style: none; margin: 0; padding: 0; }
+    .org-kids {
+      margin: 8px 0 0 12px;
+      padding-left: 10px;
+      border-left: 2px solid rgba(34,211,238,.28);
+      display: grid;
+      gap: 8px;
+    }
+    .org-node { min-width: 0; }
+    .leader-wrap { max-width: 420px; }
+    .teams { display: grid; gap: 14px; margin-top: 8px; }
+    .team {
+      padding: 12px; border-radius: 14px; border: 1px solid rgba(34,211,238,.18);
+      background: rgba(8,47,73,.28);
+    }
+    .team.nested { margin-top: 10px; background: rgba(2,6,23,.35); }
+    .summary-box {
+      margin: 8px 0 4px 8px; padding: 10px 12px; border-radius: 12px;
+      border: 1px dashed rgba(34,211,238,.35); background: rgba(8,47,73,.25);
+    }
+    .summary-total { margin: 0 0 8px; color: #e2e8f0; font-size: 12px; }
+    .summary-total strong { color: #67e8f9; font-size: 16px; }
+    .summary-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .summary-title { margin: 0 0 6px; color: #a5f3fc; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+    .summary-list { list-style: none; margin: 0; padding: 0; }
+    .summary-list li {
+      display: flex; justify-content: space-between; gap: 10px;
+      padding: 3px 0; border-bottom: 1px solid rgba(148,163,184,.12); font-size: 11px; color: #cbd5e1;
+    }
+    .summary-list strong { color: #67e8f9; }
+    .summary-empty { margin: 6px 0 0 8px; color: #94a3b8; font-size: 11px; }
+    .people-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .card {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(34,211,238,.35);
+      background: linear-gradient(180deg, rgba(8,47,73,.78), rgba(2,6,23,.94));
+      min-width: 0;
+    }
+    .card.leader { border-color: #f59e0b; grid-template-columns: 52px 1fr; }
+    .card.mini { grid-template-columns: 36px 1fr; padding: 6px 8px; border-radius: 10px; }
+    .photo {
+      width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+      border: 2px solid #22d3ee; background: #0f172a;
+    }
+    .leader .photo { width: 52px; height: 52px; border-color: #f59e0b; }
+    .mini .photo { width: 36px; height: 36px; border-width: 1.5px; }
+    .initials {
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #a5f3fc; font-size: 11px;
+    }
+    .badge {
+      margin: 0 0 2px; color: #67e8f9; font-size: 9px;
+      letter-spacing: .05em; text-transform: uppercase;
+    }
+    .leader .badge { color: #fbbf24; }
+    h3 { margin: 0 0 2px; font-size: 12px; line-height: 1.2; }
+    .mini h3 { font-size: 11px; }
+    .role, .doc, .area-tag { margin: 0; color: #94a3b8; font-size: 10px; }
+    .doc { font-family: ui-monospace, monospace; }
+    .area-tag { color: #67e8f9; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <div class="brand"><img class="logo" src="https://organigrama-frontend-550902908078.us-central1.run.app/img/LogoOrganigramasOp.png" alt="Organigramas OP" /><img class="mascot" src="https://organigrama-frontend-550902908078.us-central1.run.app/img/Submarino.png" alt="" /></div>
+      <h1>Organigrama OP</h1>
+      <p class="meta">Versión QA Sintética · qa-vigente (activa) · 9 personas</p>
+      <a class="nav-home" href="#org-root"><span>Vista jerárquica</span><strong>9</strong></a><a href="#area-0-direccion-qa-sintetica"><span>DIRECCIÓN QA SINTÉTICA</span><strong>4</strong></a><a href="#area-1-operaciones-qa-sintetica"><span>OPERACIONES QA SINTÉTICA</span><strong>5</strong></a>
+    </nav>
+    <main>
+      <section class="hero" id="org-root">
+        <p class="kicker">Organización</p>
+        <h2>Jerarquía desde la Dirección</h2>
+        <p class="lead">Solo Dirección, coordinadores, líderes y analistas de Raúl. El resto aparece como conteo por área y rol; el detalle está en cada área.</p>
+        <ul class="org-tree"><li class="org-node">
+    <article class="card leader compact" style="--depth:0">
+    <span class="photo initials">RS</span>
+    <div class="card-body">
+      <p class="badge">Dirección</p>
+      <h3>Raíz QA Sintética</h3>
+      <p class="role">DIRECTOR DE OPERACIONES</p>
+      <p class="doc">Cédula 9000001144</p>
+      <p class="area-tag">DIRECCIÓN QA SINTÉTICA</p>
+    </div>
+  </article>
+    <ul class="org-kids"><li class="org-node">
+    <article class="card leader compact mini" style="--depth:1">
+    <span class="photo initials">DS</span>
+    <div class="card-body">
+      
+      <h3>Directora QA Sintética</h3>
+      <p class="role">DIRECTOR DE OPERACIONES</p>
+      <p class="doc">Cédula 9000000100</p>
+      
+    </div>
+  </article>
+    <ul class="org-kids"><li class="org-node">
+      <article class="card leader compact mini" style="--depth:2">
+    <span class="photo initials">CU</span>
+    <div class="card-body">
+      
+      <h3>Coordinador QA Uno</h3>
+      <p class="role">COORDINADOR</p>
+      <p class="doc">Cédula 9000000101</p>
+      
+    </div>
+  </article>
+      <div class="summary-box">
+    <p class="summary-total"><strong>2</strong> colaboradores a cargo</p>
+    <div class="summary-cols">
+      <div>
+        <p class="summary-title">Por área</p>
+        <ul class="summary-list"><li><span>OPERACIONES QA SINTÉTICA</span><strong>2</strong></li></ul>
+      </div>
+      <div>
+        <p class="summary-title">Por rol</p>
+        <ul class="summary-list"><li><span>ANALISTA</span><strong>2</strong></li></ul>
+      </div>
+    </div>
+  </div>
+    </li><li class="org-node">
+      <article class="card leader compact mini" style="--depth:2">
+    <span class="photo initials">CD</span>
+    <div class="card-body">
+      
+      <h3>Coordinadora QA Dos</h3>
+      <p class="role">COORDINADOR</p>
+      <p class="doc">Cédula 9000000102</p>
+      
+    </div>
+  </article>
+      <div class="summary-box">
+    <p class="summary-total"><strong>2</strong> colaboradores a cargo</p>
+    <div class="summary-cols">
+      <div>
+        <p class="summary-title">Por área</p>
+        <ul class="summary-list"><li><span>DIRECCIÓN QA SINTÉTICA</span><strong>1</strong></li><li><span>OPERACIONES QA SINTÉTICA</span><strong>1</strong></li></ul>
+      </div>
+      <div>
+        <p class="summary-title">Por rol</p>
+        <ul class="summary-list"><li><span>ADMINISTRADOR DE SISTEMAS</span><strong>1</strong></li><li><span>ANALISTA</span><strong>1</strong></li></ul>
+      </div>
+    </div>
+  </div>
+    </li></ul>
+  </li></ul>
+  </li></ul>
+      </section>
+      <section class="area" id="area-0-direccion-qa-sintetica">
+    <header class="area-head">
+      <p class="kicker">Área · 4 personas</p>
+      <h2>DIRECCIÓN QA SINTÉTICA</h2>
+      <p class="lead">Líder: Raíz QA Sintética</p>
+    </header>
+    <div class="leader-wrap"><article class="card leader compact" style="--depth:0">
+    <span class="photo initials">RS</span>
+    <div class="card-body">
+      <p class="badge">Dirección</p>
+      <h3>Raíz QA Sintética</h3>
+      <p class="role">DIRECTOR DE OPERACIONES</p>
+      <p class="doc">Cédula 9000001144</p>
+      <p class="area-tag">DIRECCIÓN QA SINTÉTICA</p>
+    </div>
+  </article></div>
+      <h3 class="subhead">Equipos por líder · 1 reportes directos</h3>
+      <div class="teams"><div class="team">
+        <article class="card leader compact" style="--depth:0">
+    <span class="photo initials">DS</span>
+    <div class="card-body">
+      <p class="badge">Dirección</p>
+      <h3>Directora QA Sintética</h3>
+      <p class="role">DIRECTOR DE OPERACIONES</p>
+      <p class="doc">Cédula 9000000100</p>
+      <p class="area-tag">DIRECCIÓN QA SINTÉTICA</p>
+    </div>
+  </article>
+        <p class="team-count">1 en el equipo</p>
+        <div class="people-grid"><article class="card compact mini" style="--depth:0">
+    <span class="photo initials">CS</span>
+    <div class="card-body">
+      
+      <h3>Cuenta de Desarrollo QA (alias sintético)</h3>
+      <p class="role">ANALISTA</p>
+      <p class="doc">Cédula 9000000199</p>
+      
+    </div>
+  </article></div>
+        
+      </div></div>
+      <div class="team">
+            <article class="card leader compact" style="--depth:0">
+    <span class="photo initials">AQ</span>
+    <div class="card-body">
+      <p class="badge">Líder del área</p>
+      <h3>Administrador QA</h3>
+      <p class="role">ADMINISTRADOR DE SISTEMAS</p>
+      <p class="doc">Cédula 9000000106</p>
+      <p class="area-tag">DIRECCIÓN QA SINTÉTICA</p>
+    </div>
+  </article>
+            
+          </div>
+  </section><section class="area" id="area-1-operaciones-qa-sintetica">
+    <header class="area-head">
+      <p class="kicker">Área · 5 personas</p>
+      <h2>OPERACIONES QA SINTÉTICA</h2>
+      <p class="lead">Líder: Coordinador QA Uno</p>
+    </header>
+    <div class="leader-wrap"><article class="card leader compact" style="--depth:0">
+    <span class="photo initials">CU</span>
+    <div class="card-body">
+      <p class="badge">Coordinador</p>
+      <h3>Coordinador QA Uno</h3>
+      <p class="role">COORDINADOR</p>
+      <p class="doc">Cédula 9000000101</p>
+      <p class="area-tag">OPERACIONES QA SINTÉTICA</p>
+    </div>
+  </article></div>
+      <h3 class="subhead">Colaboradores · 4</h3>
+      <div class="people-grid"><article class="card compact mini" style="--depth:0">
+    <span class="photo initials">AD</span>
+    <div class="card-body">
+      
+      <h3>Analista QA Dos</h3>
+      <p class="role">ANALISTA</p>
+      <p class="doc">Cédula 9000000104</p>
+      
+    </div>
+  </article><article class="card compact mini" style="--depth:0">
+    <span class="photo initials">AU</span>
+    <div class="card-body">
+      
+      <h3>Analista QA Uno</h3>
+      <p class="role">ANALISTA</p>
+      <p class="doc">Cédula 9000000103</p>
+      
+    </div>
+  </article><article class="card compact mini" style="--depth:0">
+    <span class="photo initials">CD</span>
+    <div class="card-body">
+      
+      <h3>Coordinadora QA Dos</h3>
+      <p class="role">COORDINADOR</p>
+      <p class="doc">Cédula 9000000102</p>
+      
+    </div>
+  </article><article class="card compact mini" style="--depth:0">
+    <span class="photo initials">UP</span>
+    <div class="card-body">
+      
+      <h3>Usuario QA Sin Permisos</h3>
+      <p class="role">ANALISTA</p>
+      <p class="doc">Cédula 9000000108</p>
+      
+    </div>
+  </article></div>
+  </section>
+    </main>
+  </div>
+</body>
+</html>

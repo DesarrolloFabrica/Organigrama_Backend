@@ -25,6 +25,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM core.person
      WHERE coalesce(edu_email, '') NOT LIKE 'qa_sintetico_%@cun.edu.co'
+       -- Única excepción: el alias de desarrollo de 02_alias_cuenta_desarrollo.sql
+       -- (persona ficticia 900199).
+       AND NOT (id = 900199 AND edu_email = 'desarrollofabrica@cun.edu.co')
   ) THEN
     RAISE EXCEPTION 'core.person contiene datos no sintéticos: este seed solo corre en una base QA desechable.';
   END IF;
