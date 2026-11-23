@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
-import { assertDevLoginRouteEnabled } from './auth.config';
+import {
+  assertDevLoginRouteEnabled,
+  getDevLoginAvailability,
+} from './auth.config';
 import { AuthDevGuard } from './auth-dev.guard';
 import { getAuthSessionFromRequest } from './auth-request.util';
 import { Public } from './public.decorator';
@@ -33,6 +36,16 @@ export class AuthController {
   @Post('google')
   loginWithGoogle(@Body() body: GoogleLoginBody) {
     return this.authService.loginWithGoogleIdToken(body.idToken);
+  }
+
+  /**
+   * ¿Acepta este backend el login dev? Solo informa: no autentica ni revela
+   * datos. En producción responde 404 (como la propia ruta de login dev).
+   */
+  @Public()
+  @Get('dev-login/status')
+  getDevLoginStatus(): { enabled: boolean } {
+    return getDevLoginAvailability();
   }
 
   @Public()

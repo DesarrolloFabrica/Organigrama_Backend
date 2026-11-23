@@ -21,6 +21,18 @@ export function assertDevLoginRouteEnabled(): void {
   }
 }
 
+/**
+ * Disponibilidad del login dev para que el frontend decida si muestra el
+ * formulario. En producción lanza 404 (igual que la ruta de login) para no
+ * revelar el mecanismo.
+ */
+export function getDevLoginAvailability(): { enabled: boolean } {
+  if (process.env.NODE_ENV === 'production') {
+    throw new NotFoundException();
+  }
+  return { enabled: isDevLoginRouteEnabled() };
+}
+
 export function getGoogleClientId(): string {
   return (
     process.env.GOOGLE_CLIENT_ID?.trim() ||
