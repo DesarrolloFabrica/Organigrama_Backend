@@ -21,26 +21,13 @@ const field = (code, label, role, evidenceVolume, specialties, tools, dimensions
   competencyMap: { dimensions },
 });
 
+// Personas que deben quedar SIN perfil publicado a propósito: con un perfil
+// MC1 publicado, la pestaña Competencias muestra la vista de perfil profesional
+// en lugar de la evaluación del motor con radar. La Directora (900100) conserva
+// la evaluación curada (mc1/qa-mc1-*.json) para que QA cubra también el radar.
+const SIN_PUBLICAR = [900100];
+
 const PERFILES = [
-  {
-    personId: 900100, // Directora QA Sintética
-    fields: [
-      field('EDUCATION', 'Educación', 'PRIMARY', 'HIGH', [
-        { code: 'ACADEMIC_MANAGEMENT', label: 'Gestión académica', confidence: 0.9, skills: [skill('planeacion_academica_qa', 'Planeación académica QA'), skill('registro_calificado_qa', 'Registro calificado QA')] },
-        { code: 'CURRICULUM_DESIGN', label: 'Diseño curricular', confidence: 0.8, skills: [skill('diseno_curricular_qa', 'Diseño curricular QA')] },
-        { code: 'TEACHING_FACILITATION', label: 'Docencia y facilitación', confidence: 0.7, skills: [skill('facilitacion_qa', 'Facilitación de aprendizaje QA')] },
-      ], ['Hojas de cálculo (QA)'], [
-        { code: 'EDU_MANAGEMENT', label: 'Gestión académica', relativeCoverage: 100 },
-        { code: 'EDU_CURRICULUM', label: 'Currículo', relativeCoverage: 80 },
-        { code: 'EDU_TEACHING', label: 'Docencia', relativeCoverage: 65 },
-      ]),
-      field('PROJECT_PROGRAM_MGMT', 'Gestión de proyectos y programas', 'SECONDARY', 'MEDIUM', [
-        { code: 'PROGRAM_MANAGEMENT', label: 'Gestión de programas', confidence: 0.6, skills: [skill('gestion_programas_qa', 'Gestión de programas QA')] },
-      ], [], [
-        { code: 'PPM_PROGRAMS', label: 'Programas', relativeCoverage: 60 },
-      ]),
-    ],
-  },
   {
     personId: 900103, // Analista QA Uno
     fields: [
@@ -97,6 +84,8 @@ const lines = [
   'BEGIN;',
   "DO $$ BEGIN IF current_setting('organigrama.environment', true) IS DISTINCT FROM 'qa' THEN",
   "  RAISE EXCEPTION 'Base no marcada como QA (ejecute 00_marcar_base_qa.sql).'; END IF; END $$;",
+  '-- Sin perfil publicado a propósito (su pestaña Competencias usa el radar del motor).',
+  `UPDATE organigrama.mc1_person_profile_presentation SET is_active = FALSE WHERE person_id IN (${SIN_PUBLICAR.join(', ')}) AND is_active = TRUE;`,
 ];
 for (const p of PERFILES) {
   const payload = { status: 'AVAILABLE', source: 'QA_SINTETICO', fields: p.fields };

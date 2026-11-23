@@ -56,8 +56,11 @@ done
   columnas con valor.
 - `04`: perfiles de desarrollo (usuario general y exportadores HTML/Excel/ambos) y videos ficticios.
 - `05`: perfiles MC1 **publicados** sintéticos (`organigrama.mc1_person_profile_presentation`)
-  para el **Explorador de Competencias**: Directora (Educación), Analista Uno
-  y Dos (Ingeniería de software), Exportador Ambos (Gestión de proyectos).
+  para el **Explorador de Competencias**: Analista Uno y Dos (Ingeniería de
+  software), Exportador Ambos (Gestión de proyectos). La Directora queda **sin**
+  perfil publicado a propósito: con perfil publicado, la pestaña Competencias
+  muestra la vista de perfil profesional en lugar del radar del motor, y así QA
+  cubre las dos vistas.
   Se regenera con `node test/qa/directory-export/mc1/generar-presentaciones-mc1.js`
   (valida cada payload con el validador real del backend; requiere `dist`).
   Se niega a correr si la base no está marcada como QA.

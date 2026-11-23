@@ -64,8 +64,8 @@ Pasos manuales (otro equipo):
 | Perfil | Correo | Permisos técnicos | Qué permite probar |
 |---|---|---|---|
 | Administrador | `qa_sintetico_admin@cun.edu.co` | ORG_ADMIN, ORG_READ_ALL | ver fichas completas de todos; **no** exporta |
-| Director | `qa_sintetico_directora@cun.edu.co` | — (versionamiento en QA) | competencias MC1 (Gestión Educativa), presentación, versiones |
-| Analista | `qa_sintetico_analista1@cun.edu.co` | — | competencias MC1 (Software), presentación |
+| Director | `qa_sintetico_directora@cun.edu.co` | — (versionamiento en QA) | competencias MC1 con radar (Gestión Educativa), presentación, versiones |
+| Analista | `qa_sintetico_analista1@cun.edu.co` | — | perfil MC1 publicado (Ingeniería de software), explorador, presentación |
 | Usuario general | `qa_sintetico_general@cun.edu.co` | — | vista básica; no ve competencias fuera de su línea |
 | Exportación HTML | `qa_sintetico_export_html@cun.edu.co` | ORG_DIRECTORY_EXPORT_HTML | solo botón HTML |
 | Exportación Excel | `qa_sintetico_export_xls@cun.edu.co` | ORG_DIRECTORY_EXPORT_XLS | solo botón Excel |
@@ -89,7 +89,10 @@ node <repo>/dist/database/scripts/grant-directory-export.js <correo> --format=ht
 - Perfiles MC1: generados con el motor real a partir de perfiles curados
   sintéticos (`mc1/`); aparecen como especialidades emergentes.
 - Explorador de Competencias: lee los perfiles **publicados**
-  (`05_presentaciones_mc1.sql`): 4 personas (Directora, Analista Uno, Analista
-  Dos, Exportador Ambos). Sin ese archivo el explorador aparece vacío.
+  (`05_presentaciones_mc1.sql`): 3 personas (Analista Uno, Analista Dos,
+  Exportador Ambos). Sin ese archivo el explorador aparece vacío.
+- Pestaña Competencias: con perfil publicado muestra el perfil profesional
+  (campo, especialidades, skills); sin él, la evaluación del motor con el
+  **radar**. La Directora queda sin publicar para probar el radar.
 - Google en 5175: hoy responde `origin_mismatch` (origen no autorizado en el
   cliente OAuth); en QA se usa el formulario por correo.
