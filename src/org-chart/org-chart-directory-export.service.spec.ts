@@ -100,9 +100,25 @@ function syntheticRows() {
 
 describe('OrgChartDirectoryExportService', () => {
   let service: OrgChartDirectoryExportService;
+  /** Consulta del directorio (la del manager de la transacción). */
   let dataSource: {
     query: jest.Mock<Promise<unknown>, [string, unknown[]]>;
+    createQueryRunner: jest.Mock;
   };
+  type FakeRunner = {
+    connect: jest.Mock;
+    startTransaction: jest.Mock;
+    commitTransaction: jest.Mock;
+    rollbackTransaction: jest.Mock;
+    release: jest.Mock;
+    query: jest.Mock;
+    isTransactionActive: boolean;
+    manager: { query: jest.Mock };
+  };
+  /** Un QueryRunner nuevo por descarga, en orden. */
+  let runners: FakeRunner[];
+  /** Secuencia de operaciones (transacción, consulta y overrides) en orden. */
+  let steps: string[];
   let versionService: {
     resolveReadPlan: jest.Mock;
     getVersionById: jest.Mock;
@@ -127,16 +143,58 @@ describe('OrgChartDirectoryExportService', () => {
     overrides = { byPerson: new Map(), byRelation: new Map() };
     planSeenByQuery = undefined;
     planSeenByOverrides = undefined;
-    dataSource = {
-      query: jest
-        .fn<Promise<unknown>, [string, unknown[]]>()
-        .mockImplementation(() => {
-          planSeenByQuery = getOrgChartVersionReadPlan();
-          return Promise.resolve(rows);
+    runners = [];
+    steps = [];
+    const query = jest
+      .fn<Promise<unknown>, [string, unknown[]]>()
+      .mockImplementation(() => {
+        steps.push('directorio');
+        planSeenByQuery = getOrgChartVersionReadPlan();
+        // Copia: cada descarga recibe filas nuevas, como de PostgreSQL.
+        return Promise.resolve(rows.map((row) => ({ ...row })));
+      });
+    const newRunner = (): FakeRunner => {
+      const runner: FakeRunner = {
+        connect: jest.fn(() => {
+          steps.push('connect');
+          return Promise.resolve();
         }),
+        startTransaction: jest.fn((level: string) => {
+          steps.push(`start ${level}`);
+          runner.isTransactionActive = true;
+          return Promise.resolve();
+        }),
+        commitTransaction: jest.fn(() => {
+          steps.push('commit');
+          runner.isTransactionActive = false;
+          return Promise.resolve();
+        }),
+        rollbackTransaction: jest.fn(() => {
+          steps.push('rollback');
+          runner.isTransactionActive = false;
+          return Promise.resolve();
+        }),
+        release: jest.fn(() => {
+          steps.push('release');
+          return Promise.resolve();
+        }),
+        query: jest.fn((sql: string) => {
+          steps.push(sql);
+          return Promise.resolve();
+        }),
+        isTransactionActive: false,
+        manager: { query },
+      };
+      runners.push(runner);
+      return runner;
+    };
+    dataSource = {
+      query,
+      createQueryRunner: jest.fn(newRunner),
     };
     orgChartService = {
       getRoleNameOverridesForVersion: jest.fn().mockImplementation(() => {
+        steps.push('overrides');
         planSeenByOverrides = getOrgChartVersionReadPlan();
         return Promise.resolve(overrides);
       }),
@@ -438,7 +496,7 @@ describe('OrgChartDirectoryExportService', () => {
       expect(sql).not.toContain('org_visual_relation_override');
       expect(
         orgChartService.getRoleNameOverridesForVersion,
-      ).toHaveBeenCalledWith('7');
+      ).toHaveBeenCalledWith('7', { manager: runners[0].manager });
       expect(planSeenByOverrides).toEqual(overlayPlan);
     });
 
@@ -448,6 +506,148 @@ describe('OrgChartDirectoryExportService', () => {
       expect(dataSource.query.mock.calls[0][0]).toMatch(
         /INNER JOIN core\.person p\s+ON p\.id::text = e\.person_id\s+AND p\.is_active = true/,
       );
+    });
+  });
+
+  describe('estado vigente en cada descarga', () => {
+    const SNAPSHOT = [
+      'connect',
+      'start REPEATABLE READ',
+      'SET TRANSACTION READ ONLY',
+      'directorio',
+      'overrides',
+      'commit',
+      'release',
+    ];
+
+    it.each([['exportActiveDirectory'], ['exportActiveHtml']] as const)(
+      '%s: consulta y overrides en una sola instantánea de solo lectura',
+      async (method) => {
+        await service[method](exportViewer(AUTHORIZED));
+
+        expect(steps).toEqual(SNAPSHOT);
+        expect(runners).toHaveLength(1);
+        expect(runners[0].rollbackTransaction).not.toHaveBeenCalled();
+      },
+    );
+
+    it('dos descargas seguidas → dos generaciones completas (sin reutilizar nada)', async () => {
+      await service.exportActiveDirectory(exportViewer(AUTHORIZED));
+      await service.exportActiveDirectory(exportViewer(AUTHORIZED));
+
+      expect(versionService.resolveReadPlan).toHaveBeenCalledTimes(2);
+      expect(versionService.getVersionById).toHaveBeenCalledTimes(2);
+      expect(dataSource.query).toHaveBeenCalledTimes(2);
+      expect(
+        orgChartService.getRoleNameOverridesForVersion,
+      ).toHaveBeenCalledTimes(2);
+      expect(runners).toHaveLength(2);
+      expect(steps).toEqual([...SNAPSHOT, ...SNAPSHOT]);
+    });
+
+    it('la segunda descarga refleja altas, bajas y cambios de cargo, jefe y coordinación', async () => {
+      const first = (
+        await service.exportActiveDirectory(exportViewer(AUTHORIZED))
+      ).buffer.toString('utf8');
+
+      // Cambios ya incorporados a la base entre las dos descargas.
+      rows = [
+        {
+          ...rows[0],
+          boss_id: '3',
+          boss_name: 'Jefa Nueva Sintética',
+          boss_edu_email: 'jefa.nueva@example.test',
+          area_name: 'Coordinación Nueva Sintética',
+        },
+        {
+          ...rows[0],
+          person_id: '12',
+          relation_id: '520',
+          full_name: 'Alta Sintética',
+          document: '0000000012',
+          base_role_name: 'ANALISTA',
+          boss_id: '10',
+          boss_name: 'Persona Sintética Uno',
+          boss_edu_email: 'uno@example.test',
+        },
+      ];
+      overrides = {
+        byPerson: new Map([['10', 'LIDER SINTÉTICO']]),
+        byRelation: new Map(),
+      };
+      const second = await service.exportActiveDirectory(
+        exportViewer(AUTHORIZED),
+      );
+      const xml = second.buffer.toString('utf8');
+
+      expect(first).not.toEqual(xml);
+      expect(second.rowCount).toBe(2);
+      expect(xml).toContain('Alta Sintética');
+      expect(xml).toContain('LIDER SINTÉTICO');
+      expect(xml).toContain('Jefa Nueva Sintética');
+      expect(xml).toContain('Coordinación Nueva Sintética');
+      expect(xml).not.toContain('Jefe Sintético<');
+      expect(xml).not.toContain('>COORDINADOR<');
+    });
+
+    it('si la consulta falla: ROLLBACK, conexión liberada, ERROR auditado y sin archivo', async () => {
+      dataSource.query.mockRejectedValueOnce(new Error('conexión perdida'));
+
+      await expect(
+        service.exportActiveDirectory(exportViewer(AUTHORIZED)),
+      ).rejects.toThrow('conexión perdida');
+
+      expect(steps).toEqual([
+        'connect',
+        'start REPEATABLE READ',
+        'SET TRANSACTION READ ONLY',
+        'rollback',
+        'release',
+      ]);
+      expect(dataSource.query).toHaveBeenCalledTimes(1);
+      expect(
+        orgChartService.getRoleNameOverridesForVersion,
+      ).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+      expect(audit.recordBestEffort).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result: 'ERROR',
+          errorCode: 'GENERATION_FAILED',
+        }),
+      );
+    });
+
+    it('si fallan los overrides tampoco hay archivo (no cae a datos parciales)', async () => {
+      orgChartService.getRoleNameOverridesForVersion.mockRejectedValueOnce(
+        new Error('timeout'),
+      );
+
+      await expect(
+        service.exportActiveHtml(exportViewer(AUTHORIZED)),
+      ).rejects.toThrow('timeout');
+      expect(steps.slice(-2)).toEqual(['rollback', 'release']);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('si no hay conexión disponible: error, conexión liberada y sin archivo', async () => {
+      dataSource.createQueryRunner.mockImplementationOnce(() => {
+        const runner = {
+          connect: jest.fn().mockRejectedValue(new Error('sin conexión')),
+          isTransactionActive: false,
+          release: jest.fn(() => {
+            steps.push('release');
+            return Promise.resolve();
+          }),
+        };
+        return runner;
+      });
+
+      await expect(
+        service.exportActiveDirectory(exportViewer(AUTHORIZED)),
+      ).rejects.toThrow('sin conexión');
+      expect(steps).toEqual(['release']);
+      expect(dataSource.query).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
     });
   });
 

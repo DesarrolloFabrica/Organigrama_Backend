@@ -7,7 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, ILike, Repository } from 'typeorm';
+import { DataSource, EntityManager, ILike, Repository } from 'typeorm';
 import { Role } from '../catalogs/entities/role.entity';
 import { Hierarchy } from '../catalogs/entities/hierarchy.entity';
 import { Area } from '../catalogs/entities/area.entity';
@@ -1202,22 +1202,47 @@ export class OrgChartService {
    *
    * Devuelve nombres de cargo resueltos con el catálogo del mapa. Un override
    * cuyo cargo no existe en el catálogo queda como '' (el mapa lo pinta sin
-   * cargo; no cae al cargo base). Solo lectura: reutiliza las cachés del mapa.
+   * cargo; no cae al cargo base). Solo lectura.
+   *
+   * - Sin `manager`: reutiliza las cachés en memoria del mapa (hasta 3 min).
+   * - Con `manager`: lee la base en ese momento, sin leer ni escribir cachés,
+   *   por la conexión del `manager` (así comparte la instantánea de su
+   *   transacción). Lo usan los exportadores: cada descarga refleja el estado
+   *   vigente, también en otra instancia de Cloud Run.
    *
    * Debe llamarse dentro de `runWithOrgChartVersionReadPlan` para que los
    * overlays del plan se apliquen (usado por los exportadores del directorio).
    */
-  async getRoleNameOverridesForVersion(versionId: string): Promise<{
+  async getRoleNameOverridesForVersion(
+    versionId: string,
+    options: { manager?: EntityManager } = {},
+  ): Promise<{
     byPerson: ReadonlyMap<string, string>;
     byRelation: ReadonlyMap<string, string>;
   }> {
-    const [catalogs, personOverrides, relationOverrides] = await Promise.all([
-      this.loadCatalogsCached(),
-      this.getRoleOverrideMap(versionId),
-      this.getRelationOverrideMap(versionId),
-    ]);
+    const { manager } = options;
+    // Con manager, consultas en serie: una transacción usa una sola conexión.
+    const [roleById, personOverrides, relationOverrides] = manager
+      ? [
+          this.buildMapById(
+            await manager.getRepository(Role).find({ order: { id: 'ASC' } }),
+          ),
+          await this.readRoleOverrideMap(
+            manager.getRepository(OrgChartPersonOverride),
+            versionId,
+          ),
+          await this.readRelationOverrideMap(
+            manager.getRepository(OrgVisualRelationOverride),
+            versionId,
+          ),
+        ]
+      : await Promise.all([
+          this.loadCatalogsCached().then((catalogs) => catalogs.roleById),
+          this.getRoleOverrideMap(versionId),
+          this.getRelationOverrideMap(versionId),
+        ]);
     const roleName = (roleId: string): string =>
-      catalogs.roleById.get(String(roleId))?.name ?? '';
+      roleById.get(String(roleId))?.name ?? '';
 
     const byPerson = new Map<string, string>();
     for (const [personId, roleId] of personOverrides) {
@@ -1244,9 +1269,25 @@ export class OrgChartService {
       return cached.value;
     }
 
+    const value = await this.readRoleOverrideMap(
+      this.personOverrides,
+      versionId,
+    );
+    this.roleOverrideCache.set(cacheKey, {
+      value,
+      expiresAt: now + this.orgChartResponseCacheTtlMs,
+    });
+    return value;
+  }
+
+  /** person_id → role_id del override por persona (overlay > global). Sin caché. */
+  private async readRoleOverrideMap(
+    repository: Repository<OrgChartPersonOverride>,
+    versionId: string,
+  ): Promise<Map<string, string>> {
     const overlayIds = getOrgChartOverlayVersionIds();
     const versionIds = [versionId, ...overlayIds];
-    const rows = await this.personOverrides.find({
+    const rows = await repository.find({
       where: versionIds.map((id) => ({ version_id: id })),
     });
     const overlayVersionSet = new Set(overlayIds);
@@ -1261,11 +1302,6 @@ export class OrgChartService {
       if (!overlayVersionSet.has(String(row.version_id))) continue;
       value.set(String(row.person_id), String(row.role_id_override));
     }
-
-    this.roleOverrideCache.set(cacheKey, {
-      value,
-      expiresAt: now + this.orgChartResponseCacheTtlMs,
-    });
     return value;
   }
 
@@ -1291,9 +1327,25 @@ export class OrgChartService {
       return cached.value;
     }
 
+    const value = await this.readRelationOverrideMap(
+      this.relationOverrides,
+      versionId,
+    );
+    this.relationOverrideCache.set(cacheKey, {
+      value,
+      expiresAt: now + this.orgChartResponseCacheTtlMs,
+    });
+    return value;
+  }
+
+  /** relation_id → override activo de la versión y sus overlays. Sin caché. */
+  private async readRelationOverrideMap(
+    repository: Repository<OrgVisualRelationOverride>,
+    versionId: string,
+  ): Promise<Map<string, RelationOverrideData>> {
     const overlayIds = getOrgChartOverlayVersionIds();
     const versionIds = [versionId, ...overlayIds];
-    const rows = await this.relationOverrides.find({
+    const rows = await repository.find({
       where: versionIds.map((id) => ({ version_id: id, is_active: true })),
     });
     const value = new Map<string, RelationOverrideData>();
@@ -1306,11 +1358,6 @@ export class OrgChartService {
         assignmentLabel: row.assignment_label ?? null,
       });
     }
-
-    this.relationOverrideCache.set(cacheKey, {
-      value,
-      expiresAt: now + this.orgChartResponseCacheTtlMs,
-    });
     return value;
   }
 

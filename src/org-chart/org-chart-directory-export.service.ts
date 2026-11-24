@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { PersonPermissionService } from '../permissions/person-permission.service';
 import type { OrgViewerContext } from './org-viewer-context';
 import {
@@ -595,20 +595,53 @@ export class OrgChartDirectoryExportService {
 
     const { queryRows, overrides } = await runWithOrgChartVersionReadPlan(
       plan,
-      async () => {
-        const { sql, overlayIds } = directorySql();
-        const [rows, roleOverrides] = await Promise.all([
-          this.dataSource.query<DirectoryQueryRow[]>(
+      () =>
+        this.inReadOnlySnapshot(async (manager) => {
+          const { sql, overlayIds } = directorySql();
+          const rows = await manager.query<DirectoryQueryRow[]>(
             sql,
             withOverlayQueryParams([versionId], overlayIds),
-          ),
-          this.orgChartService.getRoleNameOverridesForVersion(versionId),
-        ]);
-        return { queryRows: rows, overrides: roleOverrides };
-      },
+          );
+          // Sin las cachés del mapa: overrides leídos en esta misma instantánea.
+          const roleOverrides =
+            await this.orgChartService.getRoleNameOverridesForVersion(
+              versionId,
+              { manager },
+            );
+          return { queryRows: rows, overrides: roleOverrides };
+        }),
     );
 
     return { queryRows, overrides, versionLabel, versionId };
+  }
+
+  /**
+   * Ejecuta `work` en una transacción de solo lectura REPEATABLE READ: todas
+   * sus consultas ven la MISMA instantánea de PostgreSQL, así personas,
+   * relaciones (incluida Planta de Orbit) y cargos de un archivo son
+   * coherentes entre sí aunque Orbit escriba durante la generación.
+   */
+  private async inReadOnlySnapshot<T>(
+    work: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    const runner = this.dataSource.createQueryRunner();
+    try {
+      await runner.connect();
+      await runner.startTransaction('REPEATABLE READ');
+      try {
+        await runner.query('SET TRANSACTION READ ONLY');
+        const result = await work(runner.manager);
+        await runner.commitTransaction();
+        return result;
+      } catch (error) {
+        if (runner.isTransactionActive) {
+          await runner.rollbackTransaction().catch(() => undefined);
+        }
+        throw error;
+      }
+    } finally {
+      await runner.release();
+    }
   }
 }
 

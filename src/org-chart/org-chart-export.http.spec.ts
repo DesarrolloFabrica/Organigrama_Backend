@@ -93,6 +93,8 @@ describe('Exportadores del organigrama: permisos por formato (HTTP)', () => {
   let jwt: JwtService;
   let db: InMemoryPermissionDb;
   let reportQueries: number;
+  /** Estado actual de la «base» que lee la consulta del informe. */
+  let reportRows: Array<Record<string, unknown>>;
   let versionService: {
     resolveReadPlan: jest.Mock;
     getVersionById: jest.Mock;
@@ -130,15 +132,39 @@ describe('Exportadores del organigrama: permisos por formato (HTTP)', () => {
       { id: USER.id, eduEmail: USER.email, active: true },
     ]);
     versionService = { resolveReadPlan: jest.fn(), getVersionById: jest.fn() };
+    const query = (sql: string, params?: unknown[]) => {
+      if (
+        /INSERT INTO organigrama\.org_chart_directory_export_audit/.test(sql)
+      ) {
+        return db.query(sql, params);
+      }
+      reportQueries++;
+      return Promise.resolve(reportRows.map((row) => ({ ...row })));
+    };
     const dataSource = {
-      query: (sql: string, params?: unknown[]) => {
-        if (
-          /INSERT INTO organigrama\.org_chart_directory_export_audit/.test(sql)
-        ) {
-          return db.query(sql, params);
-        }
-        reportQueries++;
-        return Promise.resolve(REPORT_ROWS);
+      query,
+      // Instantánea de solo lectura del informe (un runner por descarga).
+      createQueryRunner: () => {
+        const runner = {
+          isTransactionActive: false,
+          connect: () => Promise.resolve(),
+          startTransaction: () => {
+            runner.isTransactionActive = true;
+            return Promise.resolve();
+          },
+          commitTransaction: () => {
+            runner.isTransactionActive = false;
+            return Promise.resolve();
+          },
+          rollbackTransaction: () => {
+            runner.isTransactionActive = false;
+            return Promise.resolve();
+          },
+          release: () => Promise.resolve(),
+          query: () => Promise.resolve(),
+          manager: { query },
+        };
+        return runner;
       },
     };
     const unused = {};
@@ -208,6 +234,7 @@ describe('Exportadores del organigrama: permisos por formato (HTTP)', () => {
     db.failAuditWrites = false;
     db.failPermissionReads = false;
     reportQueries = 0;
+    reportRows = [...REPORT_ROWS];
     versionService.resolveReadPlan.mockReset().mockResolvedValue({
       globalVersionId: '4',
       overlays: [],
@@ -320,6 +347,61 @@ describe('Exportadores del organigrama: permisos por formato (HTTP)', () => {
         row_count: 2,
         person_id: USER.id,
       },
+    ]);
+  });
+
+  it('cada descarga se genera de nuevo con el estado vigente, sin caché HTTP ni ETag', async () => {
+    db.grant(USER.id, HTML, XLS);
+    const asText = (path: string) =>
+      expectDownload(path, token()).then((res) => {
+        expect(res.headers.etag).toBeUndefined();
+        expect(res.headers['last-modified']).toBeUndefined();
+        return Buffer.isBuffer(res.body)
+          ? res.body.toString('utf8')
+          : String(res.text);
+      });
+    const binary = (path: string) =>
+      get(path, token())
+        .buffer(true)
+        .parse((res, done) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => done(null, Buffer.concat(chunks)));
+        });
+
+    const xls1 = (await binary(XLS_PATH)).body as Buffer;
+    const html1 = await asText(HTML_PATH);
+
+    // Alta de una persona y baja de otra, ya incorporadas a la base.
+    reportRows = [
+      REPORT_ROWS[0],
+      {
+        person_id: '12',
+        boss_id: '10',
+        full_name: 'Persona Sintética Alta',
+        document: '0000000012',
+        base_role_name: 'ANALISTA',
+        area_name: 'Área Sintética',
+        edu_email: 'alta@example.test',
+        phone: '3000000012',
+      },
+    ];
+    const xls2 = ((await binary(XLS_PATH)).body as Buffer).toString('utf8');
+    const html2 = await asText(HTML_PATH);
+
+    expect(xls1.toString('utf8')).toContain('Persona Sintética Hija');
+    expect(xls2).not.toContain('Persona Sintética Hija');
+    expect(xls2).toContain('Persona Sintética Alta');
+    expect(html1).toContain('Persona Sintética Hija');
+    expect(html2).not.toContain('Persona Sintética Hija');
+    expect(html2).toContain('Persona Sintética Alta');
+    expect(reportQueries).toBe(4);
+    expect(versionService.resolveReadPlan).toHaveBeenCalledTimes(4);
+    expect(db.audit.map((a) => [a.export_format, a.result])).toEqual([
+      ['xls', 'SUCCESS'],
+      ['html', 'SUCCESS'],
+      ['xls', 'SUCCESS'],
+      ['html', 'SUCCESS'],
     ]);
   });
 
