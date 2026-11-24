@@ -17,14 +17,15 @@ despliegue de código. Verificado en solo lectura el 24-nov-2026.
 | Cloud SQL | `it-fab-contenido-edu-6:us-central1:core-database`, base `core` |
 | Encendido de Cloud SQL | Cloud Scheduler: se apaga 22:00 (lun–jue) y sáb 00:00; se enciende 07:00 (lun–vie) |
 | Respaldos automáticos | 09:00 UTC (04:00 Colombia), con la instancia apagada → **último exitoso: 10-nov** |
-| Código a desplegar | backend `integracion/organigrama-exportadores-20261123` @ `eb17acf`, frontend @ `ad4de54` (o el HEAD aprobado; anotar el SHA exacto) |
+| Código a desplegar | rama `integracion/organigrama-exportadores-20261123`: backend con código hasta `c3e0b2c` (el HEAD puede ser posterior solo con documentación), frontend `16b490d`. Anotar el SHA exacto desplegado |
+| `PersonContactEditor` | **Se conserva** sin cambios de reglas (decisión del 24-nov-2026): `PATCH /api/profile/person/:id` (backend `c3e0b2c`) y el editor en la ficha (frontend `16b490d`), copiados de `copia-main`: la propia persona u `ORG_ADMIN` |
 
 ## 1. Condiciones previas (todas obligatorias)
 
 1. Autorizaciones escritas: respaldo, migración 040, 12 concesiones, push,
    despliegue y retiro de etiquetas antiguas.
-2. Decisión tomada sobre `PersonContactEditor` (conservar con permiso
-   explícito o retirar). El despliegue robusto **no** lo incluye hoy.
+2. `PersonContactEditor`: decidido conservarlo tal como está en producción
+   (incluido desde `c3e0b2c` / `16b490d`).
 3. Aprobación institucional del tratamiento de datos personales del Excel
    (26 columnas) y del HTML (cédula y foto).
 4. Ventana con Cloud SQL encendida: lunes a jueves entre 07:00 y 21:00
@@ -78,8 +79,8 @@ Comandos exactos: `RUNBOOK.md`, paso 6.
 1. Push de las ramas de integración como **ramas nuevas** (no sobre `main`).
 2. Exportación limpia de cada commit aprobado (no desde los worktrees):
    ```bash
-   git -C <repo-backend>  archive --format=tar eb17acf | tar -x -C <dir-limpio-backend>
-   git -C <repo-frontend> archive --format=tar ad4de54 | tar -x -C <dir-limpio-frontend>
+   git -C <repo-backend>  archive --format=tar <SHA_BACKEND>  | tar -x -C <dir-limpio-backend>
+   git -C <repo-frontend> archive --format=tar <SHA_FRONTEND> | tar -x -C <dir-limpio-frontend>
    ```
 3. Controles sobre la exportación (sección 8, controles A).
 
@@ -88,7 +89,7 @@ Comandos exactos: `RUNBOOK.md`, paso 6.
 ```bash
 gcloud run deploy organigrama-backend --source <dir-limpio-backend> \
   --region=us-central1 --project=it-fab-contenido-edu-5 \
-  --no-traffic --tag=robusto --labels=commit=eb17acf
+  --no-traffic --tag=robusto --labels=commit=<SHA_BACKEND>
 ```
 
 `--source` crea una revisión nueva con la configuración actual del servicio
@@ -103,7 +104,7 @@ Pruebas en `https://robusto---organigrama-backend-…run.app` (sin sesión):
 | `GET /api/org-chart/change-token` | 401 |
 | `GET /api/org-chart/competency-people-search` | 401 |
 | `GET /api/auth/dev-login/status` y `POST /api/auth/dev-login` | 404 |
-| `PATCH /api/profile/person/1` | 404 si se retira `PersonContactEditor`; 401 si se conserva |
+| `PATCH /api/profile/person/1` | 401 (`PersonContactEditor` conservado) |
 
 Después:
 
@@ -125,7 +126,7 @@ Transición (backend nuevo + frontend antiguo, minutos):
 ```bash
 gcloud run deploy organigrama-frontend --source <dir-limpio-frontend> \
   --region=us-central1 --project=it-fab-contenido-edu-5 \
-  --no-traffic --tag=robusto --labels=commit=ad4de54
+  --no-traffic --tag=robusto --labels=commit=<SHA_FRONTEND>
 ```
 
 La URL con etiqueta llama al backend de producción y no está en CORS ni en
@@ -186,6 +187,9 @@ Sin mostrar datos personales en pantallas compartidas:
   periodo-agosto-2026 (activa)»; HTML con las mismas personas. Auditoría:
   2 filas `SUCCESS`, `version_id = 4`. Borrar los archivos descargados.
 - Cuenta no autorizada: sin botones, 403 y `DENIED`.
+- `PersonContactEditor` (sin guardar cambios): una cuenta `ORG_ADMIN` ve
+  «Guardar datos» en la ficha de otra persona; una cuenta sin `ORG_ADMIN` no
+  lo ve en fichas ajenas; cada persona lo ve en su propia ficha.
 - Memoria del backend en Cloud Run (límite 512 MiB) durante las descargas.
 
 ## 10. Reversión: tres operaciones independientes
@@ -199,8 +203,8 @@ gcloud run services update-traffic organigrama-frontend --to-revisions=organigra
 gcloud run services update-traffic organigrama-backend  --to-revisions=organigrama-backend-00126-pk9=100  --region=us-central1 --project=it-fab-contenido-edu-5
 ```
 
-- Vuelven los exportadores por lista fija (5 correos, sin auditoría) y el
-  `PersonContactEditor` antiguo.
+- Vuelven los exportadores por lista fija (5 correos, sin auditoría).
+  `PersonContactEditor` funciona igual en ambas versiones.
 - La tabla 040 y las 12 concesiones quedan en la base sin efecto, porque el
   código antiguo no las usa.
 
