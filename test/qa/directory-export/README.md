@@ -40,7 +40,7 @@ docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP
 ## 3. Datos sintéticos
 
 ```bash
-for f in 00_marcar_base_qa 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos 04_perfiles_desarrollo 05_presentaciones_mc1 06_casos_relaciones; do
+for f in 00_marcar_base_qa 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos 04_perfiles_desarrollo 05_presentaciones_mc1 06_casos_relaciones 07_coordinaciones; do
   docker cp test/qa/directory-export/$f.sql organigrama-qa-exports:/tmp/$f.sql
   docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP=1 -f /tmp/$f.sql
 done
@@ -70,6 +70,16 @@ done
   posición** y un **overlay de coordinación** activo (raíz 900104, sin equipo
   en la versión global) con override de cargo por persona: DOCENTE en la
   versión global y COORDINADOR en el overlay (debe ganar el overlay).
+- `07`: Dirección y coordinaciones para las pestañas del Excel, con la forma
+  del organigrama real (datos sintéticos): bajo la Directora cuelgan B2B,
+  ESPECIALIZACIONES, FABRICA Y DESARROLLO, HOMOLOGACIONES, OPERACION ACADEMICA
+  (con dos escuelas), PRACTICAS, PROYECCION SOCIAL y SABER PRO. Incluye un
+  docente intermedio con una subordinada elegible, personas de otra área dentro
+  de una coordinación (salen por su jefe, p. ej. el caso «Consultorio
+  Jurídico»), una analista con jefes en B2B y Fábrica (sale en ambas hojas) y
+  staff de Dirección. Idempotente. Con `01`–`07` el Excel tiene 11 hojas:
+  Base general, DIRECCIÓN QA SINTÉTICA y 9 coordinaciones (las 8 anteriores y
+  OPERACIONES QA SINTÉTICA, de `01`). Detalle: `docs/EXCEL_COORDINACIONES.md`.
 
 > **No usar** `scripts/mc1-import-person-profile-presentation.ts` para QA:
 > ese script siempre lee el `.env` de la raíz del repositorio, que en el

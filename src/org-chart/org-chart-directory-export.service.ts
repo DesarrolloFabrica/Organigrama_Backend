@@ -38,11 +38,18 @@ import {
   type PresentationPerson,
 } from './org-chart-directory-presentation';
 import {
-  buildDirectoryExcelXml,
+  BASE_GENERAL_SHEET_NAME,
+  buildDirectoryWorkbookXml,
   directoryExportDateStamp,
   shouldIncludeDirectoryRow,
   type DirectoryExportRow,
 } from './org-chart-directory-export.util';
+import {
+  buildCoordinationSheets,
+  groupDirectoryByCoordination,
+  type CoordinationPlacement,
+} from './org-chart-directory-coordinations';
+import { ORG_CHART_ROOT_PERSON_ID } from './photos/photo.config';
 
 type DirectoryQueryRow = {
   person_id: string;
@@ -420,12 +427,13 @@ export class OrgChartDirectoryExportService {
     versionId: string;
     rowCount: number;
   }> {
-    const { people, versionLabel, versionId } =
+    const { people, placements, versionLabel, versionId } =
       await this.loadActiveDirectoryPeople(viewer);
 
     // Una fila por persona; todos sus jefes efectivos en «Jefe», por nombre.
-    const rows: DirectoryExportRow[] = people
-      .map(({ row, resolved }) => ({
+    const rowById = new Map<string, DirectoryExportRow>();
+    for (const { row, resolved } of people) {
+      rowById.set(text(row.person_id), {
         fullName: text(row.full_name),
         documentType: text(row.type_document),
         document: text(row.document),
@@ -452,16 +460,47 @@ export class OrgChartDirectoryExportService {
         emergencyPhone: text(row.emergency_contact_phone),
         emergencyRelationship: text(row.emergency_contact_relationship),
         skills: text(row.skills),
-      }))
-      .sort((a, b) => {
-        const area = a.areaName.localeCompare(b.areaName, 'es');
-        if (area !== 0) return area;
-        const boss = a.bossName.localeCompare(b.bossName, 'es');
-        if (boss !== 0) return boss;
-        return a.fullName.localeCompare(b.fullName, 'es');
       });
+    }
 
-    const xml = buildDirectoryExcelXml(rows, versionLabel);
+    // «Base general»: el directorio completo, con el mismo orden de siempre.
+    const rows = [...rowById.values()].sort((a, b) => {
+      const area = a.areaName.localeCompare(b.areaName, 'es');
+      if (area !== 0) return area;
+      const boss = a.bossName.localeCompare(b.bossName, 'es');
+      if (boss !== 0) return boss;
+      return a.fullName.localeCompare(b.fullName, 'es');
+    });
+
+    // Pestañas de Dirección y por coordinación, calculadas en cada descarga
+    // desde las mismas ubicaciones (misma instantánea): ver
+    // org-chart-directory-coordinations (reglas, orden y duplicados).
+    const grouping = groupDirectoryByCoordination(
+      placements,
+      ORG_CHART_ROOT_PERSON_ID,
+    );
+    const {
+      sheets: coordinationSheets,
+      directionSheetCount,
+      unassignedIds,
+      areaMismatchIds,
+    } = buildCoordinationSheets(grouping, placements, rowById, versionLabel);
+    // Solo conteos (sin datos personales). areaDistinta = personas que salen
+    // en una coordinación por su jefe efectivo pero con otra área registrada.
+    this.log.log(
+      `[OrgChartDirectoryExport] pestañas direccion=${directionSheetCount} coordinaciones=${coordinationSheets.length - directionSheetCount} sinPestana=${unassignedIds.length} areaDistinta=${areaMismatchIds.length} version=${versionId}`,
+    );
+
+    const xml = buildDirectoryWorkbookXml([
+      {
+        // Presentación original aprobada: solo se agregan hojas nuevas.
+        name: BASE_GENERAL_SHEET_NAME,
+        title: `Operaciones — ${versionLabel}`,
+        rows,
+        layout: 'original',
+      },
+      ...coordinationSheets,
+    ]);
     const filename = `organigrama-activo-${directoryExportDateStamp()}.xls`;
 
     return {
@@ -527,6 +566,8 @@ export class OrgChartDirectoryExportService {
    */
   private async loadActiveDirectoryPeople(viewer: OrgViewerContext): Promise<{
     people: DirectoryPerson[];
+    /** Todas las ubicaciones efectivas (también de no elegibles), para agrupar. */
+    placements: CoordinationPlacement[];
     versionLabel: string;
     versionId: string;
   }> {
@@ -568,7 +609,13 @@ export class OrgChartDirectoryExportService {
       }
       people.push({ row, resolved });
     }
-    return { people, versionLabel, versionId };
+    const placements: CoordinationPlacement[] = queryRows.map((row) => ({
+      personId: text(row.person_id),
+      bossId: row.boss_id == null ? null : text(row.boss_id),
+      areaName: text(row.area_name),
+      fullName: text(row.full_name),
+    }));
+    return { people, placements, versionLabel, versionId };
   }
 
   /**

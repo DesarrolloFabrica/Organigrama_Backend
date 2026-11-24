@@ -671,6 +671,93 @@ describe('OrgChartDirectoryExportService', () => {
       expect(xml).not.toContain('Docente Sintético');
     });
 
+    it('Excel: «Base general» + Dirección + una pestaña por coordinación desde la misma lectura', async () => {
+      const base = rows[0];
+      rows = [
+        {
+          ...base,
+          person_id: '1144',
+          boss_id: null,
+          relation_id: null,
+          boss_is_active: null,
+          full_name: 'Directora Sintética',
+          document: '0000001144',
+          area_name: 'DIRECCIÓN SINTÉTICA',
+          base_role_name: 'DIRECTOR',
+        },
+        {
+          ...base,
+          person_id: '300',
+          boss_id: '1144',
+          relation_id: '601',
+          full_name: 'Supervisor B2B Sintético',
+          document: '0000000300',
+          area_name: 'B2B',
+          base_role_name: 'SUPERVISOR B2B',
+          boss_name: 'Directora Sintética',
+        },
+        {
+          ...base,
+          person_id: '301',
+          boss_id: '300',
+          relation_id: '602',
+          full_name: 'Auxiliar B2B Sintética',
+          document: '0000000301',
+          area_name: 'B2B',
+          base_role_name: 'AUXILIAR',
+          boss_name: 'Supervisor B2B Sintético',
+        },
+        {
+          ...base,
+          person_id: '302',
+          boss_id: '300',
+          relation_id: '603',
+          full_name: 'Docente B2B Sintético',
+          document: '0000000302',
+          area_name: 'B2B',
+          base_role_name: 'DOCENTE',
+          boss_name: 'Supervisor B2B Sintético',
+        },
+      ];
+
+      const file = await service.exportActiveDirectory(
+        exportViewer(AUTHORIZED),
+      );
+      const xml = file.buffer.toString('utf8');
+      const sheets = [
+        ...xml.matchAll(
+          /<Worksheet ss:Name="([^"]*)">([\s\S]*?)<\/Worksheet>/g,
+        ),
+      ].map((m) => ({ name: m[1], body: m[2] }));
+
+      // La auditoría sigue contando las filas de la base general.
+      expect(file.rowCount).toBe(3);
+      expect(sheets.map((s) => s.name)).toEqual([
+        'Base general',
+        'DIRECCIÓN SINTÉTICA',
+        'B2B',
+      ]);
+      expect(sheets[1].body).toContain(
+        'Dirección: DIRECCIÓN SINTÉTICA — Responsable: Directora Sintética',
+      );
+      const b2b = sheets[2].body;
+      expect(b2b).toContain(
+        'Coordinación: B2B — Responsable: Supervisor B2B Sintético',
+      );
+      expect(b2b.indexOf('Supervisor B2B Sintético')).toBeLessThan(
+        b2b.indexOf('Auxiliar B2B Sintética'),
+      );
+      // Título + encabezados + 2 personas (la Directora solo figura como jefe).
+      expect(b2b.match(/<Row[ >]/g)).toHaveLength(4);
+      expect(b2b).not.toContain('Docente B2B Sintético');
+      expect(sheets[0].body).toContain('Directora Sintética');
+      // La base general conserva su presentación original (sin filtros).
+      expect(sheets[0].body).not.toContain('AutoFilter');
+      // Una sola consulta: todas las hojas salen de la misma instantánea.
+      expect(dataSource.query).toHaveBeenCalledTimes(1);
+      expect(runners).toHaveLength(1);
+    });
+
     it('HTML: documento descargable con la persona y sin docentes de planta', async () => {
       const file = await service.exportActiveHtml(exportViewer(AUTHORIZED));
 
