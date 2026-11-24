@@ -2,7 +2,18 @@
 
 export type PresentationPerson = {
   personId: string;
-  bossId: string;
+  /**
+   * Todos los jefes efectivos (Organigrama no tiene relación principal): la
+   * persona se pinta bajo cada uno que esté en el informe, como en el mapa,
+   * y se cuenta una sola vez en los totales.
+   */
+  bossIds: string[];
+  /**
+   * Nombres de sus jefes registrados que están inactivos. Si ninguno de sus
+   * jefes está en el informe por esa causa, va a la sección «Jefe registrado
+   * inactivo» en lugar de aparecer como raíz junto a la Dirección.
+   */
+  inactiveBossNames: string[];
   fullName: string;
   document: string;
   roleName: string;
@@ -82,11 +93,12 @@ export function buildPresentationForest(
   const ids = new Set(people.map((person) => person.personId));
   const childrenByBoss = new Map<string, PresentationPerson[]>();
   for (const person of people) {
-    const bossKey =
-      person.bossId && ids.has(person.bossId) ? person.bossId : '';
-    const list = childrenByBoss.get(bossKey) ?? [];
-    list.push(person);
-    childrenByBoss.set(bossKey, list);
+    const bossKeys = presentParentIds(person, ids);
+    for (const bossKey of bossKeys.length > 0 ? bossKeys : ['']) {
+      const list = childrenByBoss.get(bossKey) ?? [];
+      list.push(person);
+      childrenByBoss.set(bossKey, list);
+    }
   }
   for (const list of childrenByBoss.values()) {
     list.sort((a, b) => {
@@ -113,11 +125,33 @@ export function buildPresentationForest(
   return roots.map((person) => visit(person, new Set()));
 }
 
-function descendantCount(node: TreeNode): number {
-  return node.children.reduce(
-    (total, child) => total + 1 + descendantCount(child),
-    0,
+/** Jefes de la persona presentes en el conjunto (sin repetir ni a sí misma). */
+function presentParentIds(
+  person: PresentationPerson,
+  ids: ReadonlySet<string>,
+): string[] {
+  return [...new Set(person.bossIds)].filter(
+    (bossId) => bossId !== person.personId && ids.has(bossId),
   );
+}
+
+/**
+ * Persona activa cuyo jefe registrado está inactivo y que no cuelga de ningún
+ * jefe presente en el informe. Su relación no se modifica: solo se presenta
+ * en una sección diferenciada.
+ */
+function isUnderInactiveBossOnly(
+  person: PresentationPerson,
+  ids: ReadonlySet<string>,
+): boolean {
+  return (
+    person.inactiveBossNames.length > 0 &&
+    presentParentIds(person, ids).length === 0
+  );
+}
+
+function descendantCount(node: TreeNode): number {
+  return collectDescendants(node).length;
 }
 
 function pickCoordinator(
@@ -233,11 +267,19 @@ function isHierarchyAnchor(person: PresentationPerson): boolean {
   );
 }
 
+/**
+ * Descendientes distintos del nodo. Una persona con varios jefes puede estar
+ * más de una vez en el subárbol; en los totales se cuenta una sola vez.
+ */
 function collectDescendants(node: TreeNode): PresentationPerson[] {
   const rows: PresentationPerson[] = [];
+  const seen = new Set<string>([node.personId]);
   const walk = (current: TreeNode): void => {
     for (const child of current.children) {
-      rows.push(child);
+      if (!seen.has(child.personId)) {
+        seen.add(child.personId);
+        rows.push(child);
+      }
       walk(child);
     }
   };
@@ -312,6 +354,8 @@ function renderCard(
     compact?: boolean;
     mini?: boolean;
     depth?: number;
+    /** Línea adicional (texto plano) bajo el cargo, con el mismo estilo. */
+    note?: string;
   } = {},
 ): string {
   const photo = safePhotoUrl(person.photoUrl);
@@ -334,6 +378,7 @@ function renderCard(
       ${options.mini ? '' : `<p class="badge">${xmlEscape(leaderBadge(person, leader))}</p>`}
       <h3>${xmlEscape(person.fullName)}</h3>
       <p class="role">${xmlEscape(person.roleName || 'Sin cargo')}</p>
+      ${options.note ? `<p class="role">${xmlEscape(options.note)}</p>` : ''}
       <p class="doc">Cédula ${xmlEscape(person.document || '—')}</p>
       ${options.mini ? '' : `<p class="area-tag">${xmlEscape(areaLabel(person.areaName))}</p>`}
     </div>
@@ -487,12 +532,50 @@ function renderAreaSection(section: AreaSection): string {
   </section>`;
 }
 
+export const INACTIVE_BOSS_SECTION_ID = 'jefe-registrado-inactivo';
+
+/**
+ * Sección diferenciada para quienes cuelgan solo de un jefe inactivo: se
+ * conservan con su jefe registrado (marcado «(inactivo)») y su equipo, si lo
+ * tienen, como conteo. Reutiliza los estilos de las áreas.
+ */
+function renderInactiveBossSection(roots: TreeNode[]): string {
+  const cards = roots
+    .map((node) => {
+      const note = `Jefe registrado: ${node.inactiveBossNames
+        .map((name) => `${name || 'Sin nombre'} (inactivo)`)
+        .join(' | ')}`;
+      return `<div class="team">
+        ${renderCard(node, { compact: true, note })}
+        ${node.children.length > 0 ? renderSubtreeSummary(node) : ''}
+      </div>`;
+    })
+    .join('');
+  return `<section class="area" id="${INACTIVE_BOSS_SECTION_ID}">
+    <header class="area-head">
+      <p class="kicker">Revisión · ${roots.length} personas</p>
+      <h2>Jefe registrado inactivo</h2>
+      <p class="lead">Personas activas cuyo jefe registrado en el organigrama está inactivo. Se conserva la relación tal como está registrada; cada persona también aparece en su área.</p>
+    </header>
+    <div class="teams">${cards}</div>
+  </section>`;
+}
+
 export function buildOrgChartHtml(
   people: PresentationPerson[],
   versionLabel: string,
   artwork: PresentationArtwork = {},
 ): string {
-  const forest = buildPresentationForest(people);
+  const ids = new Set(people.map((person) => person.personId));
+  const fullForest = buildPresentationForest(people);
+  // Quien solo cuelga de un jefe inactivo no es una raíz de la organización:
+  // va a su sección (con su equipo) en lugar de mezclarse con la Dirección.
+  const forest = fullForest.filter(
+    (node) => !isUnderInactiveBossOnly(node, ids),
+  );
+  const inactiveBossRoots = fullForest.filter((node) =>
+    isUnderInactiveBossOnly(node, ids),
+  );
   const sections = buildAreaSections(people);
   const logo = safePhotoUrl(artwork.logoUrl ?? '');
   const submarine = safePhotoUrl(artwork.submarineUrl ?? '');
@@ -507,6 +590,11 @@ export function buildOrgChartHtml(
       (section) =>
         `<a href="#${section.anchor}"><span>${xmlEscape(section.area)}</span><strong>${section.count}</strong></a>`,
     ),
+    ...(inactiveBossRoots.length > 0
+      ? [
+          `<a href="#${INACTIVE_BOSS_SECTION_ID}"><span>Jefe registrado inactivo</span><strong>${inactiveBossRoots.length}</strong></a>`,
+        ]
+      : []),
   ].join('');
 
   const hierarchy =
@@ -515,6 +603,10 @@ export function buildOrgChartHtml(
       : `<ul class="org-tree">${forest.map((node) => renderHierarchyList(node)).join('')}</ul>`;
 
   const areaBlocks = sections.map(renderAreaSection).join('');
+  const inactiveBossBlock =
+    inactiveBossRoots.length > 0
+      ? renderInactiveBossSection(inactiveBossRoots)
+      : '';
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -656,6 +748,7 @@ export function buildOrgChartHtml(
         ${hierarchy}
       </section>
       ${areaBlocks}
+      ${inactiveBossBlock}
     </main>
   </div>
 </body>

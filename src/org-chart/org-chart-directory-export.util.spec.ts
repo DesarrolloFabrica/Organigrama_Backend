@@ -1,5 +1,6 @@
 import {
   buildDirectoryExcelXml,
+  directoryExportDateStamp,
   isRegularDocenteRole,
   shouldIncludeDirectoryRow,
   xmlEscape,
@@ -87,5 +88,20 @@ describe('org-chart-directory-export.util', () => {
     expect(xml).toContain('Raúl Valencia');
     expect(xml).toContain('Excel (Ofimática)');
     expect(xml).toContain('ana@gmail.com');
+  });
+
+  describe('fecha de los archivos (hora de Colombia)', () => {
+    it('después de las 19:00 en Colombia conserva el día local (UTC ya cambió)', () => {
+      // 2026-11-23 20:30 en Bogotá = 2026-11-24 01:30 UTC
+      expect(directoryExportDateStamp(new Date('2026-11-24T01:30:00Z'))).toBe(
+        '2026-11-23',
+      );
+    });
+
+    it('a medianoche de Colombia ya es el día siguiente', () => {
+      expect(directoryExportDateStamp(new Date('2026-11-24T05:00:00Z'))).toBe(
+        '2026-11-24',
+      );
+    });
   });
 });

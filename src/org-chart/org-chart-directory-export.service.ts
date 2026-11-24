@@ -20,7 +20,15 @@ import {
   type DirectoryExportPermissionsDto,
 } from './org-chart-directory-export.permissions';
 import { OrgChartVersionService } from './org-chart-version.service';
+import { OrgChartService } from './org-chart.service';
 import { runWithOrgChartVersionReadPlan } from './org-chart-version-read-plan';
+import {
+  formatBossEmails,
+  formatBossNames,
+  resolveDirectoryPeople,
+  type ResolvedDirectoryPerson,
+  type RoleNameOverrides,
+} from './org-chart-directory-people';
 import {
   visualRelationSqlSource,
   withOverlayQueryParams,
@@ -31,6 +39,7 @@ import {
 } from './org-chart-directory-presentation';
 import {
   buildDirectoryExcelXml,
+  directoryExportDateStamp,
   shouldIncludeDirectoryRow,
   type DirectoryExportRow,
 } from './org-chart-directory-export.util';
@@ -52,7 +61,10 @@ type DirectoryQueryRow = {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   emergency_contact_relationship: string | null;
-  role_name: string | null;
+  /** Arista efectiva de esta ubicación (null en hijos por posición y raíces). */
+  relation_id: string | null;
+  /** Cargo de core.person.role_id; los overrides los resuelve OrgChartService. */
+  base_role_name: string | null;
   area_name: string | null;
   hierarchy_name: string | null;
   school_name: string | null;
@@ -63,8 +75,15 @@ type DirectoryQueryRow = {
   campus_name: string | null;
   boss_name: string | null;
   boss_edu_email: string | null;
+  boss_is_active: boolean | null;
   skills: string | null;
   photo_url: string | null;
+};
+
+/** Persona del informe: sus datos (primera ubicación) y jefes/cargo resueltos. */
+type DirectoryPerson = {
+  row: DirectoryQueryRow;
+  resolved: ResolvedDirectoryPerson;
 };
 
 /**
@@ -80,7 +99,17 @@ type DirectoryQueryRow = {
  * (`child_person_id` de la arista). Una arista persona → ella misma no es un
  * jefe, pero sus hijos por posición sí cuentan.
  *
- * Precedencia por persona (DISTINCT ON): arista directa < hijo por posición < raíz.
+ * Una fila por UBICACIÓN (persona, jefe): una persona con varios jefes
+ * efectivos devuelve una fila por jefe, como el mapa la pinta bajo cada uno.
+ * La raíz (sin jefe) solo se usa si la persona no tiene ningún jefe. Para un
+ * mismo jefe se prefiere la arista directa sobre el hijo por posición.
+ *
+ * El cargo NO se resuelve aquí: se devuelve el cargo base y la arista, y los
+ * overrides (por arista > por persona con overlay > global) los aplica
+ * `OrgChartService.getRoleNameOverridesForVersion`, igual que el mapa.
+ *
+ * El jefe se une sin filtrar `is_active` para conservar a quien cuelga de un
+ * jefe inactivo (se marca «(inactivo)»); la persona exportada sí debe estar activa.
  */
 function directorySql(): { sql: string; overlayIds: string[] } {
   const source = visualRelationSqlSource('r', '$1', '$2');
@@ -127,10 +156,20 @@ edges AS (
     WHERE child_edge.child_person_id = parent_edge.parent_person_id
       AND child_edge.parent_person_id <> child_edge.child_person_id
   )
+),
+placements AS (
+  SELECT DISTINCT ON (e.person_id, COALESCE(e.boss_id, ''))
+    e.person_id,
+    e.boss_id,
+    e.relation_id,
+    e.edge_rank
+  FROM edges e
+  ORDER BY e.person_id, COALESCE(e.boss_id, ''), e.edge_rank, e.relation_id NULLS LAST
 )
-SELECT DISTINCT ON (e.person_id)
+SELECT
   e.person_id,
   e.boss_id,
+  e.relation_id,
   p.full_name,
   p.type_document,
   p.document,
@@ -145,7 +184,7 @@ SELECT DISTINCT ON (e.person_id)
   p.emergency_contact_name,
   p.emergency_contact_phone,
   p.emergency_contact_relationship,
-  visual_role.name AS role_name,
+  base_role.name AS base_role_name,
   a.name AS area_name,
   h.name AS hierarchy_name,
   s.name AS school_name,
@@ -156,23 +195,16 @@ SELECT DISTINCT ON (e.person_id)
   campus.name AS campus_name,
   boss.full_name AS boss_name,
   boss.edu_email AS boss_edu_email,
+  boss.is_active AS boss_is_active,
   skills.skills,
   photo_state.profile_photo_url AS photo_url
-FROM edges e
+FROM placements e
 INNER JOIN core.person p
   ON p.id::text = e.person_id
  AND p.is_active = true
 LEFT JOIN core.person boss
   ON boss.id::text = e.boss_id
-LEFT JOIN organigrama.org_visual_relation_override rovr
-  ON e.relation_id IS NOT NULL
- AND rovr.relation_id::text = e.relation_id
- AND rovr.is_active = true
-LEFT JOIN organigrama.org_chart_person_override povr
-  ON povr.person_id::text = e.person_id
- AND povr.version_id = $1
-LEFT JOIN core.role visual_role
-  ON visual_role.id = COALESCE(rovr.role_id_override, povr.role_id_override, p.role_id)
+LEFT JOIN core.role base_role ON base_role.id = p.role_id
 LEFT JOIN core.area a ON a.id = p.area_id
 LEFT JOIN core.hierarchy h ON h.id = p.hierarchy_id
 LEFT JOIN core.school s ON s.id = p.school_id
@@ -222,6 +254,7 @@ export class OrgChartDirectoryExportService {
     @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly versionService: OrgChartVersionService,
+    private readonly orgChartService: OrgChartService,
     private readonly permissionService: PersonPermissionService,
     private readonly audit: OrgChartDirectoryExportAuditService,
   ) {}
@@ -387,18 +420,12 @@ export class OrgChartDirectoryExportService {
     versionId: string;
     rowCount: number;
   }> {
-    const { queryRows, versionLabel, versionId } =
-      await this.loadActiveDirectoryRows(viewer);
+    const { people, versionLabel, versionId } =
+      await this.loadActiveDirectoryPeople(viewer);
 
-    const rows: DirectoryExportRow[] = queryRows
-      .filter((row) =>
-        shouldIncludeDirectoryRow({
-          fullName: row.full_name,
-          document: row.document,
-          roleName: row.role_name,
-        }),
-      )
-      .map((row) => ({
+    // Una fila por persona; todos sus jefes efectivos en «Jefe», por nombre.
+    const rows: DirectoryExportRow[] = people
+      .map(({ row, resolved }) => ({
         fullName: text(row.full_name),
         documentType: text(row.type_document),
         document: text(row.document),
@@ -409,11 +436,11 @@ export class OrgChartDirectoryExportService {
         areaName: text(row.area_name),
         schoolName: text(row.school_name),
         programName: text(row.program_name),
-        roleName: text(row.role_name),
+        roleName: text(resolved.roleName),
         hierarchyName: text(row.hierarchy_name),
         contractTypeName: text(row.contract_type_name),
-        bossName: text(row.boss_name),
-        bossEduEmail: text(row.boss_edu_email),
+        bossName: formatBossNames(resolved.bosses),
+        bossEduEmail: formatBossEmails(resolved.bosses),
         regionName: text(row.region_name),
         cityName: text(row.city_name),
         campusName: text(row.campus_name),
@@ -435,8 +462,7 @@ export class OrgChartDirectoryExportService {
       });
 
     const xml = buildDirectoryExcelXml(rows, versionLabel);
-    const date = new Date().toISOString().slice(0, 10);
-    const filename = `organigrama-activo-${date}.xls`;
+    const filename = `organigrama-activo-${directoryExportDateStamp()}.xls`;
 
     return {
       filename,
@@ -460,9 +486,8 @@ export class OrgChartDirectoryExportService {
       logoUrl: `${base}/img/LogoOrganigramasOp.png`,
       submarineUrl: `${base}/img/Submarino.png`,
     });
-    const date = new Date().toISOString().slice(0, 10);
     return {
-      filename: `organigrama-${date}.html`,
+      filename: `organigrama-${directoryExportDateStamp()}.html`,
       buffer: Buffer.from(html, 'utf8'),
       versionId,
       rowCount: people.length,
@@ -474,38 +499,90 @@ export class OrgChartDirectoryExportService {
     versionLabel: string;
     versionId: string;
   }> {
-    const { queryRows, versionLabel, versionId } =
-      await this.loadActiveDirectoryRows(viewer);
-    const people = queryRows
-      .filter((row) =>
-        shouldIncludeDirectoryRow({
-          fullName: row.full_name,
-          document: row.document,
-          roleName: row.role_name,
-        }),
-      )
-      .map((row) => ({
+    const { people, versionLabel, versionId } =
+      await this.loadActiveDirectoryPeople(viewer);
+    return {
+      people: people.map(({ row, resolved }) => ({
         personId: text(row.person_id),
-        bossId: text(row.boss_id),
+        // Todos los jefes efectivos: el HTML pinta a la persona bajo cada uno
+        // (como el mapa) y la cuenta una sola vez en los totales.
+        bossIds: resolved.bosses.map((boss) => boss.personId),
+        inactiveBossNames: resolved.bosses
+          .filter((boss) => !boss.isActive)
+          .map((boss) => text(boss.name)),
         fullName: text(row.full_name),
         document: text(row.document),
-        roleName: text(row.role_name),
+        roleName: text(resolved.roleName),
         areaName: text(row.area_name),
         photoUrl: text(row.photo_url),
-      }));
+      })),
+      versionLabel,
+      versionId,
+    };
+  }
+
+  /**
+   * Personas del informe (una por persona, ya filtradas: sin vacantes ni
+   * docentes de planta), con jefes y cargo resueltos.
+   */
+  private async loadActiveDirectoryPeople(viewer: OrgViewerContext): Promise<{
+    people: DirectoryPerson[];
+    versionLabel: string;
+    versionId: string;
+  }> {
+    const { queryRows, overrides, versionLabel, versionId } =
+      await this.loadActiveDirectoryRows(viewer);
+
+    const resolvedById = resolveDirectoryPeople(
+      queryRows.map((row) => ({
+        personId: text(row.person_id),
+        bossId: row.boss_id == null ? null : text(row.boss_id),
+        relationId: row.relation_id == null ? null : text(row.relation_id),
+        bossName: text(row.boss_name),
+        bossEduEmail: text(row.boss_edu_email),
+        bossIsActive: row.boss_is_active,
+        baseRoleName: text(row.base_role_name),
+      })),
+      overrides,
+    );
+
+    // Los datos personales son los mismos en todas las ubicaciones: primera fila.
+    const firstRowById = new Map<string, DirectoryQueryRow>();
+    for (const row of queryRows) {
+      const id = text(row.person_id);
+      if (!firstRowById.has(id)) firstRowById.set(id, row);
+    }
+
+    const people: DirectoryPerson[] = [];
+    for (const [id, row] of firstRowById) {
+      const resolved = resolvedById.get(id);
+      if (!resolved) continue;
+      if (
+        !shouldIncludeDirectoryRow({
+          fullName: row.full_name,
+          document: row.document,
+          roleName: resolved.roleName,
+        })
+      ) {
+        continue;
+      }
+      people.push({ row, resolved });
+    }
     return { people, versionLabel, versionId };
   }
 
   /**
-   * Filas del directorio de la versión global vigente.
+   * Ubicaciones de la versión global vigente y overrides de cargo del plan.
    * El plan se resuelve sin parámetros de la petición: siempre la versión
    * activa publicada (con Planta/overlays/excepciones), aunque la URL traiga
-   * versionId/versionCode.
+   * versionId/versionCode. Los overrides salen del mismo servicio que el mapa
+   * y dentro del mismo plan, así que respetan overlay > global.
    *
    * Solo se llama desde runAuditedExport, después de ensureCanExport.
    */
   private async loadActiveDirectoryRows(viewer: OrgViewerContext): Promise<{
     queryRows: DirectoryQueryRow[];
+    overrides: RoleNameOverrides;
     versionLabel: string;
     versionId: string;
   }> {
@@ -516,15 +593,22 @@ export class OrgChartDirectoryExportService {
       version.is_active ? ' (activa)' : ''
     }`;
 
-    const queryRows = await runWithOrgChartVersionReadPlan(plan, () => {
-      const { sql, overlayIds } = directorySql();
-      return this.dataSource.query<DirectoryQueryRow[]>(
-        sql,
-        withOverlayQueryParams([versionId], overlayIds),
-      );
-    });
+    const { queryRows, overrides } = await runWithOrgChartVersionReadPlan(
+      plan,
+      async () => {
+        const { sql, overlayIds } = directorySql();
+        const [rows, roleOverrides] = await Promise.all([
+          this.dataSource.query<DirectoryQueryRow[]>(
+            sql,
+            withOverlayQueryParams([versionId], overlayIds),
+          ),
+          this.orgChartService.getRoleNameOverridesForVersion(versionId),
+        ]);
+        return { queryRows: rows, overrides: roleOverrides };
+      },
+    );
 
-    return { queryRows, versionLabel, versionId };
+    return { queryRows, overrides, versionLabel, versionId };
   }
 }
 

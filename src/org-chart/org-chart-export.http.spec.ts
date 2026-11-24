@@ -62,7 +62,7 @@ const REPORT_ROWS = [
     boss_id: null,
     full_name: 'Persona Sintética Raíz',
     document: '0000000010',
-    role_name: 'DIRECTOR SINTÉTICO',
+    base_role_name: 'DIRECTOR SINTÉTICO',
     area_name: 'Área Sintética',
     edu_email: 'raiz@example.test',
     phone: '3000000010',
@@ -72,7 +72,7 @@ const REPORT_ROWS = [
     boss_id: '10',
     full_name: 'Persona Sintética Hija',
     document: '0000000011',
-    role_name: 'COORDINADOR',
+    base_role_name: 'COORDINADOR',
     area_name: 'Área Sintética',
     edu_email: 'hija@example.test',
     phone: '3000000011',
@@ -174,7 +174,13 @@ describe('Exportadores del organigrama: permisos por formato (HTTP)', () => {
         { provide: OrgChartVersionService, useValue: versionService },
         { provide: getDataSourceToken(), useValue: dataSource },
         { provide: DataSource, useValue: dataSource },
-        { provide: OrgChartService, useValue: unused },
+        {
+          provide: OrgChartService,
+          useValue: {
+            getRoleNameOverridesForVersion: () =>
+              Promise.resolve({ byPerson: new Map(), byRelation: new Map() }),
+          },
+        },
         { provide: OrgChartCvService, useValue: unused },
         { provide: OrgChartVacancyService, useValue: unused },
         { provide: OrgChartWorkforceEventsService, useValue: unused },

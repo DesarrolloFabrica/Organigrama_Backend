@@ -10,6 +10,8 @@ import { PersonPermissionService } from '../permissions/person-permission.servic
 import { OrgChartDirectoryExportAuditService } from './org-chart-directory-export-audit.service';
 import { OrgChartDirectoryExportService } from './org-chart-directory-export.service';
 import { OrgChartVersionService } from './org-chart-version.service';
+import { OrgChartService } from './org-chart.service';
+import type { RoleNameOverrides } from './org-chart-directory-people';
 import {
   getOrgChartVersionReadPlan,
   type OrgChartVersionReadPlan,
@@ -50,6 +52,8 @@ function syntheticRows() {
     {
       person_id: '10',
       boss_id: '1',
+      relation_id: '501',
+      boss_is_active: true,
       full_name: 'Persona Sintética Uno',
       type_document: 'CC',
       document: '0000000001',
@@ -60,7 +64,7 @@ function syntheticRows() {
       emergency_contact_phone: '3000000009',
       emergency_contact_relationship: 'Familiar',
       skills: 'Excel (Ofimática)',
-      role_name: 'COORDINADOR',
+      base_role_name: 'COORDINADOR',
       area_name: 'Área Sintética',
       hierarchy_name: 'Nivel 3',
       school_name: null,
@@ -72,6 +76,8 @@ function syntheticRows() {
     {
       person_id: '11',
       boss_id: '10',
+      relation_id: '502',
+      boss_is_active: true,
       full_name: 'Docente Sintético',
       document: '0000000002',
       edu_email: 'docente@example.test',
@@ -80,7 +86,7 @@ function syntheticRows() {
       emergency_contact_name: null,
       emergency_contact_phone: null,
       emergency_contact_relationship: null,
-      role_name: 'DOCENTE',
+      base_role_name: 'DOCENTE',
       area_name: 'Área Sintética',
       hierarchy_name: 'Nivel 5',
       school_name: null,
@@ -108,19 +114,32 @@ describe('OrgChartDirectoryExportService', () => {
     >;
   };
   let audit: { record: jest.Mock; recordBestEffort: jest.Mock };
+  let orgChartService: { getRoleNameOverridesForVersion: jest.Mock };
   let granted: string[];
+  let rows: Record<string, unknown>[];
+  let overrides: RoleNameOverrides;
   let planSeenByQuery: OrgChartVersionReadPlan | undefined;
+  let planSeenByOverrides: OrgChartVersionReadPlan | undefined;
 
   beforeEach(async () => {
     granted = [HTML, XLS];
+    rows = syntheticRows();
+    overrides = { byPerson: new Map(), byRelation: new Map() };
     planSeenByQuery = undefined;
+    planSeenByOverrides = undefined;
     dataSource = {
       query: jest
         .fn<Promise<unknown>, [string, unknown[]]>()
         .mockImplementation(() => {
           planSeenByQuery = getOrgChartVersionReadPlan();
-          return Promise.resolve(syntheticRows());
+          return Promise.resolve(rows);
         }),
+    };
+    orgChartService = {
+      getRoleNameOverridesForVersion: jest.fn().mockImplementation(() => {
+        planSeenByOverrides = getOrgChartVersionReadPlan();
+        return Promise.resolve(overrides);
+      }),
     };
     versionService = {
       resolveReadPlan: jest.fn().mockResolvedValue(plan()),
@@ -147,6 +166,7 @@ describe('OrgChartDirectoryExportService', () => {
       providers: [
         OrgChartDirectoryExportService,
         { provide: OrgChartVersionService, useValue: versionService },
+        { provide: OrgChartService, useValue: orgChartService },
         { provide: PersonPermissionService, useValue: permissionService },
         { provide: OrgChartDirectoryExportAuditService, useValue: audit },
         { provide: getDataSourceToken(), useValue: dataSource },
@@ -376,7 +396,50 @@ describe('OrgChartDirectoryExportService', () => {
       );
       expect(sql).toContain('ee.child_person_id::text AS boss_id');
       expect(sql).toContain('ON ee.id = pc.parent_relation_id');
-      expect(sql).toContain('ORDER BY e.person_id, e.edge_rank');
+    });
+
+    it('una fila por ubicación (persona, jefe), sin descartar jefes', async () => {
+      await service.exportActiveDirectory(exportViewer(AUTHORIZED));
+
+      const sql = dataSource.query.mock.calls[0][0];
+      expect(sql).toContain(
+        "SELECT DISTINCT ON (e.person_id, COALESCE(e.boss_id, ''))",
+      );
+      expect(sql).not.toMatch(/SELECT DISTINCT ON \(e\.person_id\)\s/);
+      expect(sql).toContain('FROM placements e');
+    });
+
+    it('conserva al jefe inactivo y expone su estado', async () => {
+      await service.exportActiveDirectory(exportViewer(AUTHORIZED));
+
+      const sql = dataSource.query.mock.calls[0][0];
+      expect(sql).toContain('boss.is_active AS boss_is_active');
+      expect(sql).toMatch(
+        /LEFT JOIN core\.person boss\s+ON boss\.id::text = e\.boss_id\s+LEFT/,
+      );
+    });
+
+    it('el cargo no se resuelve en SQL: overrides del servicio del mapa dentro del mismo plan', async () => {
+      const overlayPlan = plan({
+        overlays: [
+          {
+            versionId: '9',
+            scopeCode: 'fabrica',
+            scopeLabel: 'Fábrica',
+            rootPersonId: '49',
+          },
+        ],
+      });
+      versionService.resolveReadPlan.mockResolvedValue(overlayPlan);
+      await service.exportActiveDirectory(exportViewer(AUTHORIZED));
+
+      const sql = dataSource.query.mock.calls[0][0];
+      expect(sql).not.toContain('org_chart_person_override');
+      expect(sql).not.toContain('org_visual_relation_override');
+      expect(
+        orgChartService.getRoleNameOverridesForVersion,
+      ).toHaveBeenCalledWith('7');
+      expect(planSeenByOverrides).toEqual(overlayPlan);
     });
 
     it('solo personas activas de core', async () => {
@@ -416,6 +479,149 @@ describe('OrgChartDirectoryExportService', () => {
       expect(html.trimStart().toLowerCase()).toMatch(/^<!doctype html>/);
       expect(html).toContain('Persona Sintética Uno');
       expect(html).not.toContain('Docente Sintético');
+    });
+
+    /** Ubicación adicional de la persona 10 bajo otro jefe (mismos datos personales). */
+    function secondPlacement(extra: Record<string, unknown>) {
+      return { ...rows[0], relation_id: '503', ...extra };
+    }
+
+    it('Excel: varios jefes → una fila con todos los jefes por nombre', async () => {
+      rows = [
+        rows[0],
+        secondPlacement({
+          boss_id: '2',
+          boss_name: 'Ana Jefa Sintética',
+          boss_edu_email: 'ana.jefa@example.test',
+        }),
+        rows[1],
+      ];
+      const file = await service.exportActiveDirectory(
+        exportViewer(AUTHORIZED),
+      );
+
+      expect(file.rowCount).toBe(1);
+      const xml = file.buffer.toString('utf8');
+      expect(xml.match(/Persona Sintética Uno/g)).toHaveLength(1);
+      expect(xml).toContain('Ana Jefa Sintética | Jefe Sintético');
+      expect(xml).toContain('ana.jefa@example.test | jefe@example.test');
+    });
+
+    it('HTML: varios jefes → aparece bajo cada uno y cuenta una vez', async () => {
+      rows = [
+        {
+          ...rows[0],
+          person_id: '1',
+          boss_id: null,
+          relation_id: null,
+          boss_is_active: null,
+          full_name: 'Directora Sintética',
+          document: '0000000101',
+          base_role_name: 'DIRECTOR',
+        },
+        {
+          ...rows[0],
+          person_id: '2',
+          boss_id: '1',
+          relation_id: '510',
+          full_name: 'Coordinadora Sintética',
+          document: '0000000102',
+          base_role_name: 'COORDINADOR',
+        },
+        {
+          ...rows[0],
+          boss_id: '1',
+          relation_id: '511',
+          base_role_name: 'LIDER',
+        },
+        {
+          ...rows[0],
+          boss_id: '2',
+          relation_id: '512',
+          base_role_name: 'LIDER',
+        },
+      ];
+      const file = await service.exportActiveHtml(exportViewer(AUTHORIZED));
+
+      expect(file.rowCount).toBe(3);
+      const html = file.buffer.toString('utf8');
+      expect(html).toContain('3 personas</p>');
+      const hierarchy = html.slice(0, html.indexOf('id="area-'));
+      // Bajo la Directora y bajo la Coordinadora.
+      expect(hierarchy.match(/Persona Sintética Uno/g)).toHaveLength(2);
+    });
+
+    it('Excel: jefe inactivo → se conserva la fila con «(inactivo)»', async () => {
+      rows = [
+        {
+          ...rows[0],
+          boss_name: 'Jefa Retirada Sintética',
+          boss_is_active: false,
+        },
+      ];
+      const file = await service.exportActiveDirectory(
+        exportViewer(AUTHORIZED),
+      );
+
+      expect(file.rowCount).toBe(1);
+      expect(file.buffer.toString('utf8')).toContain(
+        'Jefa Retirada Sintética (inactivo)',
+      );
+    });
+
+    it('HTML: jefe inactivo → sección diferenciada', async () => {
+      rows = [
+        {
+          ...rows[0],
+          boss_name: 'Jefa Retirada Sintética',
+          boss_is_active: false,
+        },
+      ];
+      const file = await service.exportActiveHtml(exportViewer(AUTHORIZED));
+
+      const html = file.buffer.toString('utf8');
+      expect(html).toContain('id="jefe-registrado-inactivo"');
+      expect(html).toContain(
+        'Jefe registrado: Jefa Retirada Sintética (inactivo)',
+      );
+    });
+
+    it('cargo con override de overlay: decide la exclusión y la columna Cargo', async () => {
+      // El overlay vuelve docente a la persona 10 → sale del informe;
+      // y vuelve coordinador al docente 11 → entra.
+      overrides = {
+        byPerson: new Map([
+          ['10', 'DOCENTE'],
+          ['11', 'COORDINADOR DE OVERLAY'],
+        ]),
+        byRelation: new Map(),
+      };
+      const file = await service.exportActiveDirectory(
+        exportViewer(AUTHORIZED),
+      );
+
+      const xml = file.buffer.toString('utf8');
+      expect(file.rowCount).toBe(1);
+      expect(xml).toContain('Docente Sintético');
+      expect(xml).toContain('COORDINADOR DE OVERLAY');
+      // Sigue como «Jefe» del otro, pero ya no tiene fila propia.
+      expect(xml).not.toContain(
+        '<Row><Cell><Data ss:Type="String">Persona Sintética Uno</Data>',
+      );
+    });
+
+    it('nombre del archivo con la fecha de Colombia', async () => {
+      jest.useFakeTimers({ now: new Date('2026-11-24T01:30:00Z') });
+      try {
+        const xls = await service.exportActiveDirectory(
+          exportViewer(AUTHORIZED),
+        );
+        const html = await service.exportActiveHtml(exportViewer(AUTHORIZED));
+        expect(xls.filename).toBe('organigrama-activo-2026-11-23.xls');
+        expect(html.filename).toBe('organigrama-2026-11-23.html');
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 });

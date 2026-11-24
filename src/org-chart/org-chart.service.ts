@@ -1195,6 +1195,43 @@ export class OrgChartService {
     return { ...base, profile };
   }
 
+  /**
+   * Overrides de cargo vigentes para `versionId`, con la MISMA precedencia que
+   * el mapa (`buildOrgNode`): por arista (`relation_id`) > por persona
+   * (overlay > global) > `core.person.role_id`.
+   *
+   * Devuelve nombres de cargo resueltos con el catálogo del mapa. Un override
+   * cuyo cargo no existe en el catálogo queda como '' (el mapa lo pinta sin
+   * cargo; no cae al cargo base). Solo lectura: reutiliza las cachés del mapa.
+   *
+   * Debe llamarse dentro de `runWithOrgChartVersionReadPlan` para que los
+   * overlays del plan se apliquen (usado por los exportadores del directorio).
+   */
+  async getRoleNameOverridesForVersion(versionId: string): Promise<{
+    byPerson: ReadonlyMap<string, string>;
+    byRelation: ReadonlyMap<string, string>;
+  }> {
+    const [catalogs, personOverrides, relationOverrides] = await Promise.all([
+      this.loadCatalogsCached(),
+      this.getRoleOverrideMap(versionId),
+      this.getRelationOverrideMap(versionId),
+    ]);
+    const roleName = (roleId: string): string =>
+      catalogs.roleById.get(String(roleId))?.name ?? '';
+
+    const byPerson = new Map<string, string>();
+    for (const [personId, roleId] of personOverrides) {
+      byPerson.set(personId, roleName(roleId));
+    }
+    const byRelation = new Map<string, string>();
+    for (const [relationId, data] of relationOverrides) {
+      if (data.roleIdOverride) {
+        byRelation.set(relationId, roleName(data.roleIdOverride));
+      }
+    }
+    return { byPerson, byRelation };
+  }
+
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   private async getRoleOverrideMap(

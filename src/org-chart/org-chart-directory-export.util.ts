@@ -38,6 +38,24 @@ export function shouldIncludeDirectoryRow(row: {
   return true;
 }
 
+/** Zona horaria institucional para la fecha de los archivos exportados. */
+export const DIRECTORY_EXPORT_TIME_ZONE = 'America/Bogota';
+
+/**
+ * Fecha AAAA-MM-DD en hora de Colombia (UTC−5, sin horario de verano).
+ * Con `toISOString()` (UTC) una descarga después de las 19:00 salía con la
+ * fecha del día siguiente.
+ */
+export function directoryExportDateStamp(now: Date = new Date()): string {
+  // en-CA produce AAAA-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: DIRECTORY_EXPORT_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
 export function xmlEscape(value: string): string {
   return value
     .replace(/&/g, '&amp;')
