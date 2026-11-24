@@ -1,4 +1,19 @@
 ﻿import { xmlEscape } from './org-chart-directory-export.util';
+// Rediseño HTML. Solo apariencia: no cambia datos, personas ni orden.
+// - Etapa 1: fondos con el icono oficial de cada coordinación (data-emblem).
+// - Etapa 2: color propio por coordinación (data-coord + variables CSS) y
+//   hoja de estilos base separada (espaciado y tipografía).
+import {
+  buildCoordinationEmblemCss,
+  coordinationEmblemAttribute,
+} from './html-export/coordination-emblems.styles';
+import {
+  buildCoordinationPaletteCss,
+  coordinationColorAttribute,
+} from './html-export/coordination-palette';
+import { DOCUMENT_CSS } from './html-export/document.styles';
+// Etapa 2.1: menú lateral neutro con color de coordinación solo al iluminarse.
+import { buildNavigationCss } from './html-export/navigation.styles';
 
 export type PresentationPerson = {
   personId: string;
@@ -404,8 +419,11 @@ function renderHierarchyList(node: TreeNode, depth = 0): string {
     isCoordinatorRole(node.roleName) ||
     isLeaderRole(node.roleName);
 
+  // data-coord: el nodo (tarjeta, resumen y líneas hacia sus hijos) toma el
+  // color de la coordinación de su área; sin coordinación, el color neutro.
+  const coord = coordinationColorAttribute(node.areaName);
   if (depth >= 2) {
-    return `<li class="org-node">
+    return `<li class="org-node"${coord}>
       ${renderCard(node, {
         leader,
         compact: true,
@@ -425,7 +443,7 @@ function renderHierarchyList(node: TreeNode, depth = 0): string {
           .map((child) => renderHierarchyList(child, depth + 1))
           .join('')}</ul>`
       : '';
-  return `<li class="org-node">
+  return `<li class="org-node"${coord}>
     ${renderCard(node, {
       leader: true,
       compact: true,
@@ -522,7 +540,8 @@ function renderAreaSection(section: AreaSection): string {
       ${renderPeopleGrid(collaborators)}`;
   }
 
-  return `<section class="area" id="${section.anchor}">
+  // data-emblem (si el área tiene icono oficial) activa el fondo decorativo.
+  return `<section class="area" id="${section.anchor}"${coordinationEmblemAttribute(section.area)}>
     <header class="area-head">
       <p class="kicker">Área · ${section.count} personas</p>
       <h2>${xmlEscape(section.area)}</h2>
@@ -588,7 +607,8 @@ export function buildOrgChartHtml(
     `<a class="nav-home" href="#org-root"><span>Vista jerárquica</span><strong>${people.length}</strong></a>`,
     ...sections.map(
       (section) =>
-        `<a href="#${section.anchor}"><span>${xmlEscape(section.area)}</span><strong>${section.count}</strong></a>`,
+        // data-coord: acento del enlace con el color de su coordinación.
+        `<a href="#${section.anchor}"${coordinationColorAttribute(section.area)}><span>${xmlEscape(section.area)}</span><strong>${section.count}</strong></a>`,
     ),
     ...(inactiveBossRoots.length > 0
       ? [
@@ -596,6 +616,13 @@ export function buildOrgChartHtml(
         ]
       : []),
   ].join('');
+
+  // Anclas del menú (mismas que los href de `nav`), para su estado «seleccionado».
+  const navAnchors = [
+    'org-root',
+    ...sections.map((section) => section.anchor),
+    ...(inactiveBossRoots.length > 0 ? [INACTIVE_BOSS_SECTION_ID] : []),
+  ];
 
   const hierarchy =
     forest.length === 0
@@ -615,122 +642,7 @@ export function buildOrgChartHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Organigrama OP — ${xmlEscape(versionLabel)}</title>
   <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background:
-        radial-gradient(circle at 20% 0%, rgba(8,47,73,.9), transparent 42%),
-        radial-gradient(circle at 80% 10%, rgba(14,116,144,.35), transparent 35%),
-        #020617;
-      color: #e2e8f0;
-      font-family: "Segoe UI", sans-serif;
-    }
-    .layout { display: grid; grid-template-columns: 270px 1fr; min-height: 100vh; }
-    nav {
-      position: sticky; top: 0; align-self: start; max-height: 100vh; overflow: auto;
-      padding: 18px 12px; border-right: 1px solid rgba(34,211,238,.25); background: rgba(2,6,23,.92);
-    }
-    nav h1 { margin: 0 0 6px; font-size: 17px; }
-    nav .meta { margin: 0 0 12px; color: #94a3b8; font-size: 12px; }
-    nav a {
-      display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px;
-      padding: 8px 9px; border-radius: 10px; color: inherit; text-decoration: none;
-      border: 1px solid rgba(34,211,238,.22); background: rgba(8,47,73,.4); font-size: 12px;
-    }
-    nav a.nav-home { border-color: rgba(245,158,11,.55); background: rgba(120,53,15,.35); }
-    nav a:hover, nav a:focus { border-color: #22d3ee; outline: none; }
-    nav strong { color: #a5f3fc; }
-    .brand { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    .logo { height: 36px; width: auto; }
-    .mascot { height: 44px; width: auto; }
-    main { padding: 22px 22px 64px; min-width: 0; }
-    #org-root, .area { scroll-margin-top: 16px; }
-    .hero, .area {
-      margin-bottom: 28px; padding: 16px; border-radius: 18px;
-      border: 1px solid rgba(34,211,238,.22); background: rgba(2,6,23,.5);
-    }
-    .kicker { margin: 0; color: #67e8f9; letter-spacing: .08em; text-transform: uppercase; font-size: 11px; }
-    h2 { margin: 4px 0; font-size: 22px; }
-    .lead { margin: 0 0 12px; color: #cbd5e1; font-size: 13px; }
-    .subhead { margin: 16px 0 10px; font-size: 13px; color: #a5f3fc; }
-    .team-count { margin: 4px 0 8px; color: #94a3b8; font-size: 11px; }
-    .empty { color: #94a3b8; font-size: 13px; }
-    .org-tree, .org-kids { list-style: none; margin: 0; padding: 0; }
-    .org-kids {
-      margin: 8px 0 0 12px;
-      padding-left: 10px;
-      border-left: 2px solid rgba(34,211,238,.28);
-      display: grid;
-      gap: 8px;
-    }
-    .org-node { min-width: 0; }
-    .leader-wrap { max-width: 420px; }
-    .teams { display: grid; gap: 14px; margin-top: 8px; }
-    .team {
-      padding: 12px; border-radius: 14px; border: 1px solid rgba(34,211,238,.18);
-      background: rgba(8,47,73,.28);
-    }
-    .team.nested { margin-top: 10px; background: rgba(2,6,23,.35); }
-    .summary-box {
-      margin: 8px 0 4px 8px; padding: 10px 12px; border-radius: 12px;
-      border: 1px dashed rgba(34,211,238,.35); background: rgba(8,47,73,.25);
-    }
-    .summary-total { margin: 0 0 8px; color: #e2e8f0; font-size: 12px; }
-    .summary-total strong { color: #67e8f9; font-size: 16px; }
-    .summary-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-    .summary-title { margin: 0 0 6px; color: #a5f3fc; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
-    .summary-list { list-style: none; margin: 0; padding: 0; }
-    .summary-list li {
-      display: flex; justify-content: space-between; gap: 10px;
-      padding: 3px 0; border-bottom: 1px solid rgba(148,163,184,.12); font-size: 11px; color: #cbd5e1;
-    }
-    .summary-list strong { color: #67e8f9; }
-    .summary-empty { margin: 6px 0 0 8px; color: #94a3b8; font-size: 11px; }
-    .people-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .card {
-      display: grid;
-      grid-template-columns: 48px 1fr;
-      gap: 8px;
-      align-items: center;
-      padding: 8px;
-      border-radius: 12px;
-      border: 1px solid rgba(34,211,238,.35);
-      background: linear-gradient(180deg, rgba(8,47,73,.78), rgba(2,6,23,.94));
-      min-width: 0;
-    }
-    .card.leader { border-color: #f59e0b; grid-template-columns: 52px 1fr; }
-    .card.mini { grid-template-columns: 36px 1fr; padding: 6px 8px; border-radius: 10px; }
-    .photo {
-      width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
-      border: 2px solid #22d3ee; background: #0f172a;
-    }
-    .leader .photo { width: 52px; height: 52px; border-color: #f59e0b; }
-    .mini .photo { width: 36px; height: 36px; border-width: 1.5px; }
-    .initials {
-      display: inline-flex; align-items: center; justify-content: center;
-      font-weight: 700; color: #a5f3fc; font-size: 11px;
-    }
-    .badge {
-      margin: 0 0 2px; color: #67e8f9; font-size: 9px;
-      letter-spacing: .05em; text-transform: uppercase;
-    }
-    .leader .badge { color: #fbbf24; }
-    h3 { margin: 0 0 2px; font-size: 12px; line-height: 1.2; }
-    .mini h3 { font-size: 11px; }
-    .role, .doc, .area-tag { margin: 0; color: #94a3b8; font-size: 10px; }
-    .doc { font-family: ui-monospace, monospace; }
-    .area-tag { color: #67e8f9; }
-    @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; }
-      nav { position: static; max-height: none; }
-    }
-  </style>
+${DOCUMENT_CSS}${buildNavigationCss(navAnchors)}${buildCoordinationPaletteCss(sections.map((section) => section.area))}${buildCoordinationEmblemCss(sections.map((section) => section.area))}  </style>
 </head>
 <body>
   <div class="layout">
