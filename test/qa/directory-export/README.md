@@ -40,7 +40,7 @@ docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP
 ## 3. Datos sintéticos
 
 ```bash
-for f in 00_marcar_base_qa 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos 04_perfiles_desarrollo 05_presentaciones_mc1; do
+for f in 00_marcar_base_qa 01_seed_sintetico 02_alias_cuenta_desarrollo 03_catalogos_completos 04_perfiles_desarrollo 05_presentaciones_mc1 06_casos_relaciones; do
   docker cp test/qa/directory-export/$f.sql organigrama-qa-exports:/tmp/$f.sql
   docker exec organigrama-qa-exports psql -U qa -d organigrama_qa -v ON_ERROR_STOP=1 -f /tmp/$f.sql
 done
@@ -64,6 +64,12 @@ done
   Se regenera con `node test/qa/directory-export/mc1/generar-presentaciones-mc1.js`
   (valida cada payload con el validador real del backend; requiere `dist`).
   Se niega a correr si la base no está marcada como QA.
+- `06`: casos de relaciones que el exportador debe representar como el mapa:
+  persona con **dos jefes** (con override de cargo por arista en una sola
+  ubicación), persona con **jefe inactivo** (y su equipo), **hijo por
+  posición** y un **overlay de coordinación** activo (raíz 900104, sin equipo
+  en la versión global) con override de cargo por persona: DOCENTE en la
+  versión global y COORDINADOR en el overlay (debe ganar el overlay).
 
 > **No usar** `scripts/mc1-import-person-profile-presentation.ts` para QA:
 > ese script siempre lee el `.env` de la raíz del repositorio, que en el
