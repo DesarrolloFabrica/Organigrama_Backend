@@ -2,6 +2,12 @@
 
 > **Estado: PREPARADO, NO EJECUTADO.** Requiere autorización explícita antes
 > de los pasos marcados ✍️ (escritura sobre Cloud SQL).
+>
+> **Orden en producción:** este documento detalla los scripts SQL y la
+> concesión de permisos. El orden completo con el despliegue de Cloud Run
+> (respaldo → 040 → 12 concesiones → backend → frontend → controles) está en
+> `DESPLIEGUE_PRODUCCION.md`. Las concesiones se hacen **antes** de dar
+> tráfico al código nuevo, para que no haya un intervalo sin descargas.
 
 ## Destino (verificado en solo lectura, 23-nov-2026)
 
@@ -33,7 +39,9 @@
      correos. **No debe estar corriendo** al conceder permisos: comprobar con
      `.\organigrama estado` (desde `C:\dev\Organigrama`) y, si aparece,
      `.\organigrama detener-main`. `.\organigrama iniciar` ya lo detiene.
-3. **Respaldo `SUCCESSFUL`** de `core-database` (paso 3).
+3. **Respaldo manual `SUCCESSFUL`** de `core-database` (paso 3). Obligatorio:
+   los respaldos automáticos (04:00 Colombia) no se ejecutan porque Cloud SQL
+   está apagada a esa hora; el último exitoso es del 10-nov-2026.
 4. Comprobar el ingreso con Google en `http://localhost:5173` (versión robusta,
    `.\organigrama iniciar robusto` desde `C:\dev\Organigrama`) con una de las
    cuentas aprobadas antes de conceder. 5173 es el único origen local
@@ -112,6 +120,10 @@ La parte B inserta una fila de prueba y la **revierte**; al final debe quedar
 
 ## 6. ✍️ Conceder ambos permisos a las cuentas aprobadas
 
+**12 concesiones en total** (6 cuentas × 2 formatos), en una sola pasada del
+bucle; no hay una cuenta previa adicional. En producción se ejecuta antes del
+cambio de tráfico (ver `DESPLIEGUE_PRODUCCION.md`, paso 4).
+
 Lista aprobada (fase 7) — verificada en solo lectura el 23-nov-2026: las seis
 existen, son únicas, están activas, están en el mapa vigente y no tienen
 permisos de exportación. Los seis `--dry-run` terminaron con exit 0.
@@ -187,7 +199,7 @@ $PSQL -c "SELECT person_id, export_format, result, version_id, row_count, create
    botones; las llamadas directas responden 403 y quedan como `DENIED`.
 
 ```bash
-$PSQL -c "SELECT count(*) FROM core.person_permission WHERE permission_code LIKE 'ORG_DIRECTORY_EXPORT_%'"   # = 2 (una persona, dos códigos)
+$PSQL -c "SELECT count(*) FROM core.person_permission WHERE permission_code LIKE 'ORG_DIRECTORY_EXPORT_%'"   # = 12 (6 cuentas × 2 códigos)
 ```
 
 ## 8. Manejo de los archivos reales
@@ -201,24 +213,33 @@ $PSQL -c "SELECT count(*) FROM core.person_permission WHERE permission_code LIKE
 
 ## 9. Reversión
 
-En orden, deteniéndose cuando el problema quede resuelto:
+Tres operaciones **independientes**; detalle y comandos de Cloud Run en
+`DESPLIEGUE_PRODUCCION.md`, sección 10.
 
-1. **Retirar el acceso** (inmediato; los botones desaparecen al recargar):
-   ```bash
-   node dist/database/scripts/grant-directory-export.js <correo.aprobado@cun.edu.co> --format=both --revoke
-   ```
-2. **Retirar la migración** (opcional; conserve antes la auditoría con
-   `\copy … TO 'auditoria-exportaciones.csv' CSV HEADER`):
-   ```bash
-   $PSQL -f /repo/docs/intervencion-exportadores/99_reversion_040.sql
-   ```
-   Se niega a correr si quedan permisos de exportación concedidos.
-3. **Restaurar el respaldo** del paso 3 (último recurso; revierte también
-   cualquier otro cambio posterior en la base).
+- **A. Aplicación (Cloud Run)**: devolver el tráfico a las revisiones
+  anteriores. No toca la base; vuelven los exportadores por lista fija.
+- **B. Permisos** (inmediato; con el código nuevo los botones desaparecen al
+  recargar), por cada cuenta:
+  ```bash
+  node dist/database/scripts/grant-directory-export.js <correo.aprobado@cun.edu.co> --format=both --revoke
+  ```
+- **C. Base de datos**:
+  1. Retirar la migración (opcional; antes revocar los permisos y conservar la
+     auditoría con `\copy … TO 'auditoria-exportaciones.csv' CSV HEADER`):
+     ```bash
+     $PSQL -f /repo/docs/intervencion-exportadores/99_reversion_040.sql
+     ```
+     Se niega a correr si quedan permisos de exportación concedidos.
+  2. Restaurar el respaldo del paso 3 **solo como último recurso**,
+     preferiblemente en una instancia nueva. Restaurarlo sobre `core-database`
+     revierte **todo** lo escrito después (incluido Orbit) y requiere
+     autorización aparte.
 
 ## 10. Cierre
 
-- Volver a `DEV_LOGIN_ENABLED` según se necesite para el trabajo local.
+- Mantener `DEV_LOGIN_ENABLED=false` en todo backend conectado a producción
+  (también en `Organigrama_Backend\.env`). El acceso por correo solo se usa
+  contra la base QA sintética.
 - Borrar `prod.env`.
 - Registrar: ID del respaldo, hora de aplicación, persona autorizada
   (`person_id`), resultado de las verificaciones.

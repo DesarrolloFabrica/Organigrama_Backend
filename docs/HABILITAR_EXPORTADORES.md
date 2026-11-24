@@ -24,8 +24,10 @@ Los botones están en la barra «Directorio activo», bajo el encabezado de
 ## 1. Antes de empezar
 
 1. Lista aprobada de personas y formato(s) por persona.
-2. Backend y frontend desplegados desde las ramas de integración.
-3. Respaldo/snapshot de Cloud SQL.
+2. Respaldo manual de Cloud SQL en estado `SUCCESSFUL` (obligatorio).
+3. Migración 040 aplicada. En producción, los permisos se conceden **antes**
+   de dar tráfico al código de las ramas de integración (orden completo:
+   `docs/intervencion-exportadores/DESPLIEGUE_PRODUCCION.md`).
 
 ## 2. Aplicar la migración 040 (una vez, antes de conceder permisos)
 
