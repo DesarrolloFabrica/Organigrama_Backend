@@ -21,3 +21,21 @@ export interface VacancyResponseDto {
 export interface VacancyListResponseDto {
   items: VacancyResponseDto[];
 }
+
+/**
+ * Alcance resuelto para `GET /vacancies?personId=` (ver org-chart-vacancy-scope).
+ * - `global`: raíz del mapa, todas las requisiciones.
+ * - `coordination`: cabeza de coordinación, requisiciones de su área.
+ * - `none`: otro nodo; `items` vacío y el panel omite el bloque.
+ */
+export interface VacancyScopeDto {
+  kind: 'global' | 'coordination' | 'none';
+  personId: string;
+  /** Solo en `coordination`: área oficial de la coordinación. */
+  areaName: string | null;
+}
+
+/** Respuesta con alcance: misma lista `items` más el alcance aplicado. */
+export interface ScopedVacancyListResponseDto extends VacancyListResponseDto {
+  scope: VacancyScopeDto;
+}

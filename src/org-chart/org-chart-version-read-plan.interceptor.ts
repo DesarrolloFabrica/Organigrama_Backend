@@ -24,8 +24,14 @@ export class OrgChartVersionReadPlanInterceptor implements NestInterceptor {
     }
 
     const path = `${req.baseUrl ?? ''}${req.path ?? ''}`;
+    // `/vacancies` sin `personId` es la lista global: no depende de la versión.
+    // Con `personId` el alcance se calcula sobre el mapa de la versión pedida,
+    // así que necesita el mismo plan de lectura que el resumen del nodo.
+    const vacanciesWithoutScope =
+      path.includes('/vacancies') &&
+      !Object.prototype.hasOwnProperty.call(req.query ?? {}, 'personId');
     if (
-      path.includes('/vacancies') ||
+      vacanciesWithoutScope ||
       path.includes('/video/stream') ||
       path.includes('/change-token') ||
       // Exportadores: autorizan primero y resuelven su propio plan (siempre

@@ -36,7 +36,10 @@ import { resolveOrgChartVersionId } from './org-chart-version-query.util';
 import { OrgChartVersionReadPlanInterceptor } from './org-chart-version-read-plan.interceptor';
 import { buildOrgViewerContext } from './org-chart-viewer.util';
 import type { PersonCvResponseDto } from './dto/person-cv.response.dto';
-import type { VacancyListResponseDto } from './vacancies/dto/vacancy.response.dto';
+import type {
+  ScopedVacancyListResponseDto,
+  VacancyListResponseDto,
+} from './vacancies/dto/vacancy.response.dto';
 import type { WorkforceEventListResponseDto } from './workforce-events/dto/workforce-event.response.dto';
 import type {
   CompetencyDomainDetailDto,
@@ -222,10 +225,37 @@ export class OrgChartController {
    *
    * Devuelve un DTO limpio para el frontend, enriquecido con nombres de core
    * (área, escuela, programa) cuando existe la referencia por ID.
+   *
+   * - Sin `personId`: contrato original, todas las requisiciones visibles.
+   * - Con `personId` (y opcionalmente `versionId` / `versionCode` /
+   *   `scopeVersionId`): requisiciones del nodo según la versión del mapa que
+   *   ve el usuario, más el alcance aplicado (`scope`). Un `personId` vacío,
+   *   repetido o no numérico es 400 y uno inexistente o inactivo es 404: un
+   *   alcance inválido nunca devuelve el total global.
    */
   @Get('vacancies')
-  async getVacancies(): Promise<VacancyListResponseDto> {
-    return this.vacancyService.getVacancies();
+  async getVacancies(
+    @Req() req: Request,
+    @Query('versionId') versionId?: string,
+    @Query('versionCode') versionCode?: string,
+  ): Promise<VacancyListResponseDto | ScopedVacancyListResponseDto> {
+    if (!Object.prototype.hasOwnProperty.call(req.query ?? {}, 'personId')) {
+      return this.vacancyService.getVacancies();
+    }
+    const rawPersonId = req.query.personId;
+    const resolvedPersonId = requireOrgChartIdParam(
+      typeof rawPersonId === 'string' ? rawPersonId : '',
+      'personId',
+    );
+    const resolvedVersionId = await this.resolveVersion(
+      req,
+      versionId,
+      versionCode,
+    );
+    return this.vacancyService.getVacanciesForNode(
+      resolvedPersonId,
+      resolvedVersionId,
+    );
   }
 
   /**
