@@ -1,0 +1,65 @@
+{
+  // Organigrama — tareas oficiales (versión robusta). Cursor: Terminal → Run Task…
+  // Nunca usar `npm run dev` / `npm run start:dev` en Organigrama_Backend u
+  // Organigrama_Frontend (repos originales en main = versión antigua).
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Organigrama: iniciar (robusto + QA)",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd iniciar",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Organigrama: iniciar solo robusto",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd iniciar robusto",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Organigrama: iniciar solo QA",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd iniciar qa",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Organigrama: estado",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd estado",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Organigrama: verificar",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd verificar",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Organigrama: detener todo",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd detener",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Organigrama: reiniciar y recompilar",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd reiniciar todo -Compilar",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Organigrama: detener main (versión antigua)",
+      "type": "shell",
+      "command": "${workspaceFolder}\\organigrama.cmd detener-main",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

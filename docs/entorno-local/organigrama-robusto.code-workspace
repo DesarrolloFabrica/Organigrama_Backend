@@ -1,0 +1,76 @@
+{
+  // Abrir en Cursor: File → Open Workspace from File… → este archivo.
+  // Solo contiene la versión robusta (worktrees de integración); los repos
+  // originales en main no se abren aquí.
+  "folders": [
+    { "name": "Backend (robusto)", "path": "_integracion/backend" },
+    { "name": "Frontend (robusto)", "path": "_integracion/frontend" },
+    { "name": "Organigrama (scripts)", "path": "." }
+  ],
+  "settings": {
+    // Las terminales nuevas abren en C:\dev\Organigrama, donde `.\organigrama`
+    // funciona y `npm run dev` no puede arrancar main.
+    "terminal.integrated.cwd": "C:\\dev\\Organigrama",
+    "files.exclude": {
+      "Organigrama_Backend": true,
+      "Organigrama_Frontend": true,
+      "_integracion/backend": true,
+      "_integracion/frontend": true
+    }
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Organigrama: iniciar (robusto + QA)",
+        "type": "shell",
+        "command": "C:\\dev\\Organigrama\\organigrama.cmd iniciar",
+        "options": { "cwd": "C:\\dev\\Organigrama" },
+        "problemMatcher": [],
+        "group": { "kind": "build", "isDefault": true }
+      },
+      {
+        "label": "Organigrama: iniciar solo robusto",
+        "type": "shell",
+        "command": "C:\\dev\\Organigrama\\organigrama.cmd iniciar robusto",
+        "options": { "cwd": "C:\\dev\\Organigrama" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Organigrama: iniciar solo QA",
+        "type": "shell",
+        "command": "C:\\dev\\Organigrama\\organigrama.cmd iniciar qa",
+        "options": { "cwd": "C:\\dev\\Organigrama" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Organigrama: estado",
+        "type": "shell",
+        "command": "C:\\dev\\Organigrama\\organigrama.cmd estado",
+        "options": { "cwd": "C:\\dev\\Organigrama" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Organigrama: detener todo",
+        "type": "shell",
+        "command": "C:\\dev\\Organigrama\\organigrama.cmd detener",
+        "options": { "cwd": "C:\\dev\\Organigrama" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Organigrama: reiniciar y recompilar",
+        "type": "shell",
+        "command": "C:\\dev\\Organigrama\\organigrama.cmd reiniciar todo -Compilar",
+        "options": { "cwd": "C:\\dev\\Organigrama" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Organigrama: detener main (versión antigua)",
+        "type": "shell",
+        "command": "C:\\dev\\Organigrama\\organigrama.cmd detener-main",
+        "options": { "cwd": "C:\\dev\\Organigrama" },
+        "problemMatcher": []
+      }
+    ]
+  }
+}
