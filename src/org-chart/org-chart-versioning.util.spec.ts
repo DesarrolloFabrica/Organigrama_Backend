@@ -22,17 +22,18 @@ describe('org-chart-versioning.util', () => {
     );
   });
 
-  it('incluye a los administradores de versionamiento autorizados', () => {
+  it('por defecto solo autoriza a la cuenta de desarrollo', () => {
     delete process.env.ORG_CHART_VERSION_ADMIN_EMAILS;
-    const set = getOrgChartVersionAdminEmailsSet();
+    expect(getOrgChartVersionAdminEmailsSet()).toEqual(
+      new Set(['desarrollofabrica@cun.edu.co']),
+    );
     for (const email of [
-      'desarrollofabrica@cun.edu.co',
       'iron_fuentes@cun.edu.co',
       'raul_valencia@cun.edu.co',
       'haider_bello@cun.edu.co',
       'sara_murillofo@cun.edu.co',
     ]) {
-      expect(set.has(email)).toBe(true);
+      expect(isOrgChartVersionAdminEmail(email)).toBe(false);
     }
   });
 
@@ -46,7 +47,9 @@ describe('org-chart-versioning.util', () => {
 
   it('isOrgChartVersionAdminEmail normaliza mayúsculas', () => {
     delete process.env.ORG_CHART_VERSION_ADMIN_EMAILS;
-    expect(isOrgChartVersionAdminEmail('Iron_Fuentes@cun.edu.co')).toBe(true);
+    expect(isOrgChartVersionAdminEmail('DesarrolloFabrica@cun.edu.co')).toBe(
+      true,
+    );
     expect(isOrgChartVersionAdminEmail('noautorizado@cun.edu.co')).toBe(false);
   });
 });
