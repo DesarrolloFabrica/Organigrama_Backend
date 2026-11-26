@@ -6,6 +6,10 @@
 -- la base no está marcada como QA o si core.person tiene personas no
 -- sintéticas. Idempotente (ids 9901–9910, escuela 9502, programa 9512).
 --
+-- Respeta las restricciones reales de `vacancies.vacancy` (esquema de
+-- producción): `area_id` y `quantity` son NOT NULL y `quantity > 0`. Por eso
+-- no hay requisiciones sin área ni sin cantidad: Orbit no puede crearlas.
+--
 -- Resultado esperado (filtro requisition_sent; X requisiciones · Y plazas):
 --   Raíz 1144 (global) ................................ 9 · 15
 --   ESPECIALIZACIONES (cabeza 900155, área 9005) ....... 2 · 4
@@ -51,15 +55,17 @@ VALUES
   (9902, 9005, NULL, NULL, 'COORDINADOR QA DE PROGRAMA', NULL, 1, 'requisition_sent', now() - interval '2 minutes', now()),
   -- Otro estado: no se muestra en ninguna vista.
   (9903, 9005, NULL, NULL, 'MONITOR QA', NULL, 5, 'open', now() - interval '3 minutes', now()),
-  -- OPERACION ACADEMICA: una sin cantidad (suma 0 plazas).
-  (9904, 9010, NULL, NULL, 'DOCENTE QA INGENIERIAS', NULL, 2, 'requisition_sent', now() - interval '4 minutes', now()),
-  (9909, 9010, NULL, NULL, 'AUXILIAR QA SIN CANTIDAD', NULL, NULL, 'requisition_sent', now() - interval '5 minutes', now()),
+  -- OPERACION ACADEMICA: tres requisiciones de una plaza cada una.
+  (9904, 9010, NULL, NULL, 'DOCENTE QA INGENIERIAS', NULL, 1, 'requisition_sent', now() - interval '4 minutes', now()),
+  (9909, 9010, NULL, NULL, 'AUXILIAR QA ACADEMICO', NULL, 1, 'requisition_sent', now() - interval '5 minutes', now()),
   (9910, 9010, NULL, NULL, 'ANALISTA QA ACADEMICO', NULL, 1, 'requisition_sent', now() - interval '6 minutes', now()),
   -- No asociables a una coordinación: solo cuentan en la raíz.
-  (9905, NULL, NULL, NULL, 'CARGO QA SIN AREA', NULL, 1, 'requisition_sent', now() - interval '7 minutes', now()),
+  (9905, 9011, NULL, NULL, 'CARGO QA AREA SIN PERSONAS', NULL, 1, 'requisition_sent', now() - interval '7 minutes', now()),
   (9906, 9001, NULL, NULL, 'CARGO QA AREA DE DIRECCION', NULL, 1, 'requisition_sent', now() - interval '8 minutes', now()),
   (9907, 9011, NULL, NULL, 'CARGO QA AREA SIN CABEZA', NULL, 4, 'requisition_sent', now() - interval '9 minutes', now()),
-  (9908, NULL, 9501, 9511, 'CARGO QA SOLO ESCUELA Y PROGRAMA', NULL, 2, 'requisition_sent', now() - interval '10 minutes', now());
+  -- Escuela y programa de OPERACIONES QA (9002) con área de la Dirección: el
+  -- alcance lo decide el área, así que no cuenta en 900101.
+  (9908, 9001, 9501, 9511, 'CARGO QA ESCUELA DE OTRA AREA', NULL, 2, 'requisition_sent', now() - interval '10 minutes', now());
 
 -- Plaza vacante DEL ÁRBOL (placeholder en core.person, otro concepto): cuelga
 -- de la escuela 900166 para comprobar que «vac.» de Equipo directo no cambia
