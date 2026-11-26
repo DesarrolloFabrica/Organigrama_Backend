@@ -5,6 +5,7 @@ import { DataSource, In, Repository } from 'typeorm';
 import { Area } from '../../catalogs/entities/area.entity';
 import { School } from '../../catalogs/entities/school.entity';
 import { Program } from '../../catalogs/entities/program.entity';
+import { groupDirectoryByCoordination } from '../org-chart-directory-coordinations';
 import { directoryPlacementCtes } from '../org-chart-directory-placements.sql';
 import {
   visualRelationSqlSource,
@@ -19,6 +20,7 @@ import type {
   VacancyResponseDto,
 } from './dto/vacancy.response.dto';
 import {
+  buildVacancyAttributionIndex,
   resolveVacancyScope,
   type VacancyScopePlacement,
 } from './org-chart-vacancy-scope';
@@ -112,19 +114,28 @@ export class OrgChartVacancyService {
       fullName: row.full_name ?? '',
     }));
 
+    const grouping = groupDirectoryByCoordination(
+      placements,
+      ORG_CHART_ROOT_PERSON_ID,
+    );
     const scope = resolveVacancyScope(
       placements,
       ORG_CHART_ROOT_PERSON_ID,
       personId,
+      grouping,
     );
 
     let vacancies: Vacancy[] = [];
     if (scope.kind === 'global') {
       vacancies = await this.findVisibleVacancies();
-    } else if (scope.kind === 'coordination' && scope.areaIds.length > 0) {
+    } else if (
+      (scope.kind === 'coordination' || scope.kind === 'direction') &&
+      scope.areaIds.length > 0
+    ) {
       vacancies = await this.findVisibleVacancies(scope.areaIds);
     }
     // `none` y coordinaciones sin área: lista vacía (no se asigna nada).
+    const attribution = buildVacancyAttributionIndex(placements, grouping);
 
     this.log.log(
       `[OrgChartVacancies] scope=${scope.kind}${
@@ -132,12 +143,32 @@ export class OrgChartVacancyService {
       } person=${personId} version=${versionId} found=${vacancies.length}`,
     );
 
+    const items = await this.toResponseItems(vacancies);
     return {
-      items: await this.toResponseItems(vacancies),
+      // Grupo de cada requisición por su `area_id` (emblema en el panel).
+      items: items.map((item) => {
+        const group =
+          item.areaId == null
+            ? undefined
+            : attribution.get(String(item.areaId));
+        return {
+          ...item,
+          coordination: group
+            ? {
+                kind: group.kind,
+                areaName: group.areaName,
+                headPersonIds: [...group.headPersonIds],
+              }
+            : null,
+        };
+      }),
       scope: {
         kind: scope.kind,
         personId,
-        areaName: scope.kind === 'coordination' ? scope.areaName : null,
+        areaName:
+          scope.kind === 'coordination' || scope.kind === 'direction'
+            ? scope.areaName
+            : null,
       },
     };
   }

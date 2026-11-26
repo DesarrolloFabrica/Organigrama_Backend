@@ -108,6 +108,22 @@ describe('OrgChartVacancyService.getVacanciesForNode', () => {
     expect(res.items[0]).toMatchObject({ id: 1, areaId: 100, quantity: 3 });
   });
 
+  it('cada requisición lleva su coordinación o Dirección (null si no hay grupo)', async () => {
+    vacancyRepo.find.mockResolvedValue([
+      vacancy('1', '100'),
+      vacancy('2', '1'),
+      vacancy('3', '999'),
+      vacancy('4', null),
+    ]);
+    const res = await service.getVacanciesForNode('1144', '4');
+    expect(res.items.map((i) => i.coordination)).toEqual([
+      { kind: 'coordination', areaName: 'AREA A', headPersonIds: ['20'] },
+      { kind: 'direction', areaName: 'DIRECCION', headPersonIds: ['1144'] },
+      null,
+      null,
+    ]);
+  });
+
   it('nodo bajo una coordinación → lista vacía sin consultar vacantes', async () => {
     const res = await service.getVacanciesForNode('21', '4');
     expect(res).toEqual({
