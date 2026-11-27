@@ -408,6 +408,22 @@ function renderPeopleGrid(people: TreeNode[] | PresentationPerson[]): string {
 }
 
 /**
+ * Solo presentación de la vista jerárquica: los analistas operativos de un
+ * mismo jefe se muestran juntos, después de coordinadores, líderes y
+ * supervisores. Ambos grupos conservan el orden recibido (prioridad y nombre),
+ * así que los analistas quedan en orden alfabético. No cambia relaciones,
+ * conteos ni las secciones por área.
+ */
+function groupStaffAnalystsLast<T extends PresentationPerson>(
+  children: T[],
+): T[] {
+  return [
+    ...children.filter((child) => !isStaffAnalystRole(child.roleName)),
+    ...children.filter((child) => isStaffAnalystRole(child.roleName)),
+  ];
+}
+
+/**
  * Vista jerárquica compacta:
  * Iron → Raúl → coordinadores / líderes (Jonh) / analistas (Sara, Ximena, Lorena).
  * El resto del equipo solo aparece como conteo por área y por rol.
@@ -434,8 +450,10 @@ function renderHierarchyList(node: TreeNode, depth = 0): string {
     </li>`;
   }
 
-  const visibleChildren = node.children.filter((child) =>
-    depth === 0 ? true : isHierarchyAnchor(child),
+  const visibleChildren = groupStaffAnalystsLast(
+    node.children.filter((child) =>
+      depth === 0 ? true : isHierarchyAnchor(child),
+    ),
   );
   const children =
     visibleChildren.length > 0

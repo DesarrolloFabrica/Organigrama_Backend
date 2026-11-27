@@ -220,3 +220,82 @@ describe('org chart presentation', () => {
     });
   });
 });
+
+describe('vista jerárquica: analistas juntos', () => {
+  it('muestra a los analistas operativos juntos, después de líderes y supervisores', () => {
+    const html = buildOrgChartHtml(
+      [
+        person(
+          '1',
+          [],
+          'Directora Sintética',
+          'DIRECTOR DE OPERACIONES',
+          'DIRECCION GENERAL DE OPERACIONES',
+        ),
+        person(
+          '2',
+          ['1'],
+          'Coordinador General Sintético',
+          'COORDINADOR GENERAL DE OPERACIONES',
+          'DIRECCION GENERAL DE OPERACIONES',
+        ),
+        // Por nombre, la analista «Ana» iría antes que el líder y el supervisor.
+        person(
+          '3',
+          ['2'],
+          'Ana Analista Sintética',
+          'ANALISTA OPERATIVO',
+          'DIRECCION GENERAL DE OPERACIONES',
+        ),
+        person(
+          '4',
+          ['2'],
+          'Beto Líder Sintético',
+          'LIDER DE SERVICIO',
+          'HOMOLOGACIONES',
+        ),
+        person(
+          '5',
+          ['2'],
+          'Carlos Supervisor Sintético',
+          'SUPERVISOR B2B',
+          'B2B',
+        ),
+        person(
+          '6',
+          ['2'],
+          'Diana Analista Sintética',
+          'ANALISTA OPERATIVO',
+          'DIRECCION GENERAL DE OPERACIONES',
+        ),
+        person(
+          '7',
+          ['2'],
+          'Elena Analista Sintética',
+          'ANALISTA OPERATIVO',
+          'DIRECCION GENERAL DE OPERACIONES',
+        ),
+        person(
+          '8',
+          ['4'],
+          'Equipo Sintético',
+          'AUXILIAR DE SERVICIO',
+          'HOMOLOGACIONES',
+        ),
+      ],
+      'v (activa)',
+    );
+    const start = html.indexOf('id="org-root"');
+    const hero = html.slice(start, html.indexOf('</section>', start));
+    const order = [...hero.matchAll(/<h3>([^<]+)<\/h3>/g)].map((m) => m[1]);
+    expect(order).toEqual([
+      'Directora Sintética',
+      'Coordinador General Sintético',
+      'Beto Líder Sintético',
+      'Carlos Supervisor Sintético',
+      'Ana Analista Sintética',
+      'Diana Analista Sintética',
+      'Elena Analista Sintética',
+    ]);
+  });
+});
