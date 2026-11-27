@@ -1,15 +1,17 @@
 # Rediseño del exportador HTML del organigrama
 
-Estado al **24-nov-2026**: la primera entrega está **desplegada en producción y aprobada visualmente** por el responsable, con datos reales.
+Estado al **27-nov-2026**: la primera entrega (24-nov, `6736e60`) y el ajuste de analistas (27-nov, `f2a4ffb`) están **desplegados en producción y aprobados visualmente** por el responsable, con datos reales.
 
 | Dato | Valor |
 |---|---|
-| Rama | `rediseno-html/etapa1-iconos-20261124` |
-| Commit del código desplegado | `6736e601b7dae2c5f48e60280dd48c94fa8ede04` (`6736e60`), hijo directo de `c5f2a0f` |
-| Revisión de Cloud Run | `organigrama-backend-robusto-6736e60` (tag `html-v1`), al 100 % desde el 24-nov-2026 17:38 (Colombia) |
-| Revisión para revertir | `organigrama-backend-robusto-c5f2a0f` (tag `fase3`) |
+| Rama base de trabajo | `integracion/organigrama-20261127`; contiene todo lo de abajo y las vacantes |
+| Primera entrega | `6736e60`, rama `rediseno-html/etapa1-iconos-20261124`, revisión `organigrama-backend-robusto-6736e60` (tag `html-v1`) |
+| Ajuste de analistas | `f2a4ffb`, rama `rediseno-html/analistas-juntas-20261127`, revisión `organigrama-backend-robusto-f2a4ffb` (tag `analistas-juntas`), **al 100 % desde el 27-nov-2026 16:03** (Colombia) |
+| Revisión para revertir | `organigrama-backend-robusto-0f13a17` (tag `vacantes`) |
 
-Los commits posteriores de la rama solo añaden documentación y herramientas de desarrollo; el código de `src/` es el de `6736e60`.
+Estado de `src/org-chart/org-chart-directory-presentation.ts` y `src/org-chart/html-export/`:
+- en la rama base es igual al de producción (`f2a4ffb`);
+- desde `6736e60` solo cambió el orden de los analistas (§1.5).
 
 ## 1. Qué incluye la primera entrega
 
@@ -27,6 +29,10 @@ Los commits posteriores de la rama solo añaden documentación y herramientas de
 4. **Sin cambios de lógica.** No cambian el endpoint, los permisos, la auditoría, la consulta, las reglas de inclusión, la agrupación ni el contenido de las tarjetas.
    - El Excel generado es idéntico byte a byte al de `c5f2a0f`.
    - El cuerpo del HTML es el mismo; solo se añaden los atributos `data-emblem` y `data-coord`.
+5. **Ajuste del 27-nov: analistas juntos.**
+   - En la vista jerárquica, los «Analista operativo» de un mismo jefe se muestran juntos, al final de su grupo, en orden alfabético. Lo hace la función `groupStaffAnalystsLast` en `renderHierarchyList`.
+   - Antes se mezclaban por nombre con los líderes y supervisores.
+   - Con datos reales hay las mismas 196 personas y las mismas 14 tarjetas en la vista jerárquica; solo cambia el orden.
 
 Referencias visuales sintéticas: [referencia/paleta-coordinaciones.png](referencia/paleta-coordinaciones.png) y [referencia/menu-lateral-hover-fabrica.png](referencia/menu-lateral-hover-fabrica.png).
 
@@ -54,11 +60,11 @@ No modificar para el rediseño: el controlador, `runAuditedExport`, los permisos
 npm ci                      # solo la primera vez
 npm run build
 node scripts/vista-previa-html-sintetica.cjs "$env:TEMP\vista-previa-html.html"
-# Con el código de 6736e60, el SHA-256 debe ser 785965b24213a3d2456c9d216f9855b95bf5a6d2cdb915d11917d599de4675a8
+# Con el código de 6736e60 o posterior (también f2a4ffb y la rama base), el SHA-256 debe ser 785965b24213a3d2456c9d216f9855b95bf5a6d2cdb915d11917d599de4675a8
 (Get-FileHash "$env:TEMP\vista-previa-html.html" -Algorithm SHA256).Hash
 start "$env:TEMP\vista-previa-html.html"
 
-# Pruebas del exportador (HTML, Excel y HTTP): 158 en verde
+# Pruebas del exportador (HTML, Excel y HTTP): 159 en verde
 npx jest src/org-chart/html-export src/org-chart/org-chart-directory src/org-chart/org-chart-export.http
 ```
 
